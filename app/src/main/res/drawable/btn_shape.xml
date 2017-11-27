@@ -6,11 +6,11 @@
             android:shape="rectangle">
             <!-- Corner的属性是设置圆角的半径的-->
             <corners
-                android:bottomLeftRadius="30dp"
-                android:bottomRightRadius="30dp"
+                android:bottomLeftRadius="15dp"
+                android:bottomRightRadius="15dp"
                 android:radius="20dp"
-                android:topLeftRadius="30dp"
-                android:topRightRadius="30dp" />
+                android:topLeftRadius="15dp"
+                android:topRightRadius="15dp" />
             <!-- Button里面的文字与Button边界的间隔-->
             <solid android:color="#278bee" />
         </shape>
@@ -20,11 +20,11 @@
             android:shape="rectangle">
             <!-- Corner的属性是设置圆角的半径的-->
             <corners
-                android:bottomLeftRadius="30dp"
-                android:bottomRightRadius="30dp"
+                android:bottomLeftRadius="15dp"
+                android:bottomRightRadius="15dp"
                 android:radius="20dp"
-                android:topLeftRadius="30dp"
-                android:topRightRadius="30dp" />
+                android:topLeftRadius="15dp"
+                android:topRightRadius="15dp" />
             <!-- Button里面的文字与Button边界的间隔-->
             <solid android:color="#6b849c" />
         </shape>
