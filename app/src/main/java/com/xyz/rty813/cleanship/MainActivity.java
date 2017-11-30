@@ -4,11 +4,13 @@ import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.PersistableBundle;
+import android.support.annotation.Nullable;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
@@ -34,9 +36,12 @@ import com.amap.api.maps2d.model.Polyline;
 import com.amap.api.maps2d.model.PolylineOptions;
 import com.xyz.rty813.cleanship.sql.SQLiteDBHelper;
 
+import java.lang.reflect.Array;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener {
     private MapView mMapView;
@@ -70,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_clear).setOnClickListener(this);
         findViewById(R.id.btn_detail).setOnClickListener(this);
         findViewById(R.id.btn_history).setOnClickListener(this);
+
     }
 
     @Override
@@ -172,17 +178,33 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 break;
 
             case R.id.btn_start:
-                Toast.makeText(this, "Go", Toast.LENGTH_SHORT).show();
-                StringBuilder stringBuilder = new StringBuilder();
-                for (Marker marker : markers){
-                    stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
+//                Toast.makeText(this, "Go", Toast.LENGTH_SHORT).show();
+                if (markers.size() > 0){
+                    StringBuilder stringBuilder = new StringBuilder();
+                    for (Marker marker : markers){
+                        stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
+                    }
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
+                    saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString());
                 }
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
-                saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString());
+                else{
+                    loadRoute(null);
+                }
                 break;
             case R.id.btn_history:
-                startActivity(new Intent(this, HistoryActivity.class));
+                startActivityForResult(new Intent(this, HistoryActivity.class), 200);
                 break;
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == RESULT_OK){
+            if (requestCode == 200){
+                if (data.getStringExtra("id") != null){
+                    loadRoute(data.getStringExtra("id"));
+                }
+            }
         }
     }
 
@@ -192,6 +214,43 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         cv.put("TIME", time);
         cv.put("ROUTE", route);
         database.insert(SQLiteDBHelper.TABLE_NAME, null, cv);
+        database.close();
+    }
+
+    private void loadRoute(@Nullable String id){
+        SQLiteDatabase database = MainActivity.dbHelper.getReadableDatabase();
+        aMap.clear();
+        markers.removeAll(markers);
+        polylines.removeAll(polylines);
+        Cursor cursor = null;
+        if (id != null){
+            cursor = database.query(MainActivity.dbHelper.TABLE_NAME, null, "ID=?", new String[]{id} ,null, null, null);
+            cursor.moveToFirst();
+        }
+        else{
+            cursor = database.query(MainActivity.dbHelper.TABLE_NAME, null, null, null ,null, null, null);
+            cursor.moveToLast();
+        }
+        if (cursor.getCount() > 0){
+            String route = cursor.getString(cursor.getColumnIndex("ROUTE"));
+            String[] markers_str = route.split(";");
+            for (int i = 0; i < markers_str.length; i++){
+                String[] location = markers_str[i].split(",");
+                LatLng latLng = new LatLng(Float.parseFloat(location[0]), Float.parseFloat(location[1]));
+                MarkerOptions markerOptions = new MarkerOptions().position(latLng);
+                markerOptions.title(String.valueOf(markers.size() + 1));
+                markerOptions.snippet("经度：" + latLng.latitude + "\n纬度：" + latLng.longitude);
+                markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+                markers.add(aMap.addMarker(markerOptions));
+                if (markers.size() > 1) {
+                    LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
+                    LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
+                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(6).color(Color.RED)));
+                }
+
+            }
+
+        }
         database.close();
     }
 }

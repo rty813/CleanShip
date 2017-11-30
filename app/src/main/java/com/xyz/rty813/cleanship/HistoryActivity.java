@@ -1,13 +1,18 @@
 package com.xyz.rty813.cleanship;
 
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.View;
 import android.widget.TextView;
 
+import com.yanzhenjie.recyclerview.swipe.SwipeItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 import com.yanzhenjie.recyclerview.swipe.touch.OnItemMoveListener;
 
@@ -24,6 +29,7 @@ public class HistoryActivity extends AppCompatActivity {
     private ArrayList<Map<String, String>> list;
     private SwipeRecyclerViewAdapter adapter;
     private SwipeMenuRecyclerView recyclerView;
+    private boolean isCancel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,7 +59,6 @@ public class HistoryActivity extends AppCompatActivity {
         adapter = new SwipeRecyclerViewAdapter(list);
         adapter.notifyDataSetChanged();
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.setAdapter(adapter);
         recyclerView.setItemViewSwipeEnabled(true);
         recyclerView.setOnItemMoveListener(new OnItemMoveListener() {
             @Override
@@ -63,18 +68,61 @@ public class HistoryActivity extends AppCompatActivity {
 
             @Override
             public void onItemDismiss(RecyclerView.ViewHolder srcHolder) {
-                int pos = srcHolder.getAdapterPosition();
-                String id = list.get(pos).get("id");
+                final int pos = srcHolder.getAdapterPosition();
+                final Map<String, String> map = list.get(pos);
+                String id = map.get("id");
                 list.remove(pos);
                 adapter.notifyItemRemoved(pos);
-                SQLiteDatabase database = MainActivity.dbHelper.getWritableDatabase();
-                database.beginTransaction();
-                database.delete(MainActivity.dbHelper.TABLE_NAME, "ID=?", new String[]{id});
-                database.setTransactionSuccessful();
-                database.close();
+                adapter.notifyItemRangeChanged(pos, list.size() - pos);
+//                SQLiteDatabase database = MainActivity.dbHelper.getWritableDatabase();
+//                database.delete(MainActivity.dbHelper.TABLE_NAME, "ID=?", new String[]{id});
+//                database.close();
+
+                CoordinatorLayout coordinatorLayout = findViewById(R.id.coordinatorlayout);
+                isCancel = false;
+                Snackbar.make(coordinatorLayout, "删除记录", Snackbar.LENGTH_LONG)
+                        .setAction("撤销", new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                isCancel = true;
+                                list.add(pos, map);
+                                adapter.notifyItemInserted(pos);
+                                adapter.notifyItemRangeChanged(pos + 1, list.size() - pos);
+                            }
+                        })
+                        .addCallback(new MyCallBack(id))
+                        .show();
             }
         });
+        recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
+            @Override
+            public void onItemClick(View itemView, int position) {
+                Intent intent = new Intent();
+                intent.putExtra("id", list.get(position).get("id"));
+                setResult(RESULT_OK, intent);
+                finish();
+            }
+        });
+        recyclerView.setAdapter(adapter);
 
 
+    }
+
+    private class MyCallBack extends Snackbar.Callback{
+        private String id;
+        public MyCallBack(String id){
+            super();
+            this.id = id;
+        }
+        @Override
+        public void onDismissed(Snackbar transientBottomBar, int event) {
+            if (isCancel){
+                return;
+            }
+            SQLiteDatabase database = MainActivity.dbHelper.getWritableDatabase();
+            database.delete(MainActivity.dbHelper.TABLE_NAME, "ID=?", new String[]{id});
+            database.close();
+            super.onDismissed(transientBottomBar, event);
+        }
     }
 }
