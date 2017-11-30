@@ -9,28 +9,25 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 
 public class SQLiteDBHelper extends SQLiteOpenHelper {
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
     private static final String DB_NAME = "route.db";
-    public static final String TABLE_NAME1 = "STORE";
-    public static final String TABLE_NAME2 = "HISTORY";
+    public static final String TABLE_NAME = "HISTORY";
 
-    public SQLiteDBHelper(Context context, String name, SQLiteDatabase.CursorFactory factory, int version) {
-        super(context, name, factory, version);
+    public SQLiteDBHelper(Context context) {
+        super(context, DB_NAME, null, DB_VERSION);
     }
 
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
-        String sql = "CREATE TABLE IF NOT EXISTS" + TABLE_NAME1 + " (ID INTEGER PRIMARY KEY, LATITUDE VARCHAR(500), LONGITUDE VARCHAR(500))";
-        sqLiteDatabase.execSQL(sql);
-        sql = "CREATE TABLE IF NOT EXISTS" + TABLE_NAME2 + " (ID INTEGER PRIMARY KEY, LATITUDE VARCHAR(500), LONGITUDE VARCHAR(500))";
+        String sql = "CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (ID INTEGER PRIMARY KEY AUTOINCREMENT, ROUTE VARCHAR(500), TIME VARCHAR(500))";
         sqLiteDatabase.execSQL(sql);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
-        String sql = "DROP TABLE IF EXISTS " + TABLE_NAME1;
+        String sql = "DROP TABLE IF EXISTS STORE";
         sqLiteDatabase.execSQL(sql);
-        sql = "DROP TABLE IF EXISTS " + TABLE_NAME2;
+        sql = "DROP TABLE IF EXISTS " + TABLE_NAME;
         sqLiteDatabase.execSQL(sql);
         onCreate(sqLiteDatabase);
     }

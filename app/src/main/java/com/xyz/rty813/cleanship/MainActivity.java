@@ -1,8 +1,10 @@
 package com.xyz.rty813.cleanship;
 
 import android.annotation.SuppressLint;
+import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -30,19 +32,24 @@ import com.amap.api.maps2d.model.MarkerOptions;
 import com.amap.api.maps2d.model.MyLocationStyle;
 import com.amap.api.maps2d.model.Polyline;
 import com.amap.api.maps2d.model.PolylineOptions;
+import com.xyz.rty813.cleanship.sql.SQLiteDBHelper;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener {
     private MapView mMapView;
     private AMap aMap;
     private ArrayList<Marker> markers;
     private ArrayList<Polyline> polylines;
+    public static SQLiteDBHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        dbHelper = new SQLiteDBHelper(this);
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
         markers = new ArrayList<>();
@@ -58,11 +65,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.setOnMarkerClickListener(this);
         aMap.setOnMapClickListener(this);
+        findViewById(R.id.btn_start).setOnClickListener(this);
         findViewById(R.id.btn_cancel).setOnClickListener(this);
         findViewById(R.id.btn_clear).setOnClickListener(this);
         findViewById(R.id.btn_detail).setOnClickListener(this);
         findViewById(R.id.btn_history).setOnClickListener(this);
-        findViewById(R.id.btn_save).setOnClickListener(this);
     }
 
     @Override
@@ -166,40 +173,26 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
             case R.id.btn_start:
                 Toast.makeText(this, "Go", Toast.LENGTH_SHORT).show();
+                StringBuilder stringBuilder = new StringBuilder();
+                for (Marker marker : markers){
+                    stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
+                }
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
+                saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString());
                 break;
             case R.id.btn_history:
                 startActivity(new Intent(this, HistoryActivity.class));
                 break;
-            case R.id.btn_save:
-                final EditText editText = new EditText(this);
-                editText.setHint("请输入路线名称");
-                builder = new AlertDialog.Builder(this);
-                builder.setTitle("保存");
-                builder.setView(editText, 50,20,50,20);
-                builder.setNegativeButton("取消", null);
-                builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        String routeName = editText.getText().toString();
-                        if (routeName.equals("")){
-                            Toast.makeText(MainActivity.this, "名称不能为空！", Toast.LENGTH_SHORT).show();
-                        }
-                        else{
-                            StringBuilder stringBuilder = new StringBuilder();
-                            for (Marker marker : markers){
-                                stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
-                            }
-                            saveRoute(stringBuilder.toString(), "HISTORY");
-                        }
-                    }
-                });
-                builder.show();
-                break;
         }
     }
 
-    private void saveRoute(String routeStr, String dbname){
-
+    private void saveRoute(String time, String route){
+        SQLiteDatabase database = dbHelper.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put("TIME", time);
+        cv.put("ROUTE", route);
+        database.insert(SQLiteDBHelper.TABLE_NAME, null, cv);
+        database.close();
     }
 }
 
