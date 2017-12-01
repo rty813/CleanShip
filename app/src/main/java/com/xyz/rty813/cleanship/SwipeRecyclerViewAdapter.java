@@ -1,13 +1,10 @@
 package com.xyz.rty813.cleanship;
 
-import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
-import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -35,8 +32,8 @@ public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter{
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         MyViewHolder viewHolder = (MyViewHolder) holder;
-        viewHolder.getTv_route().setText(list.get(position).get("route"));
-        viewHolder.getTv_time().setText(list.get(position).get("time"));
+        viewHolder.getTv_detail().setText(list.get(position).get("detail"));
+        viewHolder.getTv_title().setText(list.get(position).get("title"));
         viewHolder.itemView.setTag(position);
     }
 
@@ -46,20 +43,20 @@ public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter{
     }
 
     private class MyViewHolder extends RecyclerView.ViewHolder {
-        private TextView tv_time;
-        private TextView tv_route;
+        private TextView tv_title;
+        private TextView tv_detail;
         public MyViewHolder(View itemView) {
             super(itemView);
-            tv_time = itemView.findViewById(R.id.tv_time);
-            tv_route = itemView.findViewById(R.id.tv_route);
+            tv_title = itemView.findViewById(R.id.tv_title);
+            tv_detail = itemView.findViewById(R.id.tv_detail);
         }
 
-        public TextView getTv_route() {
-            return tv_route;
+        public TextView getTv_detail() {
+            return tv_detail;
         }
 
-        public TextView getTv_time() {
-            return tv_time;
+        public TextView getTv_title() {
+            return tv_title;
         }
     }
 

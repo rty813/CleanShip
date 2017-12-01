@@ -24,16 +24,25 @@ import android.widget.Toast;
 
 import com.amap.api.maps2d.AMap;
 import com.amap.api.maps2d.AMapOptions;
+import com.amap.api.maps2d.CameraUpdate;
+import com.amap.api.maps2d.CameraUpdateFactory;
 import com.amap.api.maps2d.MapView;
 import com.amap.api.maps2d.UiSettings;
 import com.amap.api.maps2d.model.BitmapDescriptor;
 import com.amap.api.maps2d.model.BitmapDescriptorFactory;
+import com.amap.api.maps2d.model.CameraPosition;
 import com.amap.api.maps2d.model.LatLng;
 import com.amap.api.maps2d.model.Marker;
 import com.amap.api.maps2d.model.MarkerOptions;
 import com.amap.api.maps2d.model.MyLocationStyle;
 import com.amap.api.maps2d.model.Polyline;
 import com.amap.api.maps2d.model.PolylineOptions;
+import com.amap.api.services.core.LatLonPoint;
+import com.amap.api.services.geocoder.GeocodeResult;
+import com.amap.api.services.geocoder.GeocodeSearch;
+import com.amap.api.services.geocoder.RegeocodeAddress;
+import com.amap.api.services.geocoder.RegeocodeQuery;
+import com.amap.api.services.geocoder.RegeocodeResult;
 import com.xyz.rty813.cleanship.sql.SQLiteDBHelper;
 
 import java.lang.reflect.Array;
@@ -43,7 +52,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener {
     private MapView mMapView;
     private AMap aMap;
     private ArrayList<Marker> markers;
@@ -180,12 +189,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             case R.id.btn_start:
 //                Toast.makeText(this, "Go", Toast.LENGTH_SHORT).show();
                 if (markers.size() > 0){
-                    StringBuilder stringBuilder = new StringBuilder();
-                    for (Marker marker : markers){
-                        stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
-                    }
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
-                    saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString());
+                    LatLng latLng = markers.get(0).getPosition();
+                    GeocodeSearch geocodeSearch = new GeocodeSearch(this);
+                    geocodeSearch.setOnGeocodeSearchListener(this);
+                    RegeocodeQuery query = new RegeocodeQuery(new LatLonPoint(latLng.latitude, latLng.longitude), 1000, GeocodeSearch.AMAP);
+                    geocodeSearch.getFromLocationAsyn(query);
                 }
                 else{
                     loadRoute(null);
@@ -208,11 +216,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         }
     }
 
-    private void saveRoute(String time, String route){
+    private void saveRoute(String time, String route, String address){
         SQLiteDatabase database = dbHelper.getWritableDatabase();
         ContentValues cv = new ContentValues();
         cv.put("TIME", time);
         cv.put("ROUTE", route);
+        cv.put("ADDRESS", address);
         database.insert(SQLiteDBHelper.TABLE_NAME, null, cv);
         database.close();
     }
@@ -222,7 +231,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aMap.clear();
         markers.removeAll(markers);
         polylines.removeAll(polylines);
-        Cursor cursor = null;
+        Cursor cursor;
         if (id != null){
             cursor = database.query(MainActivity.dbHelper.TABLE_NAME, null, "ID=?", new String[]{id} ,null, null, null);
             cursor.moveToFirst();
@@ -237,9 +246,13 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             for (int i = 0; i < markers_str.length; i++){
                 String[] location = markers_str[i].split(",");
                 LatLng latLng = new LatLng(Float.parseFloat(location[0]), Float.parseFloat(location[1]));
+                if (i == 0){
+                    CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
+                    aMap.animateCamera(cameraUpdate);
+                }
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
                 markerOptions.title(String.valueOf(markers.size() + 1));
-                markerOptions.snippet("经度：" + latLng.latitude + "\n纬度：" + latLng.longitude);
+                markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
                 markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
                 markers.add(aMap.addMarker(markerOptions));
                 if (markers.size() > 1) {
@@ -247,11 +260,39 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
                     polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(6).color(Color.RED)));
                 }
-
             }
+
 
         }
         database.close();
+    }
+
+    @Override
+    public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int i) {
+        String pos = null;
+        if (i == 1000){
+            RegeocodeAddress address = regeocodeResult.getRegeocodeAddress();
+            pos = address.getProvince();
+            if (!address.getProvince().equals(address.getCity())){
+                pos += " " + address.getCity();
+            }
+            pos +=  " " + address.getDistrict();
+            if (address.getPois().size() != 0){
+                pos = pos + " " + address.getPois().get(0);
+            }
+            System.out.println(pos);
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Marker marker : markers){
+            stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
+        }
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
+        saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
+    }
+
+    @Override
+    public void onGeocodeSearched(GeocodeResult geocodeResult, int i) {
+
     }
 }
 

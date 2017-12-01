@@ -47,10 +47,11 @@ public class HistoryActivity extends AppCompatActivity {
                 String route = cursor.getString(cursor.getColumnIndex("ROUTE"));
                 String time = cursor.getString(cursor.getColumnIndex("TIME"));
                 String id = cursor.getString(cursor.getColumnIndex("ID"));
+                String address = cursor.getString(cursor.getColumnIndex("ADDRESS"));
                 route = "(" + route.substring(0, route.length() - 2) + ")";
                 route = route.replace(";", ") -> \n(");
-                map.put("route", route);
-                map.put("time", time);
+                map.put("detail", time + "\n" + route);
+                map.put("title", address);
                 map.put("id", id);
                 list.add(map);
             } while(cursor.moveToPrevious());
@@ -74,9 +75,6 @@ public class HistoryActivity extends AppCompatActivity {
                 list.remove(pos);
                 adapter.notifyItemRemoved(pos);
                 adapter.notifyItemRangeChanged(pos, list.size() - pos);
-//                SQLiteDatabase database = MainActivity.dbHelper.getWritableDatabase();
-//                database.delete(MainActivity.dbHelper.TABLE_NAME, "ID=?", new String[]{id});
-//                database.close();
 
                 CoordinatorLayout coordinatorLayout = findViewById(R.id.coordinatorlayout);
                 isCancel = false;

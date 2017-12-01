@@ -12,13 +12,13 @@
         android:layout_height="wrap_content"
         style="@style/Base.TextAppearance.AppCompat.Large"
         android:textColor="@android:color/black"
-        android:id="@+id/tv_time"/>
+        android:id="@+id/tv_title"/>
     <TextView
         android:layout_marginTop="5dp"
         android:layout_marginBottom="5dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/tv_route"/>
+        android:id="@+id/tv_detail"/>
 
     <include layout="@layout/divide_line"/>
 
