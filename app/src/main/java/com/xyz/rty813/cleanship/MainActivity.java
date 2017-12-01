@@ -10,6 +10,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.PersistableBundle;
+import android.support.annotation.ColorRes;
+import android.support.annotation.DimenRes;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -34,6 +36,7 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
+import com.dd.morphingbutton.MorphingButton;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
@@ -51,6 +54,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ArrayList<Polyline> polylines;
     public static SQLiteDBHelper dbHelper;
     private SerialPortTool serialPort;
+    private MorphingButton btn_start;
+    private static final int READY = 1;
+    private static final int UNREADY = 0;
+    private static final int HASGO = 2;
+    private int state = UNREADY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
-
+        initSerialPort(115200);
         MyLocationStyle myLocationStyle = new MyLocationStyle();
         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
         aMap.setMyLocationStyle(myLocationStyle);
@@ -73,6 +81,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.setOnMarkerClickListener(this);
         aMap.setOnMapClickListener(this);
+        btn_start = findViewById(R.id.btn_start);
+        morph(state, 0);
         findViewById(R.id.btn_start).setOnClickListener(this);
         findViewById(R.id.btn_cancel).setOnClickListener(this);
         findViewById(R.id.btn_clear).setOnClickListener(this);
@@ -178,7 +188,14 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 break;
 
             case R.id.btn_start:
-//                Toast.makeText(this, "Go", Toast.LENGTH_SHORT).show();
+                if (state != READY){
+                    morph(READY, 300);
+                    state = READY;
+                }
+                else {
+                    morph(UNREADY, 300);
+                    state = UNREADY;
+                }
                 if (markers.size() > 0){
                     LatLng latLng = markers.get(0).getPosition();
                     GeocodeSearch geocodeSearch = new GeocodeSearch(this);
@@ -196,6 +213,52 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         }
     }
 
+    private void morph(int state, int duration){
+        MorphingButton.Params params = null;
+        switch (state){
+            case UNREADY:
+                params = MorphingButton.Params.create()
+                        .duration(duration)
+                        .cornerRadius(dimen(R.dimen.mb_height_56))
+                        .width(dimen(R.dimen.mb_height_56))
+                        .height(dimen(R.dimen.mb_height_56))
+                        .color(color(R.color.mb_blue))
+                        .colorPressed(color(R.color.mb_blue))
+                        .icon(R.drawable.connect2);
+                break;
+            case READY:
+                params = MorphingButton.Params.create()
+                        .duration(duration)
+                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                        .width(dimen(R.dimen.mb_width_100))
+                        .height(dimen(R.dimen.mb_height_56))
+                        .color(color(R.color.mb_green))
+                        .colorPressed(color(R.color.mb_green))
+                        .text("Go");
+                break;
+            case HASGO:
+                params = MorphingButton.Params.create()
+                        .duration(duration)
+                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                        .width(dimen(R.dimen.mb_width_100))
+                        .height(dimen(R.dimen.mb_height_56))
+                        .color(color(R.color.mb_red))
+                        .colorPressed(color(R.color.mb_red))
+                        .text("Stop");
+                break;
+        }
+        btn_start.morph(params);
+    }
+
+    private int dimen(@DimenRes int resId) {
+        return (int) getResources().getDimension(resId);
+    }
+
+    public int color(@ColorRes int resId) {
+
+        return getResources().getColor(resId);
+
+    }
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK){
@@ -210,13 +273,16 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private void initSerialPort(int baudRate){
         List<UsbSerialDriver> list = serialPort.searchSerialPort();
         if (list.isEmpty()){
-            Toast.makeText(this, "未找到设备", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "未连接设备", Toast.LENGTH_SHORT).show();
             return;
         }
         try {
             serialPort.initDevice(list.get(0));
             serialPort.openDevice(baudRate);
+            state = READY;
+            morph(READY, 500);
         } catch (IOException e) {
+            Toast.makeText(this, "初始化失败", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
     }

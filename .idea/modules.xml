@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/CleanShip.iml" filepath="$PROJECT_DIR$/CleanShip.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/usbSerialForAndroid/usbSerialForAndroid.iml" filepath="$PROJECT_DIR$/usbSerialForAndroid/usbSerialForAndroid.iml" />
+      <module fileurl="file://C:\Users\zhang\AndroidStudioProjects\CleanShip\usbSerialForAndroid\usbSerialForAndroid.iml" filepath="C:\Users\zhang\AndroidStudioProjects\CleanShip\usbSerialForAndroid\usbSerialForAndroid.iml" />
     </modules>
   </component>
 </project>

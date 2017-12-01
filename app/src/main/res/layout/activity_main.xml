@@ -22,15 +22,27 @@
         app:rippleColor="@color/colorPrimary"
         app:fabSize="mini"
         android:id="@+id/btn_cancel"/>
-    <Button
+    <com.dd.morphingbutton.MorphingButton
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/btn_start"
-        android:text="Go"
         android:textColor="@android:color/white"
         android:layout_gravity="center_horizontal|bottom"
         android:layout_marginBottom="20dp"
-        android:background="@drawable/btn_shape"/>
+        android:background="@drawable/connect"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/textview_border"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:text="设备状态：未连接"
+        />
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -43,28 +55,38 @@
         android:paddingRight="4dp"
         android:orientation="vertical">
         <ImageButton
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
             android:layout_margin="5dp"
             android:id="@+id/btn_clear"
             android:background="@drawable/clear"/>
         <include layout="@layout/divide_line"/>
         <ImageButton
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
             android:layout_margin="5dp"
             android:id="@+id/btn_detail"
             android:background="@drawable/detail" />
         <include layout="@layout/divide_line"/>
         <ImageButton
-            android:layout_width="20dp"
-            android:layout_height="18dp"
+            android:layout_width="25dp"
+            android:layout_height="22dp"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:layout_marginTop="6dp"
             android:layout_marginBottom="6dp"
             android:id="@+id/btn_history"
             android:background="@drawable/history"/>
+        <include layout="@layout/divide_line"/>
+        <ImageButton
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="6dp"
+            android:id="@+id/btn_connect"
+            android:background="@drawable/connect"/>
     </LinearLayout>
 
 </android.support.design.widget.CoordinatorLayout>
