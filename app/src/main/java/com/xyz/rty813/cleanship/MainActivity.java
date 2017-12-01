@@ -11,24 +11,15 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.support.annotation.Nullable;
-import android.support.design.widget.CoordinatorLayout;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
-import android.view.animation.Animation;
-import android.view.animation.LinearInterpolator;
-import android.view.animation.RotateAnimation;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import com.amap.api.maps2d.AMap;
-import com.amap.api.maps2d.AMapOptions;
 import com.amap.api.maps2d.CameraUpdate;
 import com.amap.api.maps2d.CameraUpdateFactory;
 import com.amap.api.maps2d.MapView;
-import com.amap.api.maps2d.UiSettings;
-import com.amap.api.maps2d.model.BitmapDescriptor;
 import com.amap.api.maps2d.model.BitmapDescriptorFactory;
 import com.amap.api.maps2d.model.CameraPosition;
 import com.amap.api.maps2d.model.LatLng;
@@ -43,14 +34,15 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
-import com.xyz.rty813.cleanship.sql.SQLiteDBHelper;
+import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
+import com.xyz.rty813.cleanship.util.SerialPortTool;
 
-import java.lang.reflect.Array;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener {
     private MapView mMapView;
@@ -58,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ArrayList<Marker> markers;
     private ArrayList<Polyline> polylines;
     public static SQLiteDBHelper dbHelper;
+    private SerialPortTool serialPort;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         mMapView.onCreate(savedInstanceState);
         markers = new ArrayList<>();
         polylines = new ArrayList<>();
+        serialPort = new SerialPortTool(this);
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
@@ -180,10 +174,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 builder.show();
                 break;
             case R.id.btn_detail:
-//                StringBuilder stringBuilder = new StringBuilder();
-//                for (Marker marker : markers){
-//                    stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
-//                }
+                startActivity(new Intent(this, SerialPortActivity.class));
                 break;
 
             case R.id.btn_start:
@@ -213,6 +204,20 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     loadRoute(data.getStringExtra("id"));
                 }
             }
+        }
+    }
+
+    private void initSerialPort(int baudRate){
+        List<UsbSerialDriver> list = serialPort.searchSerialPort();
+        if (list.isEmpty()){
+            Toast.makeText(this, "未找到设备", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            serialPort.initDevice(list.get(0));
+            serialPort.openDevice(baudRate);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

@@ -30,4 +30,5 @@ dependencies {
     compile 'com.amap.api:location:latest.integration'
     implementation 'com.android.support:design:27.0.1'
     compile 'com.yanzhenjie:recyclerview-swipe:1.1.3'
+    implementation project(':usbSerialForAndroid')
 }
