@@ -1,22 +1,39 @@
 package com.xyz.rty813.cleanship;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.os.PersistableBundle;
 import android.support.annotation.ColorRes;
 import android.support.annotation.DimenRes;
 import android.support.annotation.Nullable;
+import android.support.design.widget.CollapsingToolbarLayout;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.view.animation.AnimationUtils;
+import android.widget.ImageView;
+import android.widget.PopupWindow;
 import android.widget.Toast;
+import android.widget.Toolbar;
 
 import com.amap.api.maps2d.AMap;
 import com.amap.api.maps2d.CameraUpdate;
@@ -38,10 +55,12 @@ import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.dd.morphingbutton.MorphingButton;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.xyz.rty813.cleanship.util.LayoutGravity;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -59,7 +78,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private static final int UNREADY = 0;
     private static final int HASGO = 2;
     private int state = UNREADY;
-
+    private String pos = null;
+    private float alpha = 1.0f;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -120,7 +140,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 //        System.out.println(latLng.toString());
         MarkerOptions markerOptions = new MarkerOptions().position(latLng);
         markerOptions.title(String.valueOf(markers.size() + 1));
-        markerOptions.snippet("经度：" + latLng.latitude + "\n纬度：" + latLng.longitude);
+        markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
         markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
 
         Marker marker = aMap.addMarker(markerOptions);
@@ -129,6 +149,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
             LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
             polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(6).color(Color.RED)));
+        }
+        else {
+            GeocodeSearch geocodeSearch = new GeocodeSearch(this);
+            geocodeSearch.setOnGeocodeSearchListener(this);
+            RegeocodeQuery query = new RegeocodeQuery(new LatLonPoint(latLng.latitude, latLng.longitude), 1000, GeocodeSearch.AMAP);
+            geocodeSearch.getFromLocationAsyn(query);
         }
     }
 
@@ -151,7 +177,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         }
         return true;
     }
-
     @SuppressLint("RestrictedApi")
     @Override
     public void onClick(View view) {
@@ -183,8 +208,92 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 });
                 builder.show();
                 break;
-            case R.id.btn_detail:
+            case R.id.btn_connect:
                 startActivity(new Intent(this, SerialPortActivity.class));
+                break;
+
+            case R.id.btn_detail:
+                if (markers.size() > 0){
+                    final Handler mHandler = new Handler(){
+                        @Override
+                        public void handleMessage(Message msg) {
+                            switch (msg.what){
+                                case 1:
+                                    WindowManager.LayoutParams lp = getWindow().getAttributes();
+                                    lp.alpha = (float) msg.obj;
+                                    getWindow().setAttributes(lp);
+                            }
+                        }
+                    };
+                    final View popupview = View.inflate(MainActivity.this,R.layout.popupwindow_detail,null);
+                    final PopupWindow popupWindow = new PopupWindow(popupview, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false);
+                    CollapsingToolbarLayout collapsingToolbarLayout = popupview.findViewById(R.id.collapsingtoolbarlayout);
+                    aMap.getMapScreenShot(new AMap.OnMapScreenShotListener() {
+                        @Override
+                        public void onMapScreenShot(Bitmap bitmap) {
+                            popupview.findViewById(R.id.iv_map).setBackground(new BitmapDrawable(bitmap));
+                            alpha = 1.0f;
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    while(alpha > 0.3f){
+                                        try{
+                                            Thread.sleep(2);
+                                        } catch (InterruptedException e) {
+                                            e.printStackTrace();
+                                        }
+                                        Message msg = mHandler.obtainMessage();
+                                        msg.what = 1;
+                                        alpha -= 0.01f;
+                                        msg.obj = alpha;
+                                        mHandler.sendMessage(msg);
+                                    }
+                                }
+                            }).start();
+                            popupWindow.showAtLocation(mMapView, Gravity.CENTER, 0, 0);
+                        }
+                    });
+
+                    collapsingToolbarLayout.setTitle(pos);
+                    collapsingToolbarLayout.setExpandedTitleColor(Color.DKGRAY);
+                    collapsingToolbarLayout.setCollapsedTitleTextColor(Color.WHITE);
+                    RecyclerView recyclerView = popupview.findViewById(R.id.recyclerView_detail);
+                    ArrayList<String> detailList = new ArrayList<>();
+                    for (int i = 0; i < markers.size(); i++){
+                        detailList.add(String.valueOf(i + 1) + "： 纬度=" + markers.get(i).getPosition().latitude + "\t 经度=" + markers.get(i).getPosition().longitude);
+                    }
+                    DetailRecyclerViewAdapter adapter = new DetailRecyclerViewAdapter(detailList);
+                    recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                    recyclerView.setAdapter(adapter);
+
+                    popupWindow.setOutsideTouchable(true);
+                    popupWindow.setFocusable(true);
+                    popupWindow.setAnimationStyle(R.style.dismiss_anim);
+//                    popupWindow.showAtLocation(mMapView, Gravity.CENTER, 0, 0);
+                    popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                        @Override
+                        public void onDismiss() {
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    while(alpha < 1f){
+                                        try {
+                                            Thread.sleep(2);
+                                        } catch (InterruptedException e) {
+                                            e.printStackTrace();
+                                        }
+                                        Message msg = mHandler.obtainMessage();
+                                        msg.what = 1;
+                                        alpha += 0.01f;
+                                        msg.obj = alpha;
+                                        mHandler.sendMessage(msg);
+                                    }
+                                }
+                            }).start();
+
+                        }
+                    });
+                }
                 break;
 
             case R.id.btn_start:
@@ -197,11 +306,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     state = UNREADY;
                 }
                 if (markers.size() > 0){
-                    LatLng latLng = markers.get(0).getPosition();
-                    GeocodeSearch geocodeSearch = new GeocodeSearch(this);
-                    geocodeSearch.setOnGeocodeSearchListener(this);
-                    RegeocodeQuery query = new RegeocodeQuery(new LatLonPoint(latLng.latitude, latLng.longitude), 1000, GeocodeSearch.AMAP);
-                    geocodeSearch.getFromLocationAsyn(query);
+                    StringBuilder stringBuilder = new StringBuilder();
+                    for (Marker marker : markers){
+                        stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
+                    }
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
+                    saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
                 }
                 else{
                     loadRoute(null);
@@ -212,6 +322,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 break;
         }
     }
+
 
     private void morph(int state, int duration){
         MorphingButton.Params params = null;
@@ -224,7 +335,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         .height(dimen(R.dimen.mb_height_56))
                         .color(color(R.color.mb_blue))
                         .colorPressed(color(R.color.mb_blue))
-                        .icon(R.drawable.connect2);
+                        .icon(R.drawable.connect);
                 break;
             case READY:
                 params = MorphingButton.Params.create()
@@ -319,7 +430,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 LatLng latLng = new LatLng(Float.parseFloat(location[0]), Float.parseFloat(location[1]));
                 if (i == 0){
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
-                    aMap.animateCamera(cameraUpdate);
+                    aMap.moveCamera(cameraUpdate);
                 }
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
                 markerOptions.title(String.valueOf(markers.size() + 1));
@@ -340,7 +451,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
     @Override
     public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int i) {
-        String pos = null;
         if (i == 1000){
             RegeocodeAddress address = regeocodeResult.getRegeocodeAddress();
             pos = address.getProvince();
@@ -353,12 +463,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             }
             System.out.println(pos);
         }
-        StringBuilder stringBuilder = new StringBuilder();
-        for (Marker marker : markers){
-            stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
-        }
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
-        saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
     }
 
     @Override

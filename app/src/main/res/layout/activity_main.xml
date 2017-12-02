@@ -6,8 +6,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root_view"
     tools:context="com.xyz.rty813.cleanship.MainActivity">
-
-
     <com.amap.api.maps2d.MapView
         android:id="@+id/mapview"
         android:layout_width="match_parent"
@@ -19,7 +17,7 @@
         android:layout_gravity="left|bottom"
         android:layout_margin="25dp"
         app:elevation="6dp"
-        app:rippleColor="@color/colorPrimary"
+        app:rippleColor="@android:color/holo_red_light"
         app:fabSize="mini"
         android:id="@+id/btn_cancel"/>
     <com.dd.morphingbutton.MorphingButton
@@ -28,8 +26,7 @@
         android:id="@+id/btn_start"
         android:textColor="@android:color/white"
         android:layout_gravity="center_horizontal|bottom"
-        android:layout_marginBottom="20dp"
-        android:background="@drawable/connect"/>
+        android:layout_marginBottom="20dp"/>
 
     <TextView
         android:layout_width="wrap_content"

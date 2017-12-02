@@ -7,17 +7,16 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.Map;
 
 /**
- * Created by doufu on 2017/11/30.
+ * Created by doufu on 2017/12/2.
  */
 
-public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter{
+public class DetailRecyclerViewAdapter extends RecyclerView.Adapter{
 
-    private ArrayList<Map<String, String>> list;
+    private ArrayList<String> list;
 
-    public SwipeRecyclerViewAdapter(ArrayList<Map<String, String>> list) {
+    public DetailRecyclerViewAdapter(ArrayList<String> list) {
         super();
         this.list = list;
     }
@@ -25,15 +24,14 @@ public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter{
 
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.recyclerview_history, parent, false);
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.recyclerview_detail, parent, false);
         return new MyViewHolder(v);
     }
 
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         MyViewHolder viewHolder = (MyViewHolder) holder;
-        viewHolder.getTv_detail().setText(list.get(position).get("detail"));
-        viewHolder.getTv_title().setText(list.get(position).get("title"));
+        viewHolder.getTv_point().setText(list.get(position));
         viewHolder.itemView.setTag(position);
     }
 
@@ -43,23 +41,15 @@ public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter{
     }
 
     private class MyViewHolder extends RecyclerView.ViewHolder {
-        private TextView tv_title;
-        private TextView tv_detail;
+        private TextView tv_point;
         public MyViewHolder(View itemView) {
             super(itemView);
-            tv_title = itemView.findViewById(R.id.tv_title);
-            tv_detail = itemView.findViewById(R.id.tv_detail);
+            tv_point = itemView.findViewById(R.id.tv_point);
         }
 
-        public TextView getTv_detail() {
-            return tv_detail;
-        }
-
-        public TextView getTv_title() {
-            return tv_title;
+        public TextView getTv_point() {
+            return tv_point;
         }
     }
-
-    
 
 }
