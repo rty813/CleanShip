@@ -1,7 +1,6 @@
 package com.xyz.rty813.cleanship;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -25,15 +24,11 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.animation.AnimationUtils;
-import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.Toast;
-import android.widget.Toolbar;
 
 import com.amap.api.maps2d.AMap;
 import com.amap.api.maps2d.CameraUpdate;
@@ -55,16 +50,16 @@ import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.dd.morphingbutton.MorphingButton;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
-import com.xyz.rty813.cleanship.util.LayoutGravity;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import static java.lang.Math.abs;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener {
     private MapView mMapView;
@@ -76,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private MorphingButton btn_start;
     private static final int READY = 1;
     private static final int UNREADY = 0;
-    private static final int HASGO = 2;
+    private static final int GONE = 2;
     private int state = UNREADY;
     private String pos = null;
     private float alpha = 1.0f;
@@ -93,6 +88,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
+        btn_start = findViewById(R.id.btn_start);
+        morph(state, 300);
         initSerialPort(115200);
         MyLocationStyle myLocationStyle = new MyLocationStyle();
         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
@@ -101,14 +98,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.setOnMarkerClickListener(this);
         aMap.setOnMapClickListener(this);
-        btn_start = findViewById(R.id.btn_start);
-        morph(state, 0);
         findViewById(R.id.btn_start).setOnClickListener(this);
         findViewById(R.id.btn_cancel).setOnClickListener(this);
         findViewById(R.id.btn_clear).setOnClickListener(this);
         findViewById(R.id.btn_detail).setOnClickListener(this);
         findViewById(R.id.btn_history).setOnClickListener(this);
-
+        findViewById(R.id.btn_connect).setOnClickListener(this);
     }
 
     @Override
@@ -222,6 +217,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                     WindowManager.LayoutParams lp = getWindow().getAttributes();
                                     lp.alpha = (float) msg.obj;
                                     getWindow().setAttributes(lp);
+                                    break;
+                                case 2:
+                                    ((PopupWindow)msg.obj).showAtLocation(mMapView, Gravity.CENTER, 0, 0);
                             }
                         }
                     };
@@ -236,9 +234,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    while(alpha > 0.3f){
+                                    while(alpha > 0.5f){
                                         try{
-                                            Thread.sleep(2);
+                                            Thread.sleep(1);
                                         } catch (InterruptedException e) {
                                             e.printStackTrace();
                                         }
@@ -248,9 +246,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                         msg.obj = alpha;
                                         mHandler.sendMessage(msg);
                                     }
+                                    Message msg = mHandler.obtainMessage();
+                                    msg.what = 2;
+                                    msg.obj = popupWindow;
+                                    mHandler.sendMessage(msg);
                                 }
                             }).start();
-                            popupWindow.showAtLocation(mMapView, Gravity.CENTER, 0, 0);
                         }
                     });
 
@@ -268,6 +269,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
                     popupWindow.setOutsideTouchable(true);
                     popupWindow.setFocusable(true);
+                    popupWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
                     popupWindow.setAnimationStyle(R.style.dismiss_anim);
 //                    popupWindow.showAtLocation(mMapView, Gravity.CENTER, 0, 0);
                     popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
@@ -278,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                 public void run() {
                                     while(alpha < 1f){
                                         try {
-                                            Thread.sleep(2);
+                                            Thread.sleep(3);
                                         } catch (InterruptedException e) {
                                             e.printStackTrace();
                                         }
@@ -297,24 +299,29 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 break;
 
             case R.id.btn_start:
-                if (state != READY){
-                    morph(READY, 300);
-                    state = READY;
-                }
-                else {
-                    morph(UNREADY, 300);
-                    state = UNREADY;
-                }
-                if (markers.size() > 0){
-                    StringBuilder stringBuilder = new StringBuilder();
-                    for (Marker marker : markers){
-                        stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
-                    }
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
-                    saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
-                }
-                else{
-                    loadRoute(null);
+                switch (state){
+                    case READY:
+                        if (markers.size() > 0){
+                            StringBuilder stringBuilder = new StringBuilder();
+                            for (Marker marker : markers){
+                                stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
+                            }
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
+                            saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
+                            state = GONE;
+                            morph(state, 300);
+                        }
+                        else{
+                            loadRoute(null);
+                        }
+                        break;
+                    case UNREADY:
+                        initSerialPort(115200);
+                        break;
+                    case GONE:
+                        state = READY;
+                        morph(state, 300);
+                        break;
                 }
                 break;
             case R.id.btn_history:
@@ -347,7 +354,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         .colorPressed(color(R.color.mb_green))
                         .text("Go");
                 break;
-            case HASGO:
+            case GONE:
                 params = MorphingButton.Params.create()
                         .duration(duration)
                         .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
