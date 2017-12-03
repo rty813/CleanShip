@@ -1,7 +1,9 @@
 package com.xyz.rty813.cleanship;
 
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
@@ -11,6 +13,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -71,25 +75,25 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
-    private int state = UNREADY;
+    public static int state = UNREADY;
     private String pos = null;
     private float alpha = 1.0f;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        System.out.println("onCreate");
         dbHelper = new SQLiteDBHelper(this);
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
         markers = new ArrayList<>();
         polylines = new ArrayList<>();
-        serialPort = new SerialPortTool(this);
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
+        serialPort = new SerialPortTool(this);
         btn_start = findViewById(R.id.btn_start);
-        morph(state, 300);
-        initSerialPort(115200);
+        morph(state, 0);
         MyLocationStyle myLocationStyle = new MyLocationStyle();
         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
         aMap.setMyLocationStyle(myLocationStyle);
@@ -102,7 +106,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_clear).setOnClickListener(this);
         findViewById(R.id.btn_detail).setOnClickListener(this);
         findViewById(R.id.btn_history).setOnClickListener(this);
-        findViewById(R.id.btn_connect).setOnClickListener(this);
     }
 
     @Override
@@ -112,8 +115,20 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        System.out.println("onStop");
+//        serialPort.closeDevice();
+//        serialPort = null;
+//        System.gc();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        System.out.println("onDestory");
+        state = UNREADY;
+        serialPort.unregisterReceiver();
         mMapView.onDestroy();
     }
 
@@ -202,9 +217,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 });
                 builder.show();
                 break;
-            case R.id.btn_connect:
-                startActivity(new Intent(this, SerialPortActivity.class));
-                break;
 
             case R.id.btn_detail:
                 if (markers.size() > 0){
@@ -270,6 +282,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     popupWindow.setFocusable(true);
                     popupWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
                     popupWindow.setAnimationStyle(R.style.dismiss_anim);
+                    popupWindow.update();
 //                    popupWindow.showAtLocation(mMapView, Gravity.CENTER, 0, 0);
                     popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
                         @Override
@@ -307,8 +320,17 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             }
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
-                            state = GONE;
-                            morph(state, 300);
+                            try {
+                                serialPort.writeData(stringBuilder.toString());
+                                Toast.makeText(this, "已发送", Toast.LENGTH_SHORT).show();
+                                morph(GONE, 300);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                Toast.makeText(this, "发送失败！", Toast.LENGTH_SHORT).show();
+                                state = UNREADY;
+                                morph(state,200);
+                                serialPort.closeDevice();
+                            }
                         }
                         else{
                             loadRoute(null);
@@ -318,8 +340,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         initSerialPort(115200);
                         break;
                     case GONE:
-                        state = READY;
-                        morph(state, 300);
+                        morph(READY, 300);
                         break;
                 }
                 break;
@@ -329,8 +350,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         }
     }
 
-
-    private void morph(int state, int duration){
+    public void morph(int state, int duration){
+        MainActivity.state = state;
         MorphingButton.Params params = null;
         switch (state){
             case UNREADY:
@@ -388,19 +409,13 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     }
 
     private void initSerialPort(int baudRate){
+        System.out.println("init serial port");
         List<UsbSerialDriver> list = serialPort.searchSerialPort();
         if (list.isEmpty()){
             Toast.makeText(this, "未连接设备", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        try {
-            serialPort.initDevice(list.get(0));
-            serialPort.openDevice(baudRate);
-            state = READY;
-            morph(READY, 500);
-        } catch (IOException e) {
-            Toast.makeText(this, "初始化失败", Toast.LENGTH_SHORT).show();
-            e.printStackTrace();
+            morph(UNREADY, 0);
+        }else{
+            serialPort.initDevice(list.get(0), baudRate);
         }
     }
 
@@ -449,8 +464,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(6).color(Color.RED)));
                 }
             }
-
-
         }
         database.close();
     }
@@ -475,5 +488,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     public void onGeocodeSearched(GeocodeResult geocodeResult, int i) {
 
     }
+
+
 }
 

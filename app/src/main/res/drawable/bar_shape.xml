@@ -10,7 +10,7 @@
                 android:topLeftRadius="5dp"
                 android:topRightRadius="5dp" />
             <stroke android:width="0.33dp" android:color="#afafaf" />
-            <solid android:color="#ffffff" />
+            <solid android:color="#d4ffffff" />
 
         </shape>
     </item>
