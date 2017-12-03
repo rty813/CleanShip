@@ -2,7 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.xyz.rty813.cleanship">
 
-    <uses-feature android:name="android.hardware.usb.host"/>
+    <uses-feature android:name="android.hardware.usb.host" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -23,15 +24,16 @@
             android:name="com.amap.api.v2.apikey"
             android:value="c026cc87761755de77828d295b844238" />
 
-        <activity android:name=".MainActivity" android:launchMode="singleTop">
+        <activity
+            android:name=".MainActivity"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
             <intent-filter>
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"/>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
 
             <meta-data
@@ -39,7 +41,8 @@
                 android:resource="@xml/device_filter" />
         </activity>
         <activity android:name=".HistoryActivity" />
-        <activity android:name=".SerialPortActivity"/>
+        <activity android:name=".SerialPortActivity" />
+
     </application>
 
 </manifest>

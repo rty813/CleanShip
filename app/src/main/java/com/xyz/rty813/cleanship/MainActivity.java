@@ -55,6 +55,11 @@ import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.dd.morphingbutton.MorphingButton;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.kcode.lib.UpdateWrapper;
+import com.kcode.lib.bean.VersionModel;
+import com.kcode.lib.net.CheckUpdateTask;
+import com.xiaomi.mistatistic.sdk.MiStatInterface;
+import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
 
@@ -78,11 +83,20 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     public static int state = UNREADY;
     private String pos = null;
     private float alpha = 1.0f;
+    private static final String MY_APPID = "2882303761517676503";
+    private static final String MY_APP_KEY = "5131767662503";
+    private static final String CHANNEL = "SELF";
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         System.out.println("onCreate");
+        MiStatInterface.initialize(this, MY_APPID, MY_APP_KEY, CHANNEL);
+        MiStatInterface.setUploadPolicy(MiStatInterface.UPLOAD_POLICY_REALTIME, 0);
+        URLStatsRecorder.enableAutoRecord();
+        checkUpdate();
         dbHelper = new SQLiteDBHelper(this);
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
@@ -108,19 +122,33 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_history).setOnClickListener(this);
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mMapView.onPause();
+    private void checkUpdate() {
+        System.out.println("check update");
+        UpdateWrapper updateWrapper = new UpdateWrapper.Builder(getApplicationContext())
+                //set interval Time
+                .setTime(1000)
+                //set notification icon
+                .setNotificationIcon(R.mipmap.ic_launcher)
+                //set update file url
+                .setUrl("http://rty813.xyz/cleanship.json")
+                //set showToast. default is true
+                .setIsShowToast(false)
+                //add callback ,return new version info
+                .setCallback(new CheckUpdateTask.Callback() {
+                    @Override
+                    public void callBack(VersionModel versionModel) {
+                        Log.d("Update","new version :" + versionModel.getVersionCode() + ";version info" + versionModel.getVersionName());
+                    }
+                })
+                .build();
+        updateWrapper.start();
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        System.out.println("onStop");
-//        serialPort.closeDevice();
-//        serialPort = null;
-//        System.gc();
+    protected void onPause() {
+        super.onPause();
+        MiStatInterface.recordPageEnd();
+        mMapView.onPause();
     }
 
     @Override
@@ -135,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     @Override
     protected void onResume() {
         super.onResume();
+        MiStatInterface.recordPageStart(this, "主界面");
         mMapView.onResume();
     }
 
@@ -283,7 +312,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     popupWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
                     popupWindow.setAnimationStyle(R.style.dismiss_anim);
                     popupWindow.update();
-//                    popupWindow.showAtLocation(mMapView, Gravity.CENTER, 0, 0);
                     popupWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
                         @Override
                         public void onDismiss() {
