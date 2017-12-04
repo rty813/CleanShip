@@ -184,6 +184,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
 
         Marker marker = aMap.addMarker(markerOptions);
+        System.out.println(latLng.toString());
         markers.add(marker);
         if (markers.size() > 1) {
             LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
@@ -382,10 +383,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                     for (Marker marker : markers){
                                         double latitude = marker.getPosition().latitude * 100;
                                         double longitude = marker.getPosition().longitude * 100;
-                                        stringBuilder.append(String.format(Locale.getDefault(), "$GNRMC,,A,%.5f,N,%.5f,,,,,,,\n",latitude, longitude));
                                         System.out.println(stringBuilder.toString());
                                         try {
-                                            serialPort.writeData(stringBuilder.toString());
+                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNRMC,,A,%.5f,N,%.5f,,,,,,,\n",latitude, longitude));
                                             Thread.sleep(10);
                                         } catch (Exception e){
                                             e.printStackTrace();
@@ -394,8 +394,15 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                             return;
                                         }
                                     }
-                                    msg.what = 2;
-                                    mHandler.sendMessage(msg);
+                                    try {
+                                        serialPort.writeData("$GNRMC,,B,,,,,,,,,,\n");
+                                        msg.what = 2;
+                                        mHandler.sendMessage(msg);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                        msg.what = 1;
+                                        mHandler.sendMessage(msg);
+                                    }
                                 }
                             }).start();
 //                            try {
@@ -418,8 +425,21 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         initSerialPort(115200);
                         break;
                     case GONE:
-                        morph(READY, 300);
-                        break;
+                        try {
+                            serialPort.writeData("$GNRMC,,C,,,,,,,,,,\n");
+                            Toast.makeText(MainActivity.this, "已结束", Toast.LENGTH_SHORT).show();
+                            morph(READY, 300);
+                            break;
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
+                            state = UNREADY;
+                            morph(state,200);
+                            serialPort.closeDevice();
+                        }
+                        aMap.clear();
+                        markers.removeAll(markers);
+                        polylines.removeAll(polylines);
                 }
                 break;
             case R.id.btn_history:
