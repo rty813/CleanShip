@@ -68,6 +68,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener {
     private MapView mMapView;
@@ -113,6 +114,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aMap.setMyLocationStyle(myLocationStyle);
         aMap.setMyLocationEnabled(true);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
+        aMap.getUiSettings().setScaleControlsEnabled(true);
         aMap.setOnMarkerClickListener(this);
         aMap.setOnMapClickListener(this);
         findViewById(R.id.btn_start).setOnClickListener(this);
@@ -301,10 +303,17 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     RecyclerView recyclerView = popupview.findViewById(R.id.recyclerView_detail);
                     ArrayList<String> detailList = new ArrayList<>();
                     for (int i = 0; i < markers.size(); i++){
-                        detailList.add(String.valueOf(i + 1) + "： 纬度=" + markers.get(i).getPosition().latitude + "\t 经度=" + markers.get(i).getPosition().longitude);
+                        detailList.add(String.format(Locale.CHINA, "%d：纬度=%.6f\t 经度=%.6f", i+1, markers.get(i).getPosition().latitude, markers.get(i).getPosition().longitude));
+//                        detailList.add(String.valueOf(i + 1) + "： 纬度=" + markers.get(i).getPosition().latitude + "\t 经度=" + markers.get(i).getPosition().longitude);
                     }
+                    detailList.add("");
+                    detailList.add("");
                     DetailRecyclerViewAdapter adapter = new DetailRecyclerViewAdapter(detailList);
-                    recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                    LinearLayoutManager linearLayoutManager = new LinearLayoutManager(MainActivity.this);
+                    linearLayoutManager.setSmoothScrollbarEnabled(true);
+                    linearLayoutManager.setAutoMeasureEnabled(true);
+                    recyclerView.setLayoutManager(linearLayoutManager);
+                    recyclerView.setHasFixedSize(true);
                     recyclerView.setAdapter(adapter);
 
                     popupWindow.setOutsideTouchable(true);
@@ -344,21 +353,62 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         if (markers.size() > 0){
                             StringBuilder stringBuilder = new StringBuilder();
                             for (Marker marker : markers){
-                                stringBuilder.append(String.valueOf(marker.getPosition().latitude) + "," + String.valueOf(marker.getPosition().longitude) + ";");
-                            }
+                                stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
+}
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
-                            try {
-                                serialPort.writeData(stringBuilder.toString());
-                                Toast.makeText(this, "已发送", Toast.LENGTH_SHORT).show();
-                                morph(GONE, 300);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                                Toast.makeText(this, "发送失败！", Toast.LENGTH_SHORT).show();
-                                state = UNREADY;
-                                morph(state,200);
-                                serialPort.closeDevice();
-                            }
+                            final Handler mHandler = new Handler(){
+                                @Override
+                                public void handleMessage(Message msg) {
+                                    switch (msg.what){
+                                        case 1:
+                                            Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
+                                            state = UNREADY;
+                                            morph(state,200);
+                                            serialPort.closeDevice();
+                                            break;
+                                        case 2:
+                                            Toast.makeText(MainActivity.this, "已发送", Toast.LENGTH_SHORT).show();
+                                            morph(GONE, 300);
+                                            break;
+                                    }
+                                }
+                            };
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    StringBuilder stringBuilder = new StringBuilder();
+                                    Message msg = mHandler.obtainMessage();
+                                    for (Marker marker : markers){
+                                        double latitude = marker.getPosition().latitude * 100;
+                                        double longitude = marker.getPosition().longitude * 100;
+                                        stringBuilder.append(String.format(Locale.getDefault(), "$GNRMC,,A,%.5f,N,%.5f,,,,,,,\n",latitude, longitude));
+                                        System.out.println(stringBuilder.toString());
+                                        try {
+                                            serialPort.writeData(stringBuilder.toString());
+                                            Thread.sleep(10);
+                                        } catch (Exception e){
+                                            e.printStackTrace();
+                                            msg.what = 1;
+                                            mHandler.sendMessage(msg);
+                                            return;
+                                        }
+                                    }
+                                    msg.what = 2;
+                                    mHandler.sendMessage(msg);
+                                }
+                            }).start();
+//                            try {
+//                                serialPort.writeData(stringBuilder.toString());
+//                                Toast.makeText(this, "已发送", Toast.LENGTH_SHORT).show();
+//                                morph(GONE, 300);
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                                Toast.makeText(this, "发送失败！", Toast.LENGTH_SHORT).show();
+//                                state = UNREADY;
+//                                morph(state,200);
+//                                serialPort.closeDevice();
+//                            }
                         }
                         else{
                             loadRoute(null);
