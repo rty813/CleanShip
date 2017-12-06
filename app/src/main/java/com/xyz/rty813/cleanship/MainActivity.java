@@ -32,6 +32,9 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
 import android.widget.PopupWindow;
 import android.widget.Toast;
 
@@ -69,6 +72,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+
+import app.dinus.com.loadingdrawable.render.LoadingRenderer;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener {
     private MapView mMapView;
@@ -122,6 +127,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_clear).setOnClickListener(this);
         findViewById(R.id.btn_detail).setOnClickListener(this);
         findViewById(R.id.btn_history).setOnClickListener(this);
+
     }
 
     private void checkUpdate() {
@@ -361,6 +367,26 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             final Handler mHandler = new Handler(){
                                 @Override
                                 public void handleMessage(Message msg) {
+                                    AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
+                                    animation.setDuration(300);
+                                    animation.setInterpolator(new AccelerateDecelerateInterpolator());
+                                    animation.setAnimationListener(new Animation.AnimationListener() {
+                                        @Override
+                                        public void onAnimationStart(Animation animation) {
+
+                                        }
+
+                                        @Override
+                                        public void onAnimationEnd(Animation animation) {
+                                            findViewById(R.id.loadingview).setVisibility(View.GONE);
+                                        }
+
+                                        @Override
+                                        public void onAnimationRepeat(Animation animation) {
+
+                                        }
+                                    });
+                                    findViewById(R.id.loadingview).startAnimation(animation);
                                     switch (msg.what){
                                         case 1:
                                             Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
@@ -375,6 +401,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                     }
                                 }
                             };
+                            findViewById(R.id.loadingview).setVisibility(View.VISIBLE);
+                            AlphaAnimation animation = new AlphaAnimation(0.0f, 1.0f);
+                            animation.setDuration(300);
+                            animation.setInterpolator(new AccelerateDecelerateInterpolator());
+                            findViewById(R.id.loadingview).startAnimation(animation);
+
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -385,8 +417,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                         double longitude = marker.getPosition().longitude * 100;
                                         System.out.println(stringBuilder.toString());
                                         try {
-                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.5f,0,%.5f,#\n",latitude, longitude));
-                                            Thread.sleep(50);
+                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.5f,0,%.5f,#",latitude, longitude));
+                                            Thread.sleep(200);
                                         } catch (Exception e){
                                             e.printStackTrace();
                                             msg.what = 1;
@@ -395,13 +427,18 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                         }
                                     }
                                     try {
-                                        serialPort.writeData("$CALC#\n");
+                                        serialPort.writeData("$CALC#");
+                                        Thread.sleep(200);
+                                        serialPort.writeData("$XJ#");
+                                        Thread.sleep(200);
                                         msg.what = 2;
                                         mHandler.sendMessage(msg);
                                     } catch (IOException e) {
                                         e.printStackTrace();
                                         msg.what = 1;
                                         mHandler.sendMessage(msg);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
                                     }
                                 }
                             }).start();

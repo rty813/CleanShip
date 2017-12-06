@@ -40,6 +40,16 @@
         <!--android:paddingRight="10dp"-->
         <!--android:text="设备状态：未连接"-->
         <!--/>-->
+
+    <app.dinus.com.loadingdrawable.LoadingView
+        android:id="@+id/loadingview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#ffcdcdcd"
+        android:layout_gravity="center"
+        app:loading_renderer="GhostsEyeLoadingRenderer"
+        android:visibility="gone"/>
+
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
