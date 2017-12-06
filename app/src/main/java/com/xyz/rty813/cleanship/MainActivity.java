@@ -386,7 +386,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                         System.out.println(stringBuilder.toString());
                                         try {
                                             serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.5f,0,%.5f,#\n",latitude, longitude));
-                                            Thread.sleep(10);
+                                            Thread.sleep(50);
                                         } catch (Exception e){
                                             e.printStackTrace();
                                             msg.what = 1;
