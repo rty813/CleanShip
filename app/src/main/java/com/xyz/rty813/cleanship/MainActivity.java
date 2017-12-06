@@ -385,7 +385,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                         double longitude = marker.getPosition().longitude * 100;
                                         System.out.println(stringBuilder.toString());
                                         try {
-                                            serialPort.writeData(String.format(Locale.getDefault(), "GNGGA,,A,%.5f,N,%.5f,,,,,,,#\n",latitude, longitude));
+                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.5f,0,%.5f,#\n",latitude, longitude));
                                             Thread.sleep(10);
                                         } catch (Exception e){
                                             e.printStackTrace();
