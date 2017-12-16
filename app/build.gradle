@@ -6,8 +6,8 @@ android {
         applicationId "com.xyz.rty813.cleanship"
         minSdkVersion 16
         targetSdkVersion 26
-        versionCode 6
-        versionName "0.4.2"
+        versionCode 7
+        versionName "0.5"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -39,4 +39,6 @@ dependencies {
     implementation files('lib/MiStats_SDK_Client_1_9_6.jar')
     compile 'com.github.fccaikai:AppUpdate:2.1.4'
     implementation project(':LoadingView')
+    compile 'com.karumi:dexter:4.2.0'
+
 }

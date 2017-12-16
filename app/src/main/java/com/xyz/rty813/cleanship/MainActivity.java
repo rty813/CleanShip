@@ -1,5 +1,6 @@
 package com.xyz.rty813.cleanship;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
@@ -58,11 +59,18 @@ import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.dd.morphingbutton.MorphingButton;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.karumi.dexter.Dexter;
+import com.karumi.dexter.PermissionToken;
+import com.karumi.dexter.listener.PermissionDeniedResponse;
+import com.karumi.dexter.listener.PermissionGrantedResponse;
+import com.karumi.dexter.listener.PermissionRequest;
+import com.karumi.dexter.listener.single.PermissionListener;
 import com.kcode.lib.UpdateWrapper;
 import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
+import com.xyz.rty813.cleanship.util.CoordinateConverter;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
 
@@ -103,6 +111,25 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         MiStatInterface.setUploadPolicy(MiStatInterface.UPLOAD_POLICY_REALTIME, 0);
         URLStatsRecorder.enableAutoRecord();
         checkUpdate();
+        Dexter.withActivity(this)
+                .withPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                .withListener(new PermissionListener() {
+                    @Override
+                    public void onPermissionGranted(PermissionGrantedResponse response) {
+
+                    }
+
+                    @Override
+                    public void onPermissionDenied(PermissionDeniedResponse response) {
+                        finish();
+                    }
+
+                    @Override
+                    public void onPermissionRationaleShouldBeShown(PermissionRequest permission, PermissionToken token) {
+
+                    }
+                })
+                .check();
         dbHelper = new SQLiteDBHelper(this);
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
@@ -310,8 +337,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     RecyclerView recyclerView = popupview.findViewById(R.id.recyclerView_detail);
                     ArrayList<String> detailList = new ArrayList<>();
                     for (int i = 0; i < markers.size(); i++){
-                        detailList.add(String.format(Locale.CHINA, "%d：纬度=%.6f\t 经度=%.6f", i+1, markers.get(i).getPosition().latitude, markers.get(i).getPosition().longitude));
-//                        detailList.add(String.valueOf(i + 1) + "： 纬度=" + markers.get(i).getPosition().latitude + "\t 经度=" + markers.get(i).getPosition().longitude);
+                        LatLonPoint point = CoordinateConverter.toWGS84Point(markers.get(i).getPosition().latitude, markers.get(i).getPosition().longitude);
+                        detailList.add(String.format(Locale.CHINA, "%d：纬度=%.6f\t 经度=%.6f", i+1, point.getLatitude(), point.getLongitude()));
                     }
                     detailList.add("");
                     detailList.add("");
@@ -360,7 +387,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         if (markers.size() > 0){
                             StringBuilder stringBuilder = new StringBuilder();
                             for (Marker marker : markers){
-                                stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
+                                LatLonPoint point = CoordinateConverter.toWGS84Point(marker.getPosition().latitude, marker.getPosition().longitude);
+                                stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", point.getLatitude(), point.getLongitude()));
                             }
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
@@ -413,8 +441,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                     StringBuilder stringBuilder = new StringBuilder();
                                     Message msg = mHandler.obtainMessage();
                                     for (Marker marker : markers){
-                                        double latitude = marker.getPosition().latitude * 100;
-                                        double longitude = marker.getPosition().longitude * 100;
+                                        LatLonPoint point = CoordinateConverter.toWGS84Point(marker.getPosition().latitude, marker.getPosition().longitude);
+                                        double latitude = point.getLatitude() * 100;
+                                        double longitude = point.getLongitude() * 100;
                                         System.out.println(stringBuilder.toString());
                                         try {
                                             serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.5f,0,%.5f,#",latitude, longitude));
@@ -572,7 +601,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             String[] markers_str = route.split(";");
             for (int i = 0; i < markers_str.length; i++){
                 String[] location = markers_str[i].split(",");
-                LatLng latLng = new LatLng(Float.parseFloat(location[0]), Float.parseFloat(location[1]));
+                LatLonPoint point = CoordinateConverter.toGCJ02Point(Float.parseFloat(location[0]), Float.parseFloat(location[1]));
+                LatLng latLng = new LatLng(point.getLatitude(), point.getLongitude());
                 if (i == 0){
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
                     aMap.moveCamera(cameraUpdate);
