@@ -2,9 +2,7 @@ package com.xyz.rty813.cleanship;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -15,8 +13,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
-import android.hardware.usb.UsbDevice;
-import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -30,7 +26,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.util.Pair;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -54,7 +49,6 @@ import com.amap.api.maps.model.MarkerOptions;
 import com.amap.api.maps.model.MyLocationStyle;
 import com.amap.api.maps.model.Polyline;
 import com.amap.api.maps.model.PolylineOptions;
-import com.amap.api.maps.utils.SpatialRelationUtil;
 import com.amap.api.maps.utils.overlay.SmoothMoveMarker;
 import com.amap.api.services.core.LatLonPoint;
 import com.amap.api.services.geocoder.GeocodeResult;
@@ -75,7 +69,6 @@ import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
-import com.xyz.rty813.cleanship.util.CoordinateConverter;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
 
@@ -85,8 +78,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
-import app.dinus.com.loadingdrawable.render.LoadingRenderer;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener {
     private MapView mMapView;
@@ -470,20 +461,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                     }
                                     msg.what = 2;
                                     mHandler.sendMessage(msg);
-//                                    try {
-//                                        serialPort.writeData("$CALC#");
-//                                        Thread.sleep(200);
-//                                        serialPort.writeData("$XJ#");
-//                                        Thread.sleep(200);
-//                                        msg.what = 2;
-//                                        mHandler.sendMessage(msg);
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                        msg.what = 1;
-//                                        mHandler.sendMessage(msg);
-//                                    } catch (InterruptedException e) {
-//                                        e.printStackTrace();
-//                                    }
                                 }
                             }).start();
                         }
@@ -640,7 +617,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 LatLng latLng = new LatLng(Double.parseDouble(location[0]), Double.parseDouble(location[1]));
                 if (i == 0){
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
-                    aMap.moveCamera(cameraUpdate);
+                    aMap.animateCamera(cameraUpdate);
                 }
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
                 markerOptions.title(String.valueOf(markers.size() + 1));
