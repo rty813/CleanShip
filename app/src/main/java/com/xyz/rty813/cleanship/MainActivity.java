@@ -7,6 +7,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
@@ -29,6 +30,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -39,18 +41,21 @@ import android.view.animation.Animation;
 import android.widget.PopupWindow;
 import android.widget.Toast;
 
-import com.amap.api.maps2d.AMap;
-import com.amap.api.maps2d.CameraUpdate;
-import com.amap.api.maps2d.CameraUpdateFactory;
-import com.amap.api.maps2d.MapView;
-import com.amap.api.maps2d.model.BitmapDescriptorFactory;
-import com.amap.api.maps2d.model.CameraPosition;
-import com.amap.api.maps2d.model.LatLng;
-import com.amap.api.maps2d.model.Marker;
-import com.amap.api.maps2d.model.MarkerOptions;
-import com.amap.api.maps2d.model.MyLocationStyle;
-import com.amap.api.maps2d.model.Polyline;
-import com.amap.api.maps2d.model.PolylineOptions;
+import com.amap.api.maps.AMap;
+import com.amap.api.maps.CameraUpdate;
+import com.amap.api.maps.CameraUpdateFactory;
+import com.amap.api.maps.MapView;
+import com.amap.api.maps.model.BitmapDescriptorFactory;
+import com.amap.api.maps.model.CameraPosition;
+import com.amap.api.maps.model.LatLng;
+import com.amap.api.maps.model.LatLngBounds;
+import com.amap.api.maps.model.Marker;
+import com.amap.api.maps.model.MarkerOptions;
+import com.amap.api.maps.model.MyLocationStyle;
+import com.amap.api.maps.model.Polyline;
+import com.amap.api.maps.model.PolylineOptions;
+import com.amap.api.maps.utils.SpatialRelationUtil;
+import com.amap.api.maps.utils.overlay.SmoothMoveMarker;
 import com.amap.api.services.core.LatLonPoint;
 import com.amap.api.services.geocoder.GeocodeResult;
 import com.amap.api.services.geocoder.GeocodeSearch;
@@ -101,6 +106,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private static final String MY_APPID = "2882303761517676503";
     private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
+    private MyReceiver receiver;
+    private ArrayList<LatLng> shipPointList;
+    private SmoothMoveMarker smoothMoveMarker;
 
 
     @Override
@@ -150,6 +158,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aMap.getUiSettings().setScaleControlsEnabled(true);
         aMap.setOnMarkerClickListener(this);
         aMap.setOnMapClickListener(this);
+        initSmoothMove();
         findViewById(R.id.btn_start).setOnClickListener(this);
         findViewById(R.id.btn_cancel).setOnClickListener(this);
         findViewById(R.id.btn_clear).setOnClickListener(this);
@@ -185,6 +194,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         super.onPause();
         MiStatInterface.recordPageEnd();
         mMapView.onPause();
+        unregisterReceiver(receiver);
     }
 
     @Override
@@ -201,6 +211,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         super.onResume();
         MiStatInterface.recordPageStart(this, "主界面");
         mMapView.onResume();
+        receiver = new MyReceiver();
+        registerReceiver(receiver, new IntentFilter(MyReceiver.ACTION_DATA_RECEIVED));
     }
 
     @Override
@@ -329,6 +341,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                     mHandler.sendMessage(msg);
                                 }
                             }).start();
+                        }
+
+                        @Override
+                        public void onMapScreenShot(Bitmap bitmap, int i) {
+
                         }
                     });
 
@@ -620,7 +637,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             String[] markers_str = route.split(";");
             for (int i = 0; i < markers_str.length; i++){
                 String[] location = markers_str[i].split(",");
-                LatLng latLng = new LatLng(Float.parseFloat(location[0]), Float.parseFloat(location[1]));
+                LatLng latLng = new LatLng(Double.parseDouble(location[0]), Double.parseDouble(location[1]));
                 if (i == 0){
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
                     aMap.moveCamera(cameraUpdate);
@@ -661,6 +678,32 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
     }
 
+    public ArrayList<LatLng> getShipPointList() {
+        return shipPointList;
+    }
 
+    private void initSmoothMove(){
+        shipPointList = new ArrayList<>();
+        smoothMoveMarker = new SmoothMoveMarker(aMap);
+        smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromResource(R.drawable.ship));
+
+    }
+
+    private void focusShip(){
+        LatLngBounds bounds = new LatLngBounds(shipPointList.get(0), shipPointList.get(shipPointList.size() - 1));
+        aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
+    }
+
+    public void move(){
+        if (shipPointList.size() == 1){
+            focusShip();
+        }
+        else{
+            List<LatLng> subList = shipPointList.subList(shipPointList.size() - 2, shipPointList.size());
+            smoothMoveMarker.setPoints(subList);
+            smoothMoveMarker.setTotalDuration(1);
+            smoothMoveMarker.startSmoothMove();
+        }
+    }
 }
 

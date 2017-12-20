@@ -6,7 +6,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root_view"
     tools:context="com.xyz.rty813.cleanship.MainActivity">
-    <com.amap.api.maps2d.MapView
+    <com.amap.api.maps.MapView
         android:id="@+id/mapview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>

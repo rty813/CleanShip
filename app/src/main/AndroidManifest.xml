@@ -43,6 +43,10 @@
         <activity android:name=".HistoryActivity" />
         <activity android:name=".SerialPortActivity" />
 
+        <receiver
+            android:name=".MyReceiver"
+            android:enabled="true"
+            android:exported="true"></receiver>
     </application>
 
 </manifest>
