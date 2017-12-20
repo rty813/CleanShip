@@ -94,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
+    private static final int NAV = 3;
     public static int state = UNREADY;
     private String pos = null;
     private float alpha = 1.0f;
@@ -337,8 +338,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     RecyclerView recyclerView = popupview.findViewById(R.id.recyclerView_detail);
                     ArrayList<String> detailList = new ArrayList<>();
                     for (int i = 0; i < markers.size(); i++){
-                        LatLonPoint point = CoordinateConverter.toWGS84Point(markers.get(i).getPosition().latitude, markers.get(i).getPosition().longitude);
-                        detailList.add(String.format(Locale.CHINA, "%d：纬度=%.6f\t 经度=%.6f", i+1, point.getLatitude(), point.getLongitude()));
+                        detailList.add(String.format(Locale.CHINA, "%d：纬度=%.6f\t 经度=%.6f", i+1, markers.get(i).getPosition().latitude, markers.get(i).getPosition().longitude));
                     }
                     detailList.add("");
                     detailList.add("");
@@ -387,8 +387,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         if (markers.size() > 0){
                             StringBuilder stringBuilder = new StringBuilder();
                             for (Marker marker : markers){
-                                LatLonPoint point = CoordinateConverter.toWGS84Point(marker.getPosition().latitude, marker.getPosition().longitude);
-                                stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", point.getLatitude(), point.getLongitude()));
+                                stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
                             }
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
@@ -418,13 +417,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                     switch (msg.what){
                                         case 1:
                                             Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
-                                            state = UNREADY;
-                                            morph(state,200);
+                                            morph(UNREADY,200);
                                             serialPort.closeDevice();
                                             break;
                                         case 2:
-                                            Toast.makeText(MainActivity.this, "已发送", Toast.LENGTH_SHORT).show();
-                                            morph(GONE, 300);
+                                            morph(NAV, 300);
                                             break;
                                     }
                                 }
@@ -441,9 +438,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                     StringBuilder stringBuilder = new StringBuilder();
                                     Message msg = mHandler.obtainMessage();
                                     for (Marker marker : markers){
-                                        LatLonPoint point = CoordinateConverter.toWGS84Point(marker.getPosition().latitude, marker.getPosition().longitude);
-                                        double latitude = point.getLatitude() * 100;
-                                        double longitude = point.getLongitude() * 100;
+                                        double latitude = marker.getPosition().latitude * 100;
+                                        double longitude = marker.getPosition().longitude * 100;
                                         System.out.println(stringBuilder.toString());
                                         try {
                                             serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.5f,0,%.5f,#",latitude, longitude));
@@ -455,20 +451,22 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                             return;
                                         }
                                     }
-                                    try {
-                                        serialPort.writeData("$CALC#");
-                                        Thread.sleep(200);
-                                        serialPort.writeData("$XJ#");
-                                        Thread.sleep(200);
-                                        msg.what = 2;
-                                        mHandler.sendMessage(msg);
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                        msg.what = 1;
-                                        mHandler.sendMessage(msg);
-                                    } catch (InterruptedException e) {
-                                        e.printStackTrace();
-                                    }
+                                    msg.what = 2;
+                                    mHandler.sendMessage(msg);
+//                                    try {
+//                                        serialPort.writeData("$CALC#");
+//                                        Thread.sleep(200);
+//                                        serialPort.writeData("$XJ#");
+//                                        Thread.sleep(200);
+//                                        msg.what = 2;
+//                                        mHandler.sendMessage(msg);
+//                                    } catch (IOException e) {
+//                                        e.printStackTrace();
+//                                        msg.what = 1;
+//                                        mHandler.sendMessage(msg);
+//                                    } catch (InterruptedException e) {
+//                                        e.printStackTrace();
+//                                    }
                                 }
                             }).start();
                         }
@@ -479,6 +477,18 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     case UNREADY:
                         initSerialPort(115200);
                         break;
+                    case NAV:
+                        try {
+                            serialPort.writeData("$NAV#\n");
+                            morph(GONE, 300);
+                            break;
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
+                            morph(UNREADY,200);
+                            serialPort.closeDevice();
+                        }
+                        break;
                     case GONE:
                         try {
                             serialPort.writeData("$STOP#\n");
@@ -488,8 +498,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         } catch (IOException e) {
                             e.printStackTrace();
                             Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
-                            state = UNREADY;
-                            morph(state,200);
+                            morph(UNREADY,200);
                             serialPort.closeDevice();
                         }
                         aMap.clear();
@@ -525,7 +534,17 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         .height(dimen(R.dimen.mb_height_56))
                         .color(color(R.color.mb_green))
                         .colorPressed(color(R.color.mb_green))
-                        .text("Go");
+                        .text("CALC");
+                break;
+            case NAV:
+                params = MorphingButton.Params.create()
+                        .duration(duration)
+                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                        .width(dimen(R.dimen.mb_width_100))
+                        .height(dimen(R.dimen.mb_height_56))
+                        .color(color(R.color.mb_green))
+                        .colorPressed(color(R.color.mb_green))
+                        .text("NAV");
                 break;
             case GONE:
                 params = MorphingButton.Params.create()
@@ -535,7 +554,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         .height(dimen(R.dimen.mb_height_56))
                         .color(color(R.color.mb_red))
                         .colorPressed(color(R.color.mb_red))
-                        .text("Stop");
+                        .text("STOP");
                 break;
         }
         btn_start.morph(params);
@@ -601,8 +620,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             String[] markers_str = route.split(";");
             for (int i = 0; i < markers_str.length; i++){
                 String[] location = markers_str[i].split(",");
-                LatLonPoint point = CoordinateConverter.toGCJ02Point(Float.parseFloat(location[0]), Float.parseFloat(location[1]));
-                LatLng latLng = new LatLng(point.getLatitude(), point.getLongitude());
+                LatLng latLng = new LatLng(Float.parseFloat(location[0]), Float.parseFloat(location[1]));
                 if (i == 0){
                     CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
                     aMap.moveCamera(cameraUpdate);
