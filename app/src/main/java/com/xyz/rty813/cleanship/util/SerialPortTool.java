@@ -86,13 +86,17 @@ public class SerialPortTool {
                             while (mContext.state != UNREADY){
                                 String data = readData();
                                 String[] strings = data.split(";");
-                                System.out.println(data + "\t" + strings.length);
+                                Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                                intent.putExtra("rawData", data);
                                 if (strings.length == 2){
-                                    Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                                    intent.putExtra("type", Integer.parseInt(strings[0]));
-                                    intent.putExtra("data", strings[1]);
-                                    mContext.sendBroadcast(intent);
+                                    try {
+                                        intent.putExtra("type", Integer.parseInt(strings[0]));
+                                        intent.putExtra("data", strings[1]);
+                                    }catch (NumberFormatException e){
+                                        e.printStackTrace();
+                                    }
                                 }
+                                mContext.sendBroadcast(intent);
                             }
                         }
                     }).start();

@@ -105,6 +105,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private TextView tvAimAngle;
     private TextView tvGyroAngle;
     private TextView tvCurrGas;
+    private TextView tvCurrLat;
+    private TextView tvCurrLng;
+    private TextView tvRawData;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         System.out.println("onCreate");
         MiStatInterface.initialize(this, MY_APPID, MY_APP_KEY, CHANNEL);
         MiStatInterface.setUploadPolicy(MiStatInterface.UPLOAD_POLICY_REALTIME, 0);
+        MiStatInterface.enableExceptionCatcher(true);
         URLStatsRecorder.enableAutoRecord();
         checkUpdate();
         Dexter.withActivity(this)
@@ -163,20 +167,18 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         tvAimAngle = findViewById(R.id.tv_aim_angle);
         tvCurrGas = findViewById(R.id.tv_curr_gas);
         tvGyroAngle = findViewById(R.id.tv_gyro_angle);
+        tvCurrLat = findViewById(R.id.tv_curr_lat);
+        tvCurrLng = findViewById(R.id.tv_curr_lng);
+        tvRawData = findViewById(R.id.tv_raw_data);
     }
 
     private void checkUpdate() {
         System.out.println("check update");
         UpdateWrapper updateWrapper = new UpdateWrapper.Builder(getApplicationContext())
-                //set interval Time
                 .setTime(1000)
-                //set notification icon
                 .setNotificationIcon(R.mipmap.ic_launcher)
-                //set update file url
                 .setUrl("http://rty813.xyz/cleanship.json")
-                //set showToast. default is true
                 .setIsShowToast(false)
-                //add callback ,return new version info
                 .setCallback(new CheckUpdateTask.Callback() {
                     @Override
                     public void callBack(VersionModel versionModel) {
@@ -286,11 +288,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 builder.setPositiveButton("是", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        aMap.clear();
-                        shipPointList.removeAll(shipPointList);
-                        aimPointList.removeAll(aimPointList);
-                        markers.removeAll(markers);
-                        polylines.removeAll(polylines);
+                       resetMap();
                     }
                 });
                 builder.show();
@@ -408,7 +406,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             }
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
-                            final Handler mHandler = new Handler(){
+                            @SuppressLint("HandlerLeak") final Handler mHandler = new Handler(){
                                 @Override
                                 public void handleMessage(Message msg) {
                                     AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
@@ -504,11 +502,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             morph(UNREADY,200);
                             serialPort.closeDevice();
                         }
-                        aMap.clear();
-                        shipPointList.removeAll(shipPointList);
-                        aimPointList.removeAll(aimPointList);
-                        markers.removeAll(markers);
-                        polylines.removeAll(polylines);
+                       resetMap();
                 }
                 break;
             case R.id.btn_history:
@@ -608,11 +602,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
     private void loadRoute(@Nullable String id){
         SQLiteDatabase database = MainActivity.dbHelper.getReadableDatabase();
-        aMap.clear();
-        shipPointList.removeAll(shipPointList);
-        aimPointList.removeAll(aimPointList);
-        markers.removeAll(markers);
-        polylines.removeAll(polylines);
+        resetMap();
         Cursor cursor;
         if (id != null){
             cursor = database.query(MainActivity.dbHelper.TABLE_NAME, null, "ID=?", new String[]{id} ,null, null, null);
@@ -700,6 +690,23 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         this.tvCurrGas.setText(currGas);
     }
 
+    public void setCurrLat(String currLat) {
+        this.tvCurrLat.setText(currLat);
+    }
+
+    public void setCurrLng(String currLng) {
+        this.tvCurrLng.setText(currLng);
+    }
+
+    public void setRawData(String rawData){
+        if (rawData.length() > 1 && rawData.substring(0,1).equals("3")){
+            Toast.makeText(this, "收到了目标方位角！\n" + rawData, Toast.LENGTH_SHORT).show();
+        }
+        if (this.tvRawData.getText().toString().split("\n").length > 20){
+            this.tvRawData.setText("");
+        }
+        this.tvRawData.setText(this.tvRawData.getText().toString() + "\n" + rawData);
+    }
     public void setAimAngle(String aimAngle){
         this.tvAimAngle.setText(aimAngle);
     }
@@ -717,6 +724,15 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.aim)));
             aMap.addMarker(markerOptions);
         }
+    }
+
+    private void resetMap(){
+        aMap.clear();
+        shipPointList.removeAll(shipPointList);
+        aimPointList.removeAll(aimPointList);
+        markers.removeAll(markers);
+        polylines.removeAll(polylines);
+        initSmoothMove();
     }
 }
 
