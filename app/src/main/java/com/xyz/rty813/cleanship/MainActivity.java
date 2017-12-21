@@ -224,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 //        System.out.println(latLng.toString());
         MarkerOptions markerOptions = new MarkerOptions().position(latLng);
         markerOptions.title(String.valueOf(markers.size() + 1));
-        markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
+        markerOptions.snippet(String.format("纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
         markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
 
         Marker marker = aMap.addMarker(markerOptions);
@@ -459,7 +459,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                         double longitude = marker.getPosition().longitude * 100;
                                         System.out.println(stringBuilder.toString());
                                         try {
-                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.5f,0,%.5f,#",latitude, longitude));
+                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.4f,0,%.4f,#",latitude, longitude));
                                             Thread.sleep(200);
                                         } catch (Exception e){
                                             e.printStackTrace();
@@ -713,7 +713,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             aimPointList.add(aimPoint);
             MarkerOptions markerOptions = new MarkerOptions().position(aimPoint);
             markerOptions.title(String.valueOf(aimPointList.size()));
-            markerOptions.snippet("纬度：" + aimPoint.latitude + "\n经度：" + aimPoint.longitude);
+            markerOptions.snippet(String.format("纬度：%.6f\n经度：%.6f", aimPoint.latitude, aimPoint.longitude));
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.aim)));
             aMap.addMarker(markerOptions);
         }
