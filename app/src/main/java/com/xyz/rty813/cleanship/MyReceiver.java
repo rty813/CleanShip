@@ -21,34 +21,41 @@ public class MyReceiver extends BroadcastReceiver {
         activity.setRawData(rawData);
 //        type代表数据类型
 //        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前舵量
-        switch (intent.getIntExtra("type", -1)) {
-            case 0:
-                Double lat = Double.parseDouble(datas[0]);
-                Double lng = Double.parseDouble(datas[1]);
-                if (lat < 0 || lat > 55 || lng < 70 || lng > 136){
-                    return;
-                }
-                activity.setCurrLat(datas[0]);
-                activity.setCurrLng(datas[1]);
-                activity.getShipPointList().add(new LatLng(lat, lng));
-                activity.move();
-                break;
-            case 1:
-                lat = Double.parseDouble(datas[0]);
-                lng = Double.parseDouble(datas[1]);
-                activity.setAimPoint(new LatLng(lat, lng));
-                break;
-            case 2:
-                activity.setGyroAngle(data);
-                break;
-            case 3:
-                activity.setAimAngle(data);
-                break;
-            case 4:
-                activity.setCurrGas(data);
-                break;
-            default:
-                break;
+        try {
+            switch (intent.getIntExtra("type", -1)) {
+                case 0:
+                    double lat = Double.parseDouble(datas[0]);
+                    double lng = Double.parseDouble(datas[1]);
+                    if (lat < 0 || lat > 55 || lng < 70 || lng > 136) {
+                        return;
+                    }
+                    activity.setCurrLat(datas[0]);
+                    activity.setCurrLng(datas[1]);
+                    activity.getShipPointList().add(new LatLng(lat, lng));
+                    activity.move();
+                    break;
+                case 1:
+                    lat = Double.parseDouble(datas[0]);
+                    lng = Double.parseDouble(datas[1]);
+                    activity.setAimPoint(new LatLng(lat, lng));
+                    break;
+                case 2:
+                    double gyroAngle = Double.parseDouble(data);
+                    activity.setGyroAngle(gyroAngle);
+                    break;
+                case 3:
+                    double aimAngle = Double.parseDouble(data);
+                    activity.setAimAngle(aimAngle);
+                    break;
+                case 4:
+                    activity.setCurrGas(data);
+                    break;
+                default:
+                    break;
+            }
+        }
+        catch (Exception e){
+            e.printStackTrace();
         }
     }
 }

@@ -33,7 +33,11 @@ import android.view.WindowManager;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -108,6 +112,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private TextView tvCurrLat;
     private TextView tvCurrLng;
     private TextView tvRawData;
+    private ImageView ivPointerAim;
+    private ImageView ivPointerGyro;
+    private double lastAimAngle;
+    private double lastGyroAngle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -170,6 +178,33 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         tvCurrLat = findViewById(R.id.tv_curr_lat);
         tvCurrLng = findViewById(R.id.tv_curr_lng);
         tvRawData = findViewById(R.id.tv_raw_data);
+        ivPointerAim = findViewById(R.id.ivPointerAim);
+        ivPointerGyro = findViewById(R.id.ivPointerGyro);
+        ivPointerAim.post(new Runnable() {
+            @Override
+            public void run() {
+                ViewGroup.LayoutParams params = ivPointerAim.getLayoutParams();
+                params.height = params.height * 2;
+                ivPointerAim.setLayoutParams(params);
+            }
+        });
+
+        ((SeekBar)findViewById(R.id.seekbar)).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                setAimAngle(i);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
     }
 
     private void checkUpdate() {
@@ -564,10 +599,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     }
 
     public int color(@ColorRes int resId) {
-
         return getResources().getColor(resId);
-
     }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK){
@@ -707,12 +741,24 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         }
         this.tvRawData.setText(this.tvRawData.getText().toString() + "\n" + rawData);
     }
-    public void setAimAngle(String aimAngle){
-        this.tvAimAngle.setText(aimAngle);
+    public void setAimAngle(double aimAngle){
+        this.tvAimAngle.setText(String.valueOf(aimAngle));
+        RotateAnimation animation = new RotateAnimation((float)lastAimAngle, (float)aimAngle,
+                Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        animation.setDuration(100);
+        animation.setFillAfter(true);
+        ivPointerAim.startAnimation(animation);
+        lastAimAngle = aimAngle;
     }
 
-    public void setGyroAngle(String gyroAngle){
-        this.tvGyroAngle.setText(gyroAngle);
+    public void setGyroAngle(double gyroAngle){
+        this.tvGyroAngle.setText(String.valueOf(gyroAngle));
+        RotateAnimation animation = new RotateAnimation((float)lastGyroAngle, (float)gyroAngle,
+                Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        animation.setDuration(100);
+        animation.setFillAfter(true);
+        ivPointerAim.startAnimation(animation);
+        lastGyroAngle = gyroAngle;
     }
 
     public void setAimPoint(LatLng aimPoint){

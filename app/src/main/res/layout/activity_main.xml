@@ -121,7 +121,35 @@
 
     </LinearLayout>
 
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|top"
+        android:background="@drawable/angle_circle"
+        android:layout_marginTop="70dp"
+        android:layout_marginRight="20dp">
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/pointer_aim"
+            android:id="@+id/ivPointerAim"/>
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/pointer_gyro"
+            android:id="@+id/ivPointerGyro"/>
+    </FrameLayout>
 
+    <SeekBar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/seekbar"
+        android:visibility="gone"
+        android:max="360"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="100dp"/>
 
     <app.dinus.com.loadingdrawable.LoadingView
         android:id="@+id/loadingview"

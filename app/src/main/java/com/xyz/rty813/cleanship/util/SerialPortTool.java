@@ -77,7 +77,6 @@ public class SerialPortTool {
                 try {
                     mPort.open(connection);
                     mPort.setParameters(mBaudRate, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
-                    System.out.println("已连接");
                     Toast.makeText(mContext, "已连接", Toast.LENGTH_SHORT).show();
                     mContext.morph(READY, 200);
                     new Thread(new Runnable() {
