@@ -34,6 +34,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
@@ -99,8 +100,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private static final String CHANNEL = "SELF";
     private MyReceiver receiver;
     private ArrayList<LatLng> shipPointList;
+    private ArrayList<LatLng> aimPointList;
     private SmoothMoveMarker smoothMoveMarker;
-
+    private TextView tvAimAngle;
+    private TextView tvGyroAngle;
+    private TextView tvCurrGas;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,12 +154,15 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aMap.setOnMarkerClickListener(this);
         aMap.setOnMapClickListener(this);
         initSmoothMove();
+        aimPointList = new ArrayList<>();
         findViewById(R.id.btn_start).setOnClickListener(this);
         findViewById(R.id.btn_cancel).setOnClickListener(this);
         findViewById(R.id.btn_clear).setOnClickListener(this);
         findViewById(R.id.btn_detail).setOnClickListener(this);
         findViewById(R.id.btn_history).setOnClickListener(this);
-
+        tvAimAngle = findViewById(R.id.tv_aim_angle);
+        tvCurrGas = findViewById(R.id.tv_curr_gas);
+        tvGyroAngle = findViewById(R.id.tv_gyro_angle);
     }
 
     private void checkUpdate() {
@@ -280,6 +287,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         aMap.clear();
+                        shipPointList.removeAll(shipPointList);
+                        aimPointList.removeAll(aimPointList);
                         markers.removeAll(markers);
                         polylines.removeAll(polylines);
                     }
@@ -496,6 +505,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             serialPort.closeDevice();
                         }
                         aMap.clear();
+                        shipPointList.removeAll(shipPointList);
+                        aimPointList.removeAll(aimPointList);
                         markers.removeAll(markers);
                         polylines.removeAll(polylines);
                 }
@@ -598,6 +609,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private void loadRoute(@Nullable String id){
         SQLiteDatabase database = MainActivity.dbHelper.getReadableDatabase();
         aMap.clear();
+        shipPointList.removeAll(shipPointList);
+        aimPointList.removeAll(aimPointList);
         markers.removeAll(markers);
         polylines.removeAll(polylines);
         Cursor cursor;
@@ -680,6 +693,29 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             smoothMoveMarker.setPoints(subList);
             smoothMoveMarker.setTotalDuration(1);
             smoothMoveMarker.startSmoothMove();
+        }
+    }
+
+    public void setCurrGas(String currGas) {
+        this.tvCurrGas.setText(currGas);
+    }
+
+    public void setAimAngle(String aimAngle){
+        this.tvAimAngle.setText(aimAngle);
+    }
+
+    public void setGyroAngle(String gyroAngle){
+        this.tvGyroAngle.setText(gyroAngle);
+    }
+
+    public void setAimPoint(LatLng aimPoint){
+        if (!aimPointList.contains(aimPoint)){
+            aimPointList.add(aimPoint);
+            MarkerOptions markerOptions = new MarkerOptions().position(aimPoint);
+            markerOptions.title(String.valueOf(aimPointList.size()));
+            markerOptions.snippet("纬度：" + aimPoint.latitude + "\n经度：" + aimPoint.longitude);
+            markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.aim)));
+            aMap.addMarker(markerOptions);
         }
     }
 }

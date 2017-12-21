@@ -12,8 +12,33 @@ public class MyReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         activity = (MainActivity) context;
-        activity.getShipPointList().add(new LatLng(intent.getDoubleExtra("lat", 0),
-                intent.getDoubleExtra("lng", 0)));
-        activity.move();
+        String rawData = intent.getStringExtra("data");
+        String[] datas = rawData.split(",");
+//        type代表数据类型
+//        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前舵量
+        switch (intent.getIntExtra("type", -1)) {
+            case 0:
+                Double lat = Double.parseDouble(datas[0]);
+                Double lng = Double.parseDouble(datas[1]);
+                activity.getShipPointList().add(new LatLng(lat, lng));
+                activity.move();
+                break;
+            case 1:
+                lat = Double.parseDouble(datas[0]);
+                lng = Double.parseDouble(datas[1]);
+                activity.setAimPoint(new LatLng(lat, lng));
+                break;
+            case 2:
+                activity.setGyroAngle(rawData);
+                break;
+            case 3:
+                activity.setAimAngle(rawData);
+                break;
+            case 4:
+                activity.setCurrGas(rawData);
+                break;
+            default:
+                break;
+        }
     }
 }

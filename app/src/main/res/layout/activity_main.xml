@@ -28,18 +28,64 @@
         android:layout_gravity="center_horizontal|bottom"
         android:layout_marginBottom="30dp"/>
 
-    <!--<TextView-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_gravity="center_horizontal|top"-->
-        <!--android:layout_marginTop="10dp"-->
-        <!--android:background="@drawable/textview_border"-->
-        <!--android:paddingTop="5dp"-->
-        <!--android:paddingBottom="5dp"-->
-        <!--android:paddingLeft="10dp"-->
-        <!--android:paddingRight="10dp"-->
-        <!--android:text="设备状态：未连接"-->
-        <!--/>-->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:padding="5dp"
+        android:background="@drawable/textview_border"
+        android:orientation="horizontal">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:textColor="@color/mb_white"
+                android:text="@string/gyro_angle"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:textColor="@color/mb_white"
+                android:text="@string/aim_angle"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:textColor="@color/mb_white"
+                android:text="@string/curr_gas"/>
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/mb_white"
+                android:id="@+id/tv_gyro_angle"
+                android:text="0.0"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/mb_white"
+                android:id="@+id/tv_aim_angle"
+                android:text="0.0"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/mb_white"
+                android:id="@+id/tv_curr_gas"
+                android:text="0.0"/>
+        </LinearLayout>
+
+
+    </LinearLayout>
+
+
 
     <app.dinus.com.loadingdrawable.LoadingView
         android:id="@+id/loadingview"

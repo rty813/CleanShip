@@ -84,16 +84,13 @@ public class SerialPortTool {
                         @Override
                         public void run() {
                             while (mContext.state != UNREADY){
-//                                System.out.println(readData());
                                 String data = readData();
-                                if (data != null && !data.equals("")){
-                                    String[] strings = data.split(",");
-                                    double lat = Double.parseDouble(strings[0]);
-                                    double lng = Double.parseDouble(strings[1]);
+                                String[] strings = data.split(";");
+                                System.out.println(data + "\t" + strings.length);
+                                if (strings.length == 2){
                                     Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                                    intent.putExtra("raw", data);
-                                    intent.putExtra("lat", lat);
-                                    intent.putExtra("lng", lng);
+                                    intent.putExtra("type", Integer.parseInt(strings[0]));
+                                    intent.putExtra("data", strings[1]);
                                     mContext.sendBroadcast(intent);
                                 }
                             }
