@@ -116,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ImageView ivPointerGyro;
     private double lastAimAngle;
     private double lastGyroAngle;
+    private int retrytimes = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -493,7 +494,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                         System.out.println(stringBuilder.toString());
                                         try {
                                             serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.4f,0,%.4f,#",latitude, longitude));
-                                            Thread.sleep(200);
+                                            Thread.sleep(100);
                                         } catch (Exception e){
                                             e.printStackTrace();
                                             msg.what = 1;
@@ -733,14 +734,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     }
 
     public void setRawData(String rawData){
-        if (rawData.length() > 1 && rawData.substring(0,1).equals("3")){
-            Toast.makeText(this, "收到了目标方位角！\n" + rawData, Toast.LENGTH_SHORT).show();
-        }
         if (this.tvRawData.getText().toString().split("\n").length > 20){
             this.tvRawData.setText("");
         }
-        this.tvRawData.setText(this.tvRawData.getText().toString() + "\n" + rawData);
+        this.tvRawData.setText(this.tvRawData.getText().toString() + rawData + "\n");
     }
+
     public void setAimAngle(double aimAngle){
         this.tvAimAngle.setText(String.valueOf(aimAngle));
         RotateAnimation animation = new RotateAnimation((float)lastAimAngle, (float)aimAngle,

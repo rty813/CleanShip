@@ -69,6 +69,35 @@ public class SerialPortTool {
         }
     }
 
+    private class QueryThread implements Runnable {
+        @Override
+        public void run() {
+            int type = 0;
+            while (mContext.state != UNREADY) {
+                try {
+                    writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type));
+                    String data = readData();
+                    String[] strings = data.split(";");
+                    Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                    intent.putExtra("rawData", data);
+                    if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
+                        intent.putExtra("type", type);
+                        intent.putExtra("data", strings[1]);
+                        mContext.sendBroadcast(intent);
+                    }
+                    Thread.sleep(100);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (NumberFormatException e){
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                type = (type + 1) % 5;
+            }
+        }
+    }
+
     public boolean openDevice(UsbDevice device){
         if(device != null){
             UsbDeviceConnection connection = mUsbManager.openDevice(device);
@@ -79,27 +108,7 @@ public class SerialPortTool {
                     mPort.setParameters(mBaudRate, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
                     Toast.makeText(mContext, "已连接", Toast.LENGTH_SHORT).show();
                     mContext.morph(READY, 200);
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            while (mContext.state != UNREADY){
-                                String data = readData();
-                                String[] strings = data.split(";");
-                                Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                                intent.putExtra("rawData", data);
-                                if (strings.length == 2){
-                                    try {
-                                        intent.putExtra("type", Integer.parseInt(strings[0]));
-                                        intent.putExtra("data", strings[1]);
-                                    }catch (NumberFormatException e){
-                                        e.printStackTrace();
-                                    }
-                                }
-                                mContext.sendBroadcast(intent);
-                            }
-                        }
-                    }).start();
-                    return true;
+                    new Thread(new QueryThread()).start();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -119,14 +128,14 @@ public class SerialPortTool {
         mPort = null;
     }
 
-    public void writeData(String data) throws IOException {
+    public synchronized void writeData(String data) throws IOException {
         mPort.write(data.getBytes(), 1000);
     }
 
-    public String readData(){
+    public synchronized String readData(){
         byte[] bytes = new byte[255];
         try {
-            int len = mPort.read(bytes, 1000);
+            int len = mPort.read(bytes, 2000);
             return new String(bytes, 0, len);
         } catch (IOException e) {
             e.printStackTrace();
