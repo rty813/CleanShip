@@ -117,6 +117,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private double lastAimAngle;
     private double lastGyroAngle;
     private int retrytimes = 0;
+    public MyHandler mHandler = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -158,6 +159,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         serialPort = new SerialPortTool(this);
         btn_start = findViewById(R.id.btn_start);
         morph(state, 0);
+        mHandler = new MyHandler();
         MyLocationStyle myLocationStyle = new MyLocationStyle();
         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
         aMap.setMyLocationStyle(myLocationStyle);
@@ -206,6 +208,28 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
             }
         });
+    }
+
+    public class MyHandler extends Handler{
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what){
+                case 1:
+                    WindowManager.LayoutParams lp = getWindow().getAttributes();
+                    lp.alpha = (float) msg.obj;
+                    getWindow().setAttributes(lp);
+                    break;
+                case 2:
+                    ((PopupWindow)msg.obj).showAtLocation(mMapView, Gravity.CENTER, 0, 0);
+                    break;
+                case 3:
+                    morph(UNREADY, 200);
+                    Toast.makeText(MainActivity.this, "连接中断！", Toast.LENGTH_SHORT).show();
+                    break;
+                default:
+                    super.handleMessage(msg);
+            }
+        }
     }
 
     private void checkUpdate() {
@@ -324,7 +348,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 builder.setPositiveButton("是", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                       resetMap();
+                        resetMap();
                     }
                 });
                 builder.show();
@@ -332,20 +356,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
             case R.id.btn_detail:
                 if (markers.size() > 0){
-                    final Handler mHandler = new Handler(){
-                        @Override
-                        public void handleMessage(Message msg) {
-                            switch (msg.what){
-                                case 1:
-                                    WindowManager.LayoutParams lp = getWindow().getAttributes();
-                                    lp.alpha = (float) msg.obj;
-                                    getWindow().setAttributes(lp);
-                                    break;
-                                case 2:
-                                    ((PopupWindow)msg.obj).showAtLocation(mMapView, Gravity.CENTER, 0, 0);
-                            }
-                        }
-                    };
                     final View popupview = View.inflate(MainActivity.this,R.layout.popupwindow_detail,null);
                     final PopupWindow popupWindow = new PopupWindow(popupview, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false);
                     CollapsingToolbarLayout collapsingToolbarLayout = popupview.findViewById(R.id.collapsingtoolbarlayout);
@@ -493,9 +503,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                         double longitude = marker.getPosition().longitude * 100;
                                         System.out.println(stringBuilder.toString());
                                         try {
-                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.4f,0,%.4f,#",latitude, longitude));
-                                            Thread.sleep(100);
-                                        } catch (Exception e){
+                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.4f,0,%.4f,#",latitude, longitude), 100);
+                                        } catch (InterruptedException | IOException e) {
                                             e.printStackTrace();
                                             msg.what = 1;
                                             mHandler.sendMessage(msg);
@@ -516,10 +525,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         break;
                     case NAV:
                         try {
-                            serialPort.writeData("$NAV#\n");
+                            serialPort.writeData("$NAV#", 50);
                             morph(GONE, 300);
                             break;
-                        } catch (IOException e) {
+                        } catch (IOException | InterruptedException e) {
                             e.printStackTrace();
                             Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
                             morph(UNREADY,200);
@@ -528,17 +537,17 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         break;
                     case GONE:
                         try {
-                            serialPort.writeData("$STOP#\n");
+                            serialPort.writeData("$STOP#", 50);
                             Toast.makeText(MainActivity.this, "已结束", Toast.LENGTH_SHORT).show();
                             morph(READY, 300);
                             break;
-                        } catch (IOException e) {
+                        } catch (IOException | InterruptedException e) {
                             e.printStackTrace();
                             Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
                             morph(UNREADY,200);
                             serialPort.closeDevice();
                         }
-                       resetMap();
+                        resetMap();
                 }
                 break;
             case R.id.btn_history:
@@ -756,7 +765,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
         animation.setDuration(100);
         animation.setFillAfter(true);
-        ivPointerAim.startAnimation(animation);
+        ivPointerGyro.startAnimation(animation);
         lastGyroAngle = gyroAngle;
     }
 

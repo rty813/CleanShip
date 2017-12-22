@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
+import android.os.Message;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -75,7 +76,7 @@ public class SerialPortTool {
             int type = 0;
             while (mContext.state != UNREADY) {
                 try {
-                    writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type));
+                    writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 50);
                     String data = readData();
                     String[] strings = data.split(";");
                     Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
@@ -85,20 +86,19 @@ public class SerialPortTool {
                         intent.putExtra("data", strings[1]);
                         mContext.sendBroadcast(intent);
                     }
-                    Thread.sleep(100);
-                } catch (IOException e) {
+                    Thread.sleep(200);
+                } catch (NumberFormatException | InterruptedException e) {
                     e.printStackTrace();
-                } catch (NumberFormatException e){
+                } catch (IOException e){
                     e.printStackTrace();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    mContext.mHandler.sendEmptyMessage(3);
                 }
                 type = (type + 1) % 5;
             }
         }
     }
 
-    public boolean openDevice(UsbDevice device){
+    private void openDevice(UsbDevice device){
         if(device != null){
             UsbDeviceConnection connection = mUsbManager.openDevice(device);
             if (connection != null) {
@@ -114,7 +114,6 @@ public class SerialPortTool {
                 }
             }
         }
-        return false;
     }
 
     public void closeDevice() {
@@ -128,8 +127,17 @@ public class SerialPortTool {
         mPort = null;
     }
 
-    public synchronized void writeData(String data) throws IOException {
-        mPort.write(data.getBytes(), 1000);
+    public synchronized void writeData(String data, long delay) throws IOException, InterruptedException {
+        writeData(data, delay, true);
+    }
+
+    public synchronized void writeData(String data, long delay, boolean newLine) throws InterruptedException, IOException {
+        String str = data;
+        if (newLine){
+            str = str + "\r\n";
+        }
+        mPort.write(str.getBytes(), 1000);
+        Thread.sleep(delay);
     }
 
     public synchronized String readData(){
