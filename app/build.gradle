@@ -1,14 +1,6 @@
 apply plugin: 'com.android.application'
 
 android {
-    signingConfigs {
-        config {
-            keyAlias 'rty813'
-            keyPassword 'rty813'
-            storeFile file('C:/Users/doufu/OneDrive/myAndroidKey.jks')
-            storePassword 'j2mv9jyyq6'
-        }
-    }
     compileSdkVersion 27
     defaultConfig {
         applicationId "com.xyz.rty813.cleanship"
@@ -48,4 +40,5 @@ dependencies {
     compile 'com.github.fccaikai:AppUpdate:2.1.4'
     implementation project(':LoadingView')
     compile 'com.karumi:dexter:4.2.0'
+
 }
