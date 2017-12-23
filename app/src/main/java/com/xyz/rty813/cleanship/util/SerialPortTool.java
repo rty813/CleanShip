@@ -32,16 +32,23 @@ public class SerialPortTool {
     private MainActivity mContext;
     private UsbSerialPort mPort;
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
-    private static final int READY = 1;
-    private static final int UNREADY = 0;
-    private static final int GONE = 2;
     private UsbSerialDriver mDriver;
     private int mBaudRate;
+
+    public interface onConnectedListener{
+        void onConnected();
+    }
+
+    private onConnectedListener mListener;
 
     public SerialPortTool(Context context) {
         mContext = (MainActivity) context;
         mUsbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
         registerReceiver();
+    }
+
+    public void setListener(onConnectedListener listener) {
+        this.mListener = listener;
     }
 
     private void registerReceiver(){
@@ -58,7 +65,7 @@ public class SerialPortTool {
         return UsbSerialProber.getDefaultProber().findAllDrivers(mUsbManager);
     }
 
-    public void initDevice(UsbSerialDriver driver, int baudRate) {
+    public void initDevice(UsbSerialDriver driver, int baudRate) throws IOException {
         mDriver = driver;
         mBaudRate = baudRate;
         UsbDevice device = mDriver.getDevice();
@@ -70,49 +77,19 @@ public class SerialPortTool {
         }
     }
 
-    private class QueryThread implements Runnable {
-        @Override
-        public void run() {
-            int type = 0;
-            while (mContext.state != UNREADY) {
-                try {
-                    writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 50);
-                    String data = readData();
-                    String[] strings = data.split(";");
-                    Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                    intent.putExtra("rawData", data);
-                    if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
-                        intent.putExtra("type", type);
-                        intent.putExtra("data", strings[1]);
-                        mContext.sendBroadcast(intent);
-                    }
-                    Thread.sleep(200);
-                } catch (NumberFormatException | InterruptedException e) {
-                    e.printStackTrace();
-                } catch (IOException e){
-                    e.printStackTrace();
-                    mContext.mHandler.sendEmptyMessage(3);
-                }
-                type = (type + 1) % 5;
-            }
-        }
-    }
-
-    private void openDevice(UsbDevice device){
+    private void openDevice(UsbDevice device) throws IOException {
         if(device != null){
             UsbDeviceConnection connection = mUsbManager.openDevice(device);
             if (connection != null) {
                 mPort = mDriver.getPorts().get(0);
-                try {
-                    mPort.open(connection);
-                    mPort.setParameters(mBaudRate, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
-                    Toast.makeText(mContext, "已连接", Toast.LENGTH_SHORT).show();
-                    mContext.morph(READY, 200);
-                    new Thread(new QueryThread()).start();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                mPort.open(connection);
+                mPort.setParameters(mBaudRate, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+                if (mListener != null) {
+                    mListener.onConnected();
                 }
             }
+            else
+                throw new IOException();
         }
     }
 
@@ -159,7 +136,11 @@ public class SerialPortTool {
                 synchronized (this) {
                     UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
                     if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)){
-                        openDevice(device);
+                        try {
+                            openDevice(device);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }else{
                         Log.d("Err", "permission denied for device " + device);
                     }

@@ -8,17 +8,16 @@ import com.amap.api.maps.model.LatLng;
 
 public class MyReceiver extends BroadcastReceiver {
     public static final String ACTION_DATA_RECEIVED = "com.xyz.rty813.cleanship.ACTION_DATA_RECEIVED";
-    private MainActivity activity;
+
     @Override
     public void onReceive(Context context, Intent intent) {
-        activity = (MainActivity) context;
+        MainActivity activity = (MainActivity) context;
+        activity.setRawData(intent.getStringExtra("rawData"));
         String data = intent.getStringExtra("data");
-        String rawData = intent.getStringExtra("rawData");
         if (data == null){
             return;
         }
         String[] datas = data.split(",");
-        activity.setRawData(rawData);
 //        type代表数据类型
 //        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前舵量
         try {

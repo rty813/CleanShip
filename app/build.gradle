@@ -1,13 +1,21 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        config {
+            keyAlias 'rty813'
+            keyPassword 'rty813'
+            storeFile file('C:/Users/doufu/OneDrive/myAndroidKey.jks')
+            storePassword 'j2mv9jyyq6'
+        }
+    }
     compileSdkVersion 27
     defaultConfig {
         applicationId "com.xyz.rty813.cleanship"
         minSdkVersion 16
         targetSdkVersion 26
-        versionCode 13
-        versionName "0.7.3"
+        versionCode 14
+        versionName "0.7.4"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -40,5 +48,4 @@ dependencies {
     compile 'com.github.fccaikai:AppUpdate:2.1.4'
     implementation project(':LoadingView')
     compile 'com.karumi:dexter:4.2.0'
-
 }

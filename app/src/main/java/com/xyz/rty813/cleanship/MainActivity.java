@@ -84,7 +84,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener {
+import app.dinus.com.loadingdrawable.LoadingView;
+
+public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener, SerialPortTool.onConnectedListener {
     private MapView mMapView;
     private AMap aMap;
     private ArrayList<Marker> markers;
@@ -106,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ArrayList<LatLng> shipPointList;
     private ArrayList<LatLng> aimPointList;
     private SmoothMoveMarker smoothMoveMarker;
+    private LoadingView loadingView;
     private TextView tvAimAngle;
     private TextView tvGyroAngle;
     private TextView tvCurrGas;
@@ -116,7 +119,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ImageView ivPointerGyro;
     private double lastAimAngle;
     private double lastGyroAngle;
-    private int retrytimes = 0;
     public MyHandler mHandler = null;
 
     @Override
@@ -157,6 +159,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             aMap = mMapView.getMap();
         }
         serialPort = new SerialPortTool(this);
+        serialPort.setListener(this);
         btn_start = findViewById(R.id.btn_start);
         morph(state, 0);
         mHandler = new MyHandler();
@@ -183,6 +186,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         tvRawData = findViewById(R.id.tv_raw_data);
         ivPointerAim = findViewById(R.id.ivPointerAim);
         ivPointerGyro = findViewById(R.id.ivPointerGyro);
+        loadingView = findViewById(R.id.loadingview);
         ivPointerAim.post(new Runnable() {
             @Override
             public void run() {
@@ -210,9 +214,61 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         });
     }
 
+    @Override
+    public void onConnected() {
+        Toast.makeText(this, "已连接", Toast.LENGTH_SHORT).show();
+        morph(READY, 200);
+        new Thread(new QueryThread()).start();
+    }
+
+    private class QueryThread implements Runnable {
+        @Override
+        public void run() {
+            int type = 0;
+            while (state != UNREADY) {
+                try {
+                    serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 50);
+                    String data = serialPort.readData();
+                    if (data != null && !data.equals("")) {
+                        String[] strings = data.split(";");
+                        Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                        intent.putExtra("rawData", data);
+                        if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
+                            intent.putExtra("type", type);
+                            intent.putExtra("data", strings[1]);
+                        }
+                        sendBroadcast(intent);
+                    }
+                    Thread.sleep(200);
+                } catch (NumberFormatException | InterruptedException e) {
+                    e.printStackTrace();
+                } catch (IOException e){
+                    e.printStackTrace();
+                    mHandler.sendEmptyMessage(3);
+                }
+                type = (type + 1) % 5;
+            }
+        }
+    }
+
     public class MyHandler extends Handler{
         @Override
         public void handleMessage(Message msg) {
+            AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
+            animation.setDuration(300);
+            animation.setInterpolator(new AccelerateDecelerateInterpolator());
+            animation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+                }
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    loadingView.setVisibility(View.GONE);
+                }
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+                }
+            });
             switch (msg.what){
                 case 1:
                     WindowManager.LayoutParams lp = getWindow().getAttributes();
@@ -223,8 +279,18 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     ((PopupWindow)msg.obj).showAtLocation(mMapView, Gravity.CENTER, 0, 0);
                     break;
                 case 3:
+                    if (loadingView.getVisibility() == View.VISIBLE){
+                        loadingView.startAnimation(animation);
+                    }
                     morph(UNREADY, 200);
                     Toast.makeText(MainActivity.this, "连接中断！", Toast.LENGTH_SHORT).show();
+                    serialPort.closeDevice();
+                    break;
+                case 4:
+                    if (loadingView.getVisibility() == View.VISIBLE){
+                        loadingView.startAnimation(animation);
+                    }
+                    morph(NAV, 300);
                     break;
                 default:
                     super.handleMessage(msg);
@@ -452,41 +518,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             }
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
-                            @SuppressLint("HandlerLeak") final Handler mHandler = new Handler(){
-                                @Override
-                                public void handleMessage(Message msg) {
-                                    AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
-                                    animation.setDuration(300);
-                                    animation.setInterpolator(new AccelerateDecelerateInterpolator());
-                                    animation.setAnimationListener(new Animation.AnimationListener() {
-                                        @Override
-                                        public void onAnimationStart(Animation animation) {
-
-                                        }
-
-                                        @Override
-                                        public void onAnimationEnd(Animation animation) {
-                                            findViewById(R.id.loadingview).setVisibility(View.GONE);
-                                        }
-
-                                        @Override
-                                        public void onAnimationRepeat(Animation animation) {
-
-                                        }
-                                    });
-                                    findViewById(R.id.loadingview).startAnimation(animation);
-                                    switch (msg.what){
-                                        case 1:
-                                            Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
-                                            morph(UNREADY,200);
-                                            serialPort.closeDevice();
-                                            break;
-                                        case 2:
-                                            morph(NAV, 300);
-                                            break;
-                                    }
-                                }
-                            };
                             findViewById(R.id.loadingview).setVisibility(View.VISIBLE);
                             AlphaAnimation animation = new AlphaAnimation(0.0f, 1.0f);
                             animation.setDuration(300);
@@ -497,22 +528,19 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                 @Override
                                 public void run() {
                                     StringBuilder stringBuilder = new StringBuilder();
-                                    Message msg = mHandler.obtainMessage();
                                     for (Marker marker : markers){
-                                        double latitude = marker.getPosition().latitude * 100;
-                                        double longitude = marker.getPosition().longitude * 100;
+                                        double latitude = marker.getPosition().latitude;
+                                        double longitude = marker.getPosition().longitude;
                                         System.out.println(stringBuilder.toString());
                                         try {
-                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,0,%.4f,0,%.4f,#",latitude, longitude), 100);
+                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#",latitude, longitude), 100);
                                         } catch (InterruptedException | IOException e) {
                                             e.printStackTrace();
-                                            msg.what = 1;
-                                            mHandler.sendMessage(msg);
+                                            mHandler.sendEmptyMessage(3);
                                             return;
                                         }
                                     }
-                                    msg.what = 2;
-                                    mHandler.sendMessage(msg);
+                                    mHandler.sendEmptyMessage(4);
                                 }
                             }).start();
                         }
@@ -630,7 +658,13 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             Toast.makeText(this, "未连接设备", Toast.LENGTH_SHORT).show();
             morph(UNREADY, 0);
         }else{
-            serialPort.initDevice(list.get(0), baudRate);
+            try {
+                serialPort.initDevice(list.get(0), baudRate);
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "连接失败", Toast.LENGTH_SHORT).show();
+                morph(UNREADY, 0);
+            }
         }
     }
 
