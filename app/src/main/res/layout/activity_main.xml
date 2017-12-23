@@ -194,6 +194,20 @@
             android:layout_marginBottom="6dp"
             android:id="@+id/btn_history"
             android:background="@drawable/history"/>
+        <include layout="@layout/divide_line"/>
+        <ImageButton
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_margin="5dp"
+            android:id="@+id/btn_plane"
+            android:background="@drawable/map_plane" />
+        <include layout="@layout/divide_line"/>
+        <ImageButton
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_margin="5dp"
+            android:id="@+id/btn_satellite"
+            android:background="@drawable/map_satellite" />
     </LinearLayout>
 
 </android.support.design.widget.CoordinatorLayout>

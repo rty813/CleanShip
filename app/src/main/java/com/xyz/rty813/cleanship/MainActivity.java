@@ -167,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
         aMap.setMyLocationStyle(myLocationStyle);
         aMap.setMyLocationEnabled(true);
+        aMap.getUiSettings().setCompassEnabled(true);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setScaleControlsEnabled(true);
         aMap.setOnMarkerClickListener(this);
@@ -178,6 +179,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_clear).setOnClickListener(this);
         findViewById(R.id.btn_detail).setOnClickListener(this);
         findViewById(R.id.btn_history).setOnClickListener(this);
+        findViewById(R.id.btn_plane).setOnClickListener(this);
+        findViewById(R.id.btn_satellite).setOnClickListener(this);
         tvAimAngle = findViewById(R.id.tv_aim_angle);
         tvCurrGas = findViewById(R.id.tv_curr_gas);
         tvGyroAngle = findViewById(R.id.tv_gyro_angle);
@@ -354,6 +357,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         markerOptions.title(String.valueOf(markers.size() + 1));
         markerOptions.snippet(String.format("纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
         markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+        markerOptions.anchor(0.5f, 0.5f);
 
         Marker marker = aMap.addMarker(markerOptions);
         System.out.println(latLng.toString());
@@ -384,6 +388,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             LatLng latLng = markers.get(markers.size() - 1).getPosition();
             MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+            markerOptions.anchor(0.5f, 0.5f);
             markers.add(aMap.addMarker(markerOptions));
             polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(6).color(Color.RED)));
             Toast.makeText(this, "完成闭合回路！", Toast.LENGTH_SHORT).show();
@@ -581,6 +586,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             case R.id.btn_history:
                 startActivityForResult(new Intent(this, HistoryActivity.class), 200);
                 break;
+            case R.id.btn_plane:
+                aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+                break;
+            case R.id.btn_satellite:
+                aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
+                break;
         }
     }
 
@@ -704,6 +715,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 markerOptions.title(String.valueOf(markers.size() + 1));
                 markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
                 markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+                markerOptions.anchor(0.5f, 0.5f);
                 markers.add(aMap.addMarker(markerOptions));
                 if (markers.size() > 1) {
                     LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
@@ -810,6 +822,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             markerOptions.title(String.valueOf(aimPointList.size()));
             markerOptions.snippet(String.format("纬度：%.6f\n经度：%.6f", aimPoint.latitude, aimPoint.longitude));
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.aim)));
+            markerOptions.anchor(0.5f, 0.5f);
             aMap.addMarker(markerOptions);
         }
     }
