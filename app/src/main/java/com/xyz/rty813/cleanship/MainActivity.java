@@ -231,7 +231,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             int type = 0;
             while (state != UNREADY) {
                 try {
-                    serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 50);
+                    serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
                     String data = serialPort.readData();
                     if (data != null && !data.equals("")) {
                         String[] strings = data.split(";");
@@ -245,6 +245,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
                             intent.putExtra("type", type);
                             intent.putExtra("data", strings[1]);
+                            type = (type + 1) % 6;
                         }
                         sendBroadcast(intent);
                     }
@@ -256,7 +257,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     e.printStackTrace();
                     mHandler.sendEmptyMessage(3);
                 }
-                type = (type + 1) % 6;
             }
         }
     }
@@ -568,7 +568,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         break;
                     case NAV:
                         try {
-                            serialPort.writeData("$NAV#", 50);
+                            serialPort.writeData("$NAV#", 100);
                             morph(GONE, 300);
                             break;
                         } catch (IOException | InterruptedException e) {
@@ -580,7 +580,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         break;
                     case GONE:
                         try {
-                            serialPort.writeData("$STOP#", 50);
+                            serialPort.writeData("$STOP#", 100);
                             Toast.makeText(MainActivity.this, "已结束", Toast.LENGTH_SHORT).show();
                             morph(READY, 300);
                             break;
