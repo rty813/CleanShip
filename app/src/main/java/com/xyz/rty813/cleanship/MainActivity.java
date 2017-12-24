@@ -115,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private TextView tvCurrLat;
     private TextView tvCurrLng;
     private TextView tvRawData;
+    private TextView tvGpsNum;
     private ImageView ivPointerAim;
     private ImageView ivPointerGyro;
     private double lastAimAngle;
@@ -130,17 +131,28 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         MiStatInterface.setUploadPolicy(MiStatInterface.UPLOAD_POLICY_REALTIME, 0);
         MiStatInterface.enableExceptionCatcher(true);
         URLStatsRecorder.enableAutoRecord();
-        checkUpdate();
+        dbHelper = new SQLiteDBHelper(this);
+        mMapView = findViewById(R.id.mapview);
+        mMapView.onCreate(savedInstanceState);
+        markers = new ArrayList<>();
+        polylines = new ArrayList<>();
+        if (aMap == null) {
+            aMap = mMapView.getMap();
+        }
         Dexter.withActivity(this)
                 .withPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
                 .withListener(new PermissionListener() {
                     @Override
                     public void onPermissionGranted(PermissionGrantedResponse response) {
-
+                        MyLocationStyle myLocationStyle = new MyLocationStyle();
+                        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
+                        aMap.setMyLocationStyle(myLocationStyle);
+                        aMap.setMyLocationEnabled(true);
                     }
 
                     @Override
                     public void onPermissionDenied(PermissionDeniedResponse response) {
+                        Toast.makeText(MainActivity.this, "请赋予定位权限", Toast.LENGTH_SHORT).show();
                         finish();
                     }
 
@@ -150,23 +162,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     }
                 })
                 .check();
-        dbHelper = new SQLiteDBHelper(this);
-        mMapView = findViewById(R.id.mapview);
-        mMapView.onCreate(savedInstanceState);
-        markers = new ArrayList<>();
-        polylines = new ArrayList<>();
-        if (aMap == null) {
-            aMap = mMapView.getMap();
-        }
         serialPort = new SerialPortTool(this);
         serialPort.setListener(this);
         btn_start = findViewById(R.id.btn_start);
         morph(state, 0);
         mHandler = new MyHandler();
-        MyLocationStyle myLocationStyle = new MyLocationStyle();
-        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
-        aMap.setMyLocationStyle(myLocationStyle);
-        aMap.setMyLocationEnabled(true);
         aMap.getUiSettings().setCompassEnabled(true);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setScaleControlsEnabled(true);
@@ -187,6 +187,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         tvCurrLat = findViewById(R.id.tv_curr_lat);
         tvCurrLng = findViewById(R.id.tv_curr_lng);
         tvRawData = findViewById(R.id.tv_raw_data);
+        tvGpsNum = findViewById(R.id.tv_gps_num);
         ivPointerAim = findViewById(R.id.ivPointerAim);
         ivPointerGyro = findViewById(R.id.ivPointerGyro);
         loadingView = findViewById(R.id.loadingview);
@@ -198,7 +199,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 ivPointerAim.setLayoutParams(params);
             }
         });
-
+        checkUpdate();
         ((SeekBar)findViewById(R.id.seekbar)).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
@@ -249,7 +250,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     e.printStackTrace();
                     mHandler.sendEmptyMessage(3);
                 }
-                type = (type + 1) % 5;
+                type = (type + 1) % 6;
             }
         }
     }
@@ -694,11 +695,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         resetMap();
         Cursor cursor;
         if (id != null){
-            cursor = database.query(MainActivity.dbHelper.TABLE_NAME, null, "ID=?", new String[]{id} ,null, null, null);
+            cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, "ID=?", new String[]{id} ,null, null, null);
             cursor.moveToFirst();
         }
         else{
-            cursor = database.query(MainActivity.dbHelper.TABLE_NAME, null, null, null ,null, null, null);
+            cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null ,null, null, null);
             cursor.moveToLast();
         }
         if (cursor.getCount() > 0){
@@ -786,6 +787,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
     public void setCurrLng(String currLng) {
         this.tvCurrLng.setText(currLng);
+    }
+
+    public void setGpsNum(String gpsNum) {
+        this.tvGpsNum.setText(gpsNum);
     }
 
     public void setRawData(String rawData){

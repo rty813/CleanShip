@@ -74,6 +74,12 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
                 android:textColor="@color/mb_white"
+                android:text="@string/gps_num"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:textColor="@color/mb_white"
                 android:text="@string/raw_data"/>
         </LinearLayout>
         <LinearLayout
@@ -97,7 +103,7 @@
                 android:layout_height="wrap_content"
                 android:textColor="@color/mb_white"
                 android:id="@+id/tv_curr_gas"
-                android:text="0.0"/>
+                android:text="0"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -110,6 +116,12 @@
                 android:textColor="@color/mb_white"
                 android:id="@+id/tv_curr_lng"
                 android:text="0.0"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="@color/mb_white"
+                android:id="@+id/tv_gps_num"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

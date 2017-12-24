@@ -49,6 +49,9 @@ public class MyReceiver extends BroadcastReceiver {
                 case 4:
                     activity.setCurrGas(data);
                     break;
+                case 5:
+                    activity.setGpsNum(data);
+                    break;
                 default:
                     break;
             }

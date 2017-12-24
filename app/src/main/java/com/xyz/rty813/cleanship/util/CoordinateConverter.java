@@ -48,9 +48,7 @@ public class CoordinateConverter {
     private static boolean isOutOfChina(double lat, double lon) {
         if (lon < 72.004 || lon > 137.8347)
             return true;
-        if (lat < 0.8293 || lat > 55.8271)
-            return true;
-        return false;
+        return lat < 0.8293 || lat > 55.8271;
     }
 
     private static double calLat(double x, double y) {

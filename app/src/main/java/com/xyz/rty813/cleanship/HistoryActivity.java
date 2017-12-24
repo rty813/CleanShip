@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
+import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.yanzhenjie.recyclerview.swipe.SwipeItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 import com.yanzhenjie.recyclerview.swipe.touch.OnItemMoveListener;
@@ -40,7 +41,7 @@ public class HistoryActivity extends AppCompatActivity {
 
         recyclerView = findViewById(R.id.recyclerView);
         SQLiteDatabase database = MainActivity.dbHelper.getReadableDatabase();
-        Cursor cursor = database.query(MainActivity.dbHelper.TABLE_NAME, null, null, null ,null, null, null);
+        Cursor cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null ,null, null, null);
         if (cursor.getCount() > 0){
             cursor.moveToLast();
             do{
@@ -131,7 +132,7 @@ public class HistoryActivity extends AppCompatActivity {
                 return;
             }
             SQLiteDatabase database = MainActivity.dbHelper.getWritableDatabase();
-            database.delete(MainActivity.dbHelper.TABLE_NAME, "ID=?", new String[]{id});
+            database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
             database.close();
             super.onDismissed(transientBottomBar, event);
         }
