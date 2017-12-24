@@ -236,7 +236,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     if (data != null && !data.equals("")) {
                         String[] strings = data.split(";");
                         Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                        intent.putExtra("rawData", data);
+                        if (strings.length == 2){
+                            intent.putExtra("rawData", "|" + strings[0] + "|" + strings[1] + "|");
+                        }
+                        else{
+                            intent.putExtra("rawData", data);
+                        }
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
                             intent.putExtra("type", type);
                             intent.putExtra("data", strings[1]);
@@ -245,6 +250,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     }
                     Thread.sleep(200);
                 } catch (NumberFormatException | InterruptedException e) {
+                    mHandler.sendEmptyMessage(5);
                     e.printStackTrace();
                 } catch (IOException e){
                     e.printStackTrace();
@@ -295,6 +301,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         loadingView.startAnimation(animation);
                     }
                     morph(NAV, 300);
+                    break;
+                case 5:
+                    Toast.makeText(MainActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
                     break;
                 default:
                     super.handleMessage(msg);

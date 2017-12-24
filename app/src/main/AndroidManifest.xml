@@ -45,8 +45,7 @@
 
         <receiver
             android:name=".MyReceiver"
-            android:enabled="true"
-            android:exported="true"></receiver>
+            android:enabled="true" />
     </application>
 
 </manifest>
