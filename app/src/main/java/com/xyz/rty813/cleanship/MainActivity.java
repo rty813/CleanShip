@@ -80,6 +80,7 @@ import com.xyz.rty813.cleanship.util.SerialPortTool;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -121,6 +122,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private double lastAimAngle;
     private double lastGyroAngle;
     public MyHandler mHandler = null;
+    private Thread myThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -164,6 +166,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 .check();
         serialPort = new SerialPortTool(this);
         serialPort.setListener(this);
+        myThread = new Thread(new QueryThread());
+        myThread.start();
         btn_start = findViewById(R.id.btn_start);
         morph(state, 0);
         mHandler = new MyHandler();
@@ -222,40 +226,48 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     public void onConnected() {
         Toast.makeText(this, "已连接", Toast.LENGTH_SHORT).show();
         morph(READY, 200);
-        new Thread(new QueryThread()).start();
+        synchronized (serialPort){
+            serialPort.notify();
+        }
     }
 
     private class QueryThread implements Runnable {
         @Override
         public void run() {
-            int type = 0;
-            while (state != UNREADY) {
-                try {
-                    serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
-                    String data = serialPort.readData();
-                    if (data != null && !data.equals("")) {
-                        String[] strings = data.split(";");
-                        Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                        if (strings.length == 2){
-                            intent.putExtra("rawData", "|" + strings[0] + "|" + strings[1] + "|");
+            synchronized (serialPort){
+                int type = 0;
+                while (true) {
+                    try {
+                        if (state == UNREADY){
+                            serialPort.wait();
                         }
-                        else{
-                            intent.putExtra("rawData", data);
+                        Thread.sleep(100);
+                        serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
+                        String data = serialPort.readData();
+                        if (data != null && !data.equals("")) {
+                            String[] strings = data.split(";");
+                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                            if (strings.length == 2){
+                                intent.putExtra("rawData", "|" + strings[0] + "|" + strings[1] + "|");
+                            }
+                            else{
+                                intent.putExtra("rawData", data);
+                            }
+                            if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
+                                intent.putExtra("type", type);
+                                intent.putExtra("data", strings[1]);
+                                type = (type + 1) % 6;
+                            }
+                            sendBroadcast(intent);
                         }
-                        if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
-                            intent.putExtra("type", type);
-                            intent.putExtra("data", strings[1]);
-                            type = (type + 1) % 6;
-                        }
-                        sendBroadcast(intent);
+                        Thread.sleep(100);
+                    } catch (NumberFormatException | InterruptedException e) {
+                        mHandler.sendEmptyMessage(5);
+                        e.printStackTrace();
+                    } catch (IOException e){
+                        e.printStackTrace();
+                        mHandler.sendEmptyMessage(3);
                     }
-                    Thread.sleep(200);
-                } catch (NumberFormatException | InterruptedException e) {
-                    mHandler.sendEmptyMessage(5);
-                    e.printStackTrace();
-                } catch (IOException e){
-                    e.printStackTrace();
-                    mHandler.sendEmptyMessage(3);
                 }
             }
         }
@@ -300,11 +312,30 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     if (loadingView.getVisibility() == View.VISIBLE){
                         loadingView.startAnimation(animation);
                     }
-                    morph(NAV, 300);
+                    synchronized (serialPort){
+                        serialPort.notify();
+                        morph(NAV, 300);
+                    }
                     break;
                 case 5:
                     Toast.makeText(MainActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
                     break;
+                case 6:
+                    if (loadingView.getVisibility() == View.VISIBLE){
+                        loadingView.startAnimation(animation);
+                    }
+                    break;
+                case 7:
+                    btn_start.setEnabled(true);
+                    break;
+                case 8:
+                    synchronized (serialPort) {
+                        if (loadingView.getVisibility() == View.VISIBLE){
+                            loadingView.startAnimation(animation);
+                        }
+                        morph((Integer) msg.obj, 300);
+                        serialPort.notify();
+                    }
                 default:
                     super.handleMessage(msg);
             }
@@ -365,7 +396,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 //        System.out.println(latLng.toString());
         MarkerOptions markerOptions = new MarkerOptions().position(latLng);
         markerOptions.title(String.valueOf(markers.size() + 1));
-        markerOptions.snippet(String.format("纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
+        markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
         markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
         markerOptions.anchor(0.5f, 0.5f);
 
@@ -375,7 +406,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         if (markers.size() > 1) {
             LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
             LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
-            polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(6).color(Color.RED)));
+            polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10).color(Color.RED)));
         }
         else {
             GeocodeSearch geocodeSearch = new GeocodeSearch(this);
@@ -400,7 +431,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
             markerOptions.anchor(0.5f, 0.5f);
             markers.add(aMap.addMarker(markerOptions));
-            polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(6).color(Color.RED)));
+            polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(10).color(Color.RED)));
             Toast.makeText(this, "完成闭合回路！", Toast.LENGTH_SHORT).show();
         }
         return true;
@@ -531,31 +562,27 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             for (Marker marker : markers){
                                 stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
                             }
-                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss");
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
-                            findViewById(R.id.loadingview).setVisibility(View.VISIBLE);
-                            AlphaAnimation animation = new AlphaAnimation(0.0f, 1.0f);
-                            animation.setDuration(300);
-                            animation.setInterpolator(new AccelerateDecelerateInterpolator());
-                            findViewById(R.id.loadingview).startAnimation(animation);
-
+                            showLoadingView();
+                            state = UNREADY;
+                            btn_start.setEnabled(false);
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    StringBuilder stringBuilder = new StringBuilder();
-                                    for (Marker marker : markers){
-                                        double latitude = marker.getPosition().latitude;
-                                        double longitude = marker.getPosition().longitude;
-                                        System.out.println(stringBuilder.toString());
-                                        try {
+                                    try {
+                                        for (Marker marker : markers){
+                                            double latitude = marker.getPosition().latitude;
+                                            double longitude = marker.getPosition().longitude;
                                             serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#",latitude, longitude), 100);
-                                        } catch (InterruptedException | IOException e) {
-                                            e.printStackTrace();
-                                            mHandler.sendEmptyMessage(3);
-                                            return;
                                         }
+                                        mHandler.sendEmptyMessage(4);
+                                    } catch (InterruptedException | IOException e) {
+                                        e.printStackTrace();
+                                        mHandler.sendEmptyMessage(3);
+                                    } finally {
+                                        mHandler.sendEmptyMessage(7);
                                     }
-                                    mHandler.sendEmptyMessage(4);
                                 }
                             }).start();
                         }
@@ -567,30 +594,66 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         initSerialPort(115200);
                         break;
                     case NAV:
-                        try {
-                            serialPort.writeData("$NAV#", 100);
-                            morph(GONE, 300);
-                            break;
-                        } catch (IOException | InterruptedException e) {
-                            e.printStackTrace();
-                            Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
-                            morph(UNREADY,200);
-                            serialPort.closeDevice();
-                        }
+                            state = UNREADY;
+                            showLoadingView();
+                            btn_start.setEnabled(false);
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        do {
+                                            Thread.sleep(200);
+                                            serialPort.writeData("$NAV#", 100);
+                                            String data = serialPort.readData();
+                                            if (data != null && data.contains("$NAV#")){
+                                                Message msg = mHandler.obtainMessage();
+                                                msg.what = 8;
+                                                msg.obj = GONE;
+                                                mHandler.sendMessage(msg);
+                                                break;
+                                            }
+                                            Thread.sleep(200);
+                                        } while (true);
+                                    } catch (IOException | InterruptedException e) {
+                                        e.printStackTrace();
+                                        mHandler.sendEmptyMessage(3);
+                                    } finally {
+                                        mHandler.sendEmptyMessage(7);
+                                    }
+                                }
+                            }).start();
                         break;
                     case GONE:
-                        try {
-                            serialPort.writeData("$STOP#", 100);
-                            Toast.makeText(MainActivity.this, "已结束", Toast.LENGTH_SHORT).show();
-                            morph(READY, 300);
-                            break;
-                        } catch (IOException | InterruptedException e) {
-                            e.printStackTrace();
-                            Toast.makeText(MainActivity.this, "发送失败！", Toast.LENGTH_SHORT).show();
-                            morph(UNREADY,200);
-                            serialPort.closeDevice();
-                        }
-                        resetMap();
+                        state = UNREADY;
+                        showLoadingView();
+                        btn_start.setEnabled(false);
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    do {
+                                        Thread.sleep(200);
+                                        serialPort.writeData("$STOP#", 100);
+                                        String data = serialPort.readData();
+                                        if (data != null && data.contains("$STOP#")){
+                                            Message msg = mHandler.obtainMessage();
+                                            msg.what = 8;
+                                            msg.obj = READY;
+                                            mHandler.sendMessage(msg);
+                                            break;
+                                        }
+                                        Thread.sleep(200);
+                                    } while (true);
+                                } catch (IOException | InterruptedException e) {
+                                    e.printStackTrace();
+                                    mHandler.sendEmptyMessage(3);
+                                } finally {
+                                    mHandler.sendEmptyMessage(7);
+                                }
+                            }
+                        }).start();
+//                        resetMap();
+                        break;
                 }
                 break;
             case R.id.btn_history:
@@ -603,6 +666,14 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
                 break;
         }
+    }
+
+    private void showLoadingView() {
+        findViewById(R.id.loadingview).setVisibility(View.VISIBLE);
+        AlphaAnimation animation = new AlphaAnimation(0.0f, 1.0f);
+        animation.setDuration(300);
+        animation.setInterpolator(new AccelerateDecelerateInterpolator());
+        findViewById(R.id.loadingview).startAnimation(animation);
     }
 
     public void morph(int state, int duration){
@@ -730,10 +801,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 if (markers.size() > 1) {
                     LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
                     LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(6).color(Color.RED)));
+                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10).color(Color.RED)));
                 }
             }
         }
+        cursor.close();
         database.close();
     }
 
@@ -764,18 +836,19 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
     private void initSmoothMove(){
         shipPointList = new ArrayList<>();
+        shipPointList.add(new LatLng(0, 0));
         smoothMoveMarker = new SmoothMoveMarker(aMap);
         smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromResource(R.drawable.ship));
 
     }
 
     private void focusShip(){
-        LatLngBounds bounds = new LatLngBounds(shipPointList.get(0), shipPointList.get(shipPointList.size() - 1));
+        LatLngBounds bounds = new LatLngBounds(shipPointList.get(1), shipPointList.get(shipPointList.size() - 1));
         aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
     }
 
     public void move(){
-        if (shipPointList.size() == 1){
+        if (shipPointList.size() == 2){
             focusShip();
         }
         else{
@@ -783,6 +856,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             smoothMoveMarker.setPoints(subList);
             smoothMoveMarker.setTotalDuration(1);
             smoothMoveMarker.startSmoothMove();
+            aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
+                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.rgb(61, 110, 234)));
         }
     }
 
@@ -790,12 +865,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         this.tvCurrGas.setText(currGas);
     }
 
-    public void setCurrLat(String currLat) {
-        this.tvCurrLat.setText(currLat);
-    }
-
-    public void setCurrLng(String currLng) {
-        this.tvCurrLng.setText(currLng);
+    public void setCurrLatlng(String lat, String lng) {
+        this.tvCurrLat.setText(lat);
+        this.tvCurrLng.setText(lng);
     }
 
     public void setGpsNum(String gpsNum) {
@@ -803,7 +875,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     }
 
     public void setRawData(String rawData){
-        if (this.tvRawData.getText().toString().split("\n").length > 20){
+        if (this.tvRawData.getText().toString().split("\n").length > 5){
             this.tvRawData.setText("");
         }
         this.tvRawData.setText(this.tvRawData.getText().toString() + rawData + "\n");
@@ -834,7 +906,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             aimPointList.add(aimPoint);
             MarkerOptions markerOptions = new MarkerOptions().position(aimPoint);
             markerOptions.title(String.valueOf(aimPointList.size()));
-            markerOptions.snippet(String.format("纬度：%.6f\n经度：%.6f", aimPoint.latitude, aimPoint.longitude));
+            markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", aimPoint.latitude, aimPoint.longitude));
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.aim)));
             markerOptions.anchor(0.5f, 0.5f);
             aMap.addMarker(markerOptions);
@@ -844,6 +916,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private void resetMap(){
         aMap.clear();
         shipPointList.removeAll(shipPointList);
+        shipPointList.add(new LatLng(0, 0));
         aimPointList.removeAll(aimPointList);
         markers.removeAll(markers);
         polylines.removeAll(polylines);

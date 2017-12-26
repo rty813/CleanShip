@@ -27,12 +27,13 @@ public class MyReceiver extends BroadcastReceiver {
                 case 0:
                     double lat = Double.parseDouble(datas[0]);
                     double lng = Double.parseDouble(datas[1]);
-                    if (lat < 0 || lat > 55 || lng < 70 || lng > 136) {
+                    LatLng latLng = activity.getShipPointList().get(activity.getShipPointList().size() - 1);
+                    activity.getShipPointList().add(new LatLng(lat, lng));
+                    if ((lat < 0 || lat > 55 || lng < 70 || lng > 136)
+                            || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
                         return;
                     }
-                    activity.setCurrLat(datas[0]);
-                    activity.setCurrLng(datas[1]);
-                    activity.getShipPointList().add(new LatLng(lat, lng));
+                    activity.setCurrLatlng(datas[0], datas[1]);
                     activity.move();
                     break;
                 case 1:
