@@ -40,5 +40,6 @@ dependencies {
     compile 'com.github.fccaikai:AppUpdate:2.1.4'
     implementation project(':LoadingView')
     compile 'com.karumi:dexter:4.2.0'
-
+    compile 'com.github.clans:fab:1.6.4'
+    compile 'lib.kingja.switchbutton:switchbutton:1.1.6'
 }

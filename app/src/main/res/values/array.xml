@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <array name="switch_tabs">
+        <item>导航1</item>
+        <item>导航2</item>
+    </array>
+</resources>

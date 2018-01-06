@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/CleanShip.iml" filepath="$PROJECT_DIR$/CleanShip.iml" />
+      <module fileurl="file://$PROJECT_DIR$/CleanShipAndroid.iml" filepath="$PROJECT_DIR$/CleanShipAndroid.iml" />
       <module fileurl="file://$PROJECT_DIR$/LoadingView/LoadingView.iml" filepath="$PROJECT_DIR$/LoadingView/LoadingView.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/usbSerialForAndroid/usbSerialForAndroid.iml" filepath="$PROJECT_DIR$/usbSerialForAndroid/usbSerialForAndroid.iml" />

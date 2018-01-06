@@ -38,6 +38,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -62,6 +63,8 @@ import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.dd.morphingbutton.MorphingButton;
+import com.github.clans.fab.FloatingActionButton;
+import com.github.clans.fab.FloatingActionMenu;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.PermissionToken;
@@ -86,6 +89,7 @@ import java.util.List;
 import java.util.Locale;
 
 import app.dinus.com.loadingdrawable.LoadingView;
+import lib.kingja.switchbutton.SwitchMultiButton;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener, SerialPortTool.onConnectedListener {
     private MapView mMapView;
@@ -95,10 +99,14 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     public static SQLiteDBHelper dbHelper;
     private SerialPortTool serialPort;
     private MorphingButton btn_start;
+    private FloatingActionButton fab_home;
+    private FloatingActionButton fab_mark;
+    private FloatingActionMenu fab_menu;
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
     private static final int NAV = 3;
+    private static final int NONE = -1;
     public static int state = UNREADY;
     private String pos = null;
     private float alpha = 1.0f;
@@ -110,6 +118,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ArrayList<LatLng> aimPointList;
     private SmoothMoveMarker smoothMoveMarker;
     private LoadingView loadingView;
+    private SwitchMultiButton sw_nav;
     private TextView tvAimAngle;
     private TextView tvGyroAngle;
     private TextView tvCurrGas;
@@ -169,11 +178,14 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         myThread = new Thread(new QueryThread());
         myThread.start();
         btn_start = findViewById(R.id.btn_start);
+        fab_home = findViewById(R.id.fab_home);
+        fab_mark = findViewById(R.id.fab_mark);
+        fab_menu = findViewById(R.id.fab_menu);
         morph(state, 0);
         mHandler = new MyHandler();
         aMap.getUiSettings().setCompassEnabled(true);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
-        aMap.getUiSettings().setScaleControlsEnabled(true);
+        aMap.getUiSettings().setZoomControlsEnabled(false);
         aMap.setOnMarkerClickListener(this);
         aMap.setOnMapClickListener(this);
         initSmoothMove();
@@ -185,6 +197,9 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_history).setOnClickListener(this);
         findViewById(R.id.btn_plane).setOnClickListener(this);
         findViewById(R.id.btn_satellite).setOnClickListener(this);
+        findViewById(R.id.fab_home).setOnClickListener(this);
+        findViewById(R.id.fab_mark).setOnClickListener(this);
+        sw_nav = findViewById(R.id.sw_nav);
         tvAimAngle = findViewById(R.id.tv_aim_angle);
         tvCurrGas = findViewById(R.id.tv_curr_gas);
         tvGyroAngle = findViewById(R.id.tv_gyro_angle);
@@ -204,22 +219,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             }
         });
         checkUpdate();
-        ((SeekBar)findViewById(R.id.seekbar)).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                setAimAngle(i);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
     }
 
     @Override
@@ -269,6 +268,40 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         mHandler.sendEmptyMessage(3);
                     }
                 }
+            }
+        }
+    }
+
+    private class WriteSeiralThread implements Runnable{
+        private final String mData;
+        private final int mState;
+
+        WriteSeiralThread(String data, int state){
+            mData = data;
+            mState = state;
+        }
+
+        @Override
+        public void run() {
+            try {
+                do {
+                    Thread.sleep(200);
+                    serialPort.writeData(mData, 100);
+                    String data = serialPort.readData();
+                    if (data != null && data.contains(mData)){
+                        Message msg = mHandler.obtainMessage();
+                        msg.what = 8;
+                        msg.obj = mState;
+                        mHandler.sendMessage(msg);
+                        break;
+                    }
+                    Thread.sleep(200);
+                } while (true);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
+            } finally {
+                mHandler.sendEmptyMessage(7);
             }
         }
     }
@@ -327,6 +360,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     break;
                 case 7:
                     btn_start.setEnabled(true);
+                    fab_menu.showMenuButton(true);
                     break;
                 case 8:
                     synchronized (serialPort) {
@@ -565,8 +599,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
                             showLoadingView();
+//                            使QueryThread进入Wait
                             state = UNREADY;
                             btn_start.setEnabled(false);
+                            fab_menu.hideMenuButton(false);
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -594,66 +630,95 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         initSerialPort(115200);
                         break;
                     case NAV:
-                            state = UNREADY;
-                            showLoadingView();
-                            btn_start.setEnabled(false);
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        do {
-                                            Thread.sleep(200);
-                                            serialPort.writeData("$NAV#", 100);
-                                            String data = serialPort.readData();
-                                            if (data != null && data.contains("$NAV#")){
-                                                Message msg = mHandler.obtainMessage();
-                                                msg.what = 8;
-                                                msg.obj = GONE;
-                                                mHandler.sendMessage(msg);
-                                                break;
-                                            }
-                                            Thread.sleep(200);
-                                        } while (true);
-                                    } catch (IOException | InterruptedException e) {
-                                        e.printStackTrace();
-                                        mHandler.sendEmptyMessage(3);
-                                    } finally {
-                                        mHandler.sendEmptyMessage(7);
-                                    }
-                                }
-                            }).start();
+                        state = UNREADY;
+                        showLoadingView();
+                        btn_start.setEnabled(false);
+                        fab_menu.hideMenuButton(false);
+                        String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
+                        new Thread(new WriteSeiralThread(data, GONE)).start();
+//                        new Thread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                try {
+//                                    do {
+//                                        Thread.sleep(200);
+//                                        serialPort.writeData("$NAV#", 100);
+//                                        String data = serialPort.readData();
+//                                        if (data != null && data.contains("$NAV#")){
+//                                            Message msg = mHandler.obtainMessage();
+//                                            msg.what = 8;
+//                                            msg.obj = GONE;
+//                                            mHandler.sendMessage(msg);
+//                                            break;
+//                                        }
+//                                        Thread.sleep(200);
+//                                    } while (true);
+//                                } catch (IOException | InterruptedException e) {
+//                                    e.printStackTrace();
+//                                    mHandler.sendEmptyMessage(3);
+//                                } finally {
+//                                    mHandler.sendEmptyMessage(7);
+//                                }
+//                            }
+//                        }).start();
                         break;
                     case GONE:
                         state = UNREADY;
                         showLoadingView();
                         btn_start.setEnabled(false);
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    do {
-                                        Thread.sleep(200);
-                                        serialPort.writeData("$STOP#", 100);
-                                        String data = serialPort.readData();
-                                        if (data != null && data.contains("$STOP#")){
-                                            Message msg = mHandler.obtainMessage();
-                                            msg.what = 8;
-                                            msg.obj = READY;
-                                            mHandler.sendMessage(msg);
-                                            break;
-                                        }
-                                        Thread.sleep(200);
-                                    } while (true);
-                                } catch (IOException | InterruptedException e) {
-                                    e.printStackTrace();
-                                    mHandler.sendEmptyMessage(3);
-                                } finally {
-                                    mHandler.sendEmptyMessage(7);
-                                }
-                            }
-                        }).start();
+                        fab_menu.hideMenuButton(false);
+                        new Thread(new WriteSeiralThread("$STOP#", READY)).start();
+//                        new Thread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                try {
+//                                    do {
+//                                        Thread.sleep(200);
+//                                        serialPort.writeData("$STOP#", 100);
+//                                        String data = serialPort.readData();
+//                                        if (data != null && data.contains("$STOP#")){
+//                                            Message msg = mHandler.obtainMessage();
+//                                            msg.what = 8;
+//                                            msg.obj = READY;
+//                                            mHandler.sendMessage(msg);
+//                                            break;
+//                                        }
+//                                        Thread.sleep(200);
+//                                    } while (true);
+//                                } catch (IOException | InterruptedException e) {
+//                                    e.printStackTrace();
+//                                    mHandler.sendEmptyMessage(3);
+//                                } finally {
+//                                    mHandler.sendEmptyMessage(7);
+//                                }
+//                            }
+//                        }).start();
 //                        resetMap();
                         break;
+                }
+                break;
+            case R.id.fab_home:
+                if (state != UNREADY){
+                    fab_menu.close(true);
+                    int pre_state = state;
+                    state = UNREADY;
+                    showLoadingView();
+                    btn_start.setEnabled(false);
+                    fab_menu.hideMenuButton(false);
+                    new Thread(new WriteSeiralThread("$ORDER,2#", pre_state)).start();
+                }
+                break;
+            case R.id.fab_mark:
+                if (state != UNREADY && markers.size() == 1){
+                    fab_menu.close(true);
+                    int pre_state = state;
+                    state = UNREADY;
+                    showLoadingView();
+                    btn_start.setEnabled(false);
+                    fab_menu.hideMenuButton(false);
+                    new Thread(new WriteSeiralThread(String.format(Locale.getDefault(),
+                            "$ORDER,1,%.6f,%.6f#", markers.get(0).getPosition().latitude,
+                            markers.get(0).getPosition().longitude), pre_state)).start();
                 }
                 break;
             case R.id.btn_history:
@@ -677,51 +742,53 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     }
 
     public void morph(int state, int duration){
-        MainActivity.state = state;
-        MorphingButton.Params params = null;
-        switch (state){
-            case UNREADY:
-                params = MorphingButton.Params.create()
-                        .duration(duration)
-                        .cornerRadius(dimen(R.dimen.mb_height_56))
-                        .width(dimen(R.dimen.mb_height_56))
-                        .height(dimen(R.dimen.mb_height_56))
-                        .color(color(R.color.mb_blue))
-                        .colorPressed(color(R.color.mb_blue))
-                        .icon(R.drawable.connect);
-                break;
-            case READY:
-                params = MorphingButton.Params.create()
-                        .duration(duration)
-                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
-                        .width(dimen(R.dimen.mb_width_100))
-                        .height(dimen(R.dimen.mb_height_56))
-                        .color(color(R.color.mb_green))
-                        .colorPressed(color(R.color.mb_green))
-                        .text("CALC");
-                break;
-            case NAV:
-                params = MorphingButton.Params.create()
-                        .duration(duration)
-                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
-                        .width(dimen(R.dimen.mb_width_100))
-                        .height(dimen(R.dimen.mb_height_56))
-                        .color(color(R.color.mb_green))
-                        .colorPressed(color(R.color.mb_green))
-                        .text("NAV");
-                break;
-            case GONE:
-                params = MorphingButton.Params.create()
-                        .duration(duration)
-                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
-                        .width(dimen(R.dimen.mb_width_100))
-                        .height(dimen(R.dimen.mb_height_56))
-                        .color(color(R.color.mb_red))
-                        .colorPressed(color(R.color.mb_red))
-                        .text("STOP");
-                break;
+        if (state != NONE){
+            MainActivity.state = state;
+            MorphingButton.Params params = null;
+            switch (state){
+                case UNREADY:
+                    params = MorphingButton.Params.create()
+                            .duration(duration)
+                            .cornerRadius(dimen(R.dimen.mb_height_56))
+                            .width(dimen(R.dimen.mb_height_56))
+                            .height(dimen(R.dimen.mb_height_56))
+                            .color(color(R.color.mb_blue))
+                            .colorPressed(color(R.color.mb_blue))
+                            .icon(R.drawable.connect);
+                    break;
+                case READY:
+                    params = MorphingButton.Params.create()
+                            .duration(duration)
+                            .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                            .width(dimen(R.dimen.mb_width_100))
+                            .height(dimen(R.dimen.mb_height_56))
+                            .color(color(R.color.mb_green))
+                            .colorPressed(color(R.color.mb_green))
+                            .text("CALC");
+                    break;
+                case NAV:
+                    params = MorphingButton.Params.create()
+                            .duration(duration)
+                            .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                            .width(dimen(R.dimen.mb_width_100))
+                            .height(dimen(R.dimen.mb_height_56))
+                            .color(color(R.color.mb_green))
+                            .colorPressed(color(R.color.mb_green))
+                            .text("NAV");
+                    break;
+                case GONE:
+                    params = MorphingButton.Params.create()
+                            .duration(duration)
+                            .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                            .width(dimen(R.dimen.mb_width_100))
+                            .height(dimen(R.dimen.mb_height_56))
+                            .color(color(R.color.mb_red))
+                            .colorPressed(color(R.color.mb_red))
+                            .text("STOP");
+                    break;
+            }
+            btn_start.morph(params);
         }
-        btn_start.morph(params);
     }
 
     private int dimen(@DimenRes int resId) {
