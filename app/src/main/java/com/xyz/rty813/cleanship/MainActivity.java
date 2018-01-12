@@ -81,6 +81,7 @@ import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -224,9 +225,39 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     @Override
     public void onConnected() {
         Toast.makeText(this, "已连接", Toast.LENGTH_SHORT).show();
-        morph(READY, 200);
-        synchronized (serialPort){
-            serialPort.notify();
+        checkFirmwareUpdate();
+    }
+
+    private void checkFirmwareUpdate() {
+        if (true)
+        {
+            Toast.makeText(this, "更新中", Toast.LENGTH_SHORT).show();
+            state = UNREADY;
+            try {
+                InputStream inputStream = this.getAssets().open("LED.bin");
+                int size = inputStream.available();
+                byte[] buffer = new byte[size];
+                inputStream.read(buffer);
+                inputStream.close();
+                serialPort.writeData("y", 1000);
+                serialPort.writeByte(buffer, 10);
+                String response = serialPort.readData();
+                if (response.contains("Success")){
+                    Toast.makeText(this, "固件更新成功！", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    Toast.makeText(this, "固件更新失败" + response, Toast.LENGTH_SHORT).show();
+                }
+                morph(READY, 200);
+                synchronized (serialPort){
+                    serialPort.notify();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 
@@ -351,7 +382,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     }
                     break;
                 case 5:
-                    Toast.makeText(MainActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(MainActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
                     break;
                 case 6:
                     if (loadingView.getVisibility() == View.VISIBLE){

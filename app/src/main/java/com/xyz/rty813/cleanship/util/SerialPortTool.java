@@ -104,6 +104,13 @@ public class SerialPortTool {
         mPort = null;
     }
 
+    public synchronized void writeByte(byte[] data, int delay) throws IOException, InterruptedException {
+        if (mPort != null){
+            mPort.write(data, 1000);
+            Thread.sleep(delay);
+        }
+    }
+
     public synchronized void writeData(String data, long delay) throws IOException, InterruptedException {
         writeData(data, delay, true);
     }
@@ -113,12 +120,17 @@ public class SerialPortTool {
         if (newLine){
             str = str + "\r\n";
         }
-        mPort.write(str.getBytes(), 1000);
+        if (mPort != null){
+            mPort.write(str.getBytes(), 1000);
+        }
         Thread.sleep(delay);
     }
 
     public synchronized String readData(){
         byte[] bytes = new byte[255];
+        if (mPort == null){
+            return "";
+        }
         try {
             int len = mPort.read(bytes, 2000);
             return new String(bytes, 0, len);
