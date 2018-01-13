@@ -2,6 +2,7 @@ package com.xyz.rty813.cleanship;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -14,6 +15,7 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PersistableBundle;
@@ -35,10 +37,7 @@ import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.SeekBar;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -52,7 +51,6 @@ import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.LatLngBounds;
 import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
-import com.amap.api.maps.model.MyLocationStyle;
 import com.amap.api.maps.model.Polyline;
 import com.amap.api.maps.model.PolylineOptions;
 import com.amap.api.maps.utils.overlay.SmoothMoveMarker;
@@ -67,11 +65,10 @@ import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.karumi.dexter.Dexter;
+import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
-import com.karumi.dexter.listener.PermissionDeniedResponse;
-import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
-import com.karumi.dexter.listener.single.PermissionListener;
+import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 import com.kcode.lib.UpdateWrapper;
 import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
@@ -79,12 +76,26 @@ import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
+import com.yanzhenjie.nohttp.NoHttp;
+import com.yanzhenjie.nohttp.RequestMethod;
+import com.yanzhenjie.nohttp.download.DownloadRequest;
+import com.yanzhenjie.nohttp.download.SimpleDownloadListener;
+import com.yanzhenjie.nohttp.download.SyncDownloadExecutor;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.math.BigInteger;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -133,6 +144,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private double lastGyroAngle;
     public MyHandler mHandler = null;
     private Thread myThread;
+    private int rfVersion = 0;
+    private String rfSha256 = "";
+    private String rfName = "";
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -143,6 +158,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         MiStatInterface.setUploadPolicy(MiStatInterface.UPLOAD_POLICY_REALTIME, 0);
         MiStatInterface.enableExceptionCatcher(true);
         URLStatsRecorder.enableAutoRecord();
+        NoHttp.initialize(this);
         dbHelper = new SQLiteDBHelper(this);
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
@@ -152,28 +168,18 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             aMap = mMapView.getMap();
         }
         Dexter.withActivity(this)
-                .withPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-                .withListener(new PermissionListener() {
+                .withPermissions(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                .withListener(new MultiplePermissionsListener() {
                     @Override
-                    public void onPermissionGranted(PermissionGrantedResponse response) {
-                        MyLocationStyle myLocationStyle = new MyLocationStyle();
-                        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
-                        aMap.setMyLocationStyle(myLocationStyle);
-                        aMap.setMyLocationEnabled(true);
+                    public void onPermissionsChecked(MultiplePermissionsReport report) {
+
                     }
 
                     @Override
-                    public void onPermissionDenied(PermissionDeniedResponse response) {
-                        Toast.makeText(MainActivity.this, "请赋予定位权限", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-
-                    @Override
-                    public void onPermissionRationaleShouldBeShown(PermissionRequest permission, PermissionToken token) {
+                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
 
                     }
-                })
-                .check();
+                }).check();
         serialPort = new SerialPortTool(this);
         serialPort.setListener(this);
         myThread = new Thread(new QueryThread());
@@ -220,44 +226,100 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             }
         });
         checkUpdate();
+        new Thread(new GetRFInfo()).start();
     }
 
     @Override
     public void onConnected() {
-        Toast.makeText(this, "已连接", Toast.LENGTH_SHORT).show();
-        checkFirmwareUpdate();
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("更新固件中");
+        new Thread(new CheckFirmwareUpdate()).start();
+//        synchronized (serialPort) {
+//            serialPort.notify();
+//        }
     }
 
-    private void checkFirmwareUpdate() {
-        if (true)
-        {
-            Toast.makeText(this, "更新中", Toast.LENGTH_SHORT).show();
-            state = UNREADY;
+    private class CheckFirmwareUpdate implements Runnable {
+        @Override
+        public void run() {
             try {
-                InputStream inputStream = this.getAssets().open("LED.bin");
-                int size = inputStream.available();
-                byte[] buffer = new byte[size];
-                inputStream.read(buffer);
-                inputStream.close();
-                serialPort.writeData("y", 1000);
-                serialPort.writeByte(buffer, 10);
-                String response = serialPort.readData();
-                if (response.contains("Success")){
-                    Toast.makeText(this, "固件更新成功！", Toast.LENGTH_SHORT).show();
-                }
-                else{
-                    Toast.makeText(this, "固件更新失败" + response, Toast.LENGTH_SHORT).show();
-                }
-                morph(READY, 200);
-                synchronized (serialPort){
-                    serialPort.notify();
+                serialPort.writeData("$VERSION#", 10);
+                int lfVersion = Integer.parseInt(serialPort.readData()
+                        .replace("\n", "")
+                        .replace("\r", ""));
+                if (lfVersion < rfVersion){
+                    mHandler.sendEmptyMessage(10);
+                    String url = "http://rty813.xyz/cleanship/bin/" + rfName;
+                    String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/cleanship/";
+                    DownloadRequest request = new DownloadRequest(url, RequestMethod.GET, path, true, true);
+                    SyncDownloadExecutor.INSTANCE.execute(0, request, new SimpleDownloadListener() {
+                        @Override
+                        public void onFinish(int what, String filePath) {
+                            try {
+                                InputStream inputStream = new FileInputStream(filePath);
+                                int size = inputStream.available();
+                                byte[] buffer = new byte[size];
+                                inputStream.read(buffer);
+                                inputStream.close();
+                                // 计算SHA-256 校验
+                                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                                digest.update(buffer);
+                                BigInteger bigInteger = new BigInteger(1, digest.digest());
+                                Message msg = mHandler.obtainMessage(9);
+                                if (!bigInteger.toString(16).equals(rfSha256)) {
+                                    msg.obj = "校验错误！";
+                                    mHandler.sendMessage(msg);
+                                    return;
+                                }
+                                serialPort.writeData("y", 1000);
+                                serialPort.writeByte(buffer, 0);
+                                final String response = serialPort.readData();
+                                if (response.contains("Success")) {
+                                    msg.obj = "固件更新成功";
+                                } else {
+                                    msg.obj = "固件更新失败";
+                                }
+                                mHandler.sendMessage(msg);
+                            } catch (IOException e){
+                                e.printStackTrace();
+                                mHandler.sendEmptyMessage(3);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
                 }
             } catch (IOException e) {
                 e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            } catch (NumberFormatException e){
+                e.printStackTrace();
             }
+        }
+    }
 
+    private class GetRFInfo implements Runnable{
+        @Override
+        public void run() {
+            try {
+                HttpURLConnection connection = (HttpURLConnection) new URL("http://139.199.37.92/cleanship/bin.json").openConnection();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String line;
+                StringBuilder builder = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    builder.append(line);
+                }
+                final JSONObject json = new JSONObject(builder.toString());
+                rfName = json.getString("name");
+                rfVersion = json.getInt("version");
+                rfSha256 = json.getString("sha256");
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            }
         }
     }
 
@@ -401,6 +463,17 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         morph((Integer) msg.obj, 300);
                         serialPort.notify();
                     }
+                    break;
+                case 9:
+                    synchronized (serialPort){
+                        Toast.makeText(MainActivity.this, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
+                        progressDialog.dismiss();
+                        morph(READY, 200);
+                    }
+                    break;
+                case 10:
+                    progressDialog.show();
+                    break;
                 default:
                     super.handleMessage(msg);
             }
@@ -412,7 +485,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         UpdateWrapper updateWrapper = new UpdateWrapper.Builder(getApplicationContext())
                 .setTime(1000)
                 .setNotificationIcon(R.mipmap.ic_launcher)
-                .setUrl("http://rty813.xyz/cleanship.json")
+                .setUrl("http://rty813.xyz/cleanship/app.json")
                 .setIsShowToast(false)
                 .setCallback(new CheckUpdateTask.Callback() {
                     @Override

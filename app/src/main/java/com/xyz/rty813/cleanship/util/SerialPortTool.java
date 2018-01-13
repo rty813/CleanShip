@@ -107,7 +107,9 @@ public class SerialPortTool {
     public synchronized void writeByte(byte[] data, int delay) throws IOException, InterruptedException {
         if (mPort != null){
             mPort.write(data, 1000);
-            Thread.sleep(delay);
+            if (delay != 0){
+                Thread.sleep(delay);
+            }
         }
     }
 
