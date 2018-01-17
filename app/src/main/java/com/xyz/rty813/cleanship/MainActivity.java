@@ -51,6 +51,7 @@ import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.LatLngBounds;
 import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
+import com.amap.api.maps.model.MyLocationStyle;
 import com.amap.api.maps.model.Polyline;
 import com.amap.api.maps.model.PolylineOptions;
 import com.amap.api.maps.utils.overlay.SmoothMoveMarker;
@@ -111,8 +112,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     public static SQLiteDBHelper dbHelper;
     private SerialPortTool serialPort;
     private MorphingButton btn_start;
-    private FloatingActionButton fab_home;
-    private FloatingActionButton fab_mark;
     private FloatingActionMenu fab_menu;
     private static final int READY = 1;
     private static final int UNREADY = 0;
@@ -172,7 +171,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 .withListener(new MultiplePermissionsListener() {
                     @Override
                     public void onPermissionsChecked(MultiplePermissionsReport report) {
-
+                        if (report.areAllPermissionsGranted()){
+                            MyLocationStyle myLocationStyle = new MyLocationStyle();//初始化定位蓝点样式类myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
+                            myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE) ;
+                            aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
+                            aMap.setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
+                        }
                     }
 
                     @Override
@@ -185,8 +189,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         myThread = new Thread(new QueryThread());
         myThread.start();
         btn_start = findViewById(R.id.btn_start);
-        fab_home = findViewById(R.id.fab_home);
-        fab_mark = findViewById(R.id.fab_mark);
         fab_menu = findViewById(R.id.fab_menu);
         morph(state, 0);
         mHandler = new MyHandler();
@@ -194,6 +196,44 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setZoomControlsEnabled(false);
         aMap.setOnMarkerClickListener(this);
+        aMap.setOnMarkerDragListener(new AMap.OnMarkerDragListener() {
+            private int index;
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+                for (index = 0; index < markers.size(); index++){
+                    if (markers.get(index).hashCode() == marker.hashCode()){
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public void onMarkerDrag(Marker marker) {
+                LatLng latLng = marker.getPosition();
+                marker.setSnippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
+                if (markers.size() > 1){
+                    PolylineOptions options = new PolylineOptions().width(10).color(Color.RED);
+                    if (index == 0){
+                        options.add(latLng, markers.get(1).getPosition());
+                        polylines.get(0).setOptions(options);
+                    }
+                    else if (index == markers.size() - 1){
+                        options.add(markers.get(markers.size() - 2).getPosition(), latLng);
+                        polylines.get(polylines.size() - 1).setOptions(options);
+                    }
+                    else {
+                        options.add(markers.get(index - 1).getPosition(), latLng);
+                        polylines.get(index - 1).setOptions(options);
+                        options = new PolylineOptions().width(10).color(Color.RED).add(latLng, markers.get(index + 1).getPosition());
+                        polylines.get(index).setOptions(options);
+                    }
+                }
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+            }
+        });
         aMap.setOnMapClickListener(this);
         initSmoothMove();
         aimPointList = new ArrayList<>();
@@ -234,9 +274,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("更新固件中");
         new Thread(new CheckFirmwareUpdate()).start();
-//        synchronized (serialPort) {
-//            serialPort.notify();
-//        }
     }
 
     private class CheckFirmwareUpdate implements Runnable {
@@ -469,6 +506,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         Toast.makeText(MainActivity.this, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
                         progressDialog.dismiss();
                         morph(READY, 200);
+                        serialPort.notify();
                     }
                     break;
                 case 10:
@@ -537,10 +575,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
         markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
         markerOptions.anchor(0.5f, 0.5f);
+        markerOptions.setFlat(true);
+        markerOptions.draggable(true);
 
-        Marker marker = aMap.addMarker(markerOptions);
         System.out.println(latLng.toString());
-        markers.add(marker);
+        markers.add(aMap.addMarker(markerOptions));
         if (markers.size() > 1) {
             LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
             LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
@@ -568,7 +607,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
             markerOptions.anchor(0.5f, 0.5f);
+            markerOptions.setFlat(true);
+            markerOptions.draggable(true);
             markers.add(aMap.addMarker(markerOptions));
+
             polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(10).color(Color.RED)));
             Toast.makeText(this, "完成闭合回路！", Toast.LENGTH_SHORT).show();
         }
@@ -968,6 +1010,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
                 markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
                 markerOptions.anchor(0.5f, 0.5f);
+                markerOptions.draggable(true);
+                markerOptions.setFlat(true);
                 markers.add(aMap.addMarker(markerOptions));
                 if (markers.size() > 1) {
                     LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
@@ -1080,6 +1124,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", aimPoint.latitude, aimPoint.longitude));
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.aim)));
             markerOptions.anchor(0.5f, 0.5f);
+            markerOptions.draggable(true);
+            markerOptions.setFlat(true);
             aMap.addMarker(markerOptions);
         }
     }
