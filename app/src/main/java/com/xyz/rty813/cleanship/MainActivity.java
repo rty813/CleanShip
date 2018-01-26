@@ -321,18 +321,29 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                 e.printStackTrace();
                                 mHandler.sendEmptyMessage(3);
                             } catch (Exception e) {
+                                Message msg = mHandler.obtainMessage(9);
+                                msg.obj = "固件更新失败";
+                                mHandler.sendMessage(msg);
                                 e.printStackTrace();
                             }
                         }
                     });
                 }
+                else{
+                    synchronized (serialPort){
+                        Message msg = mHandler.obtainMessage(9);
+                        msg.obj = "已是最新版";
+                        mHandler.sendMessage(msg);
+                    }
+                }
             } catch (IOException e) {
                 e.printStackTrace();
                 mHandler.sendEmptyMessage(3);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException|NumberFormatException e) {
                 e.printStackTrace();
-            } catch (NumberFormatException e){
-                e.printStackTrace();
+                Message msg = mHandler.obtainMessage(9);
+                msg.obj = "固件更新失败";
+                mHandler.sendMessage(msg);
             }
         }
     }
@@ -371,7 +382,14 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             serialPort.wait();
                         }
                         Thread.sleep(100);
+
                         serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
+
+/**************************************临时测试**********************************************************************/
+//                        serialPort.writeData("$YAW#", 10);
+//                        type = 2;
+/***************************************END!!!*************************************************************************/
+
                         String data = serialPort.readData();
                         if (data != null && !data.equals("")) {
                             String[] strings = data.split(";");
