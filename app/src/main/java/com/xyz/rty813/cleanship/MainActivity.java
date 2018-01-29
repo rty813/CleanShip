@@ -109,6 +109,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private AMap aMap;
     private ArrayList<Marker> markers;
     private ArrayList<Polyline> polylines;
+    private ArrayList<Polyline> trace;
     public static SQLiteDBHelper dbHelper;
     private SerialPortTool serialPort;
     private MorphingButton btn_start;
@@ -142,7 +143,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private double lastAimAngle;
     private double lastGyroAngle;
     public MyHandler mHandler = null;
-    private Thread myThread;
     private int rfVersion = 0;
     private String rfSha256 = "";
     private String rfName = "";
@@ -163,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         mMapView.onCreate(savedInstanceState);
         markers = new ArrayList<>();
         polylines = new ArrayList<>();
+        trace = new ArrayList<>();
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
@@ -186,8 +187,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 }).check();
         serialPort = new SerialPortTool(this);
         serialPort.setListener(this);
-        myThread = new Thread(new QueryThread());
-        myThread.start();
         btn_start = findViewById(R.id.btn_start);
         fab_menu = findViewById(R.id.fab_menu);
         morph(state, 0);
@@ -244,6 +243,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_history).setOnClickListener(this);
         findViewById(R.id.btn_plane).setOnClickListener(this);
         findViewById(R.id.btn_satellite).setOnClickListener(this);
+        findViewById(R.id.btn_trace).setOnClickListener(this);
         findViewById(R.id.fab_home).setOnClickListener(this);
         findViewById(R.id.fab_mark).setOnClickListener(this);
         sw_nav = findViewById(R.id.sw_nav);
@@ -266,6 +266,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             }
         });
         checkUpdate();
+        new Thread(new QueryThread()).start();
         new Thread(new GetRFInfo()).start();
     }
 
@@ -385,10 +386,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
 
                         serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
 
-/**************************************临时测试**********************************************************************/
-//                        serialPort.writeData("$YAW#", 10);
-//                        type = 2;
-/***************************************END!!!*************************************************************************/
+/**************************************临时测试**********************************************************************
+ serialPort.writeData("$YAW#", 10);
+ type = 2;
+ ***************************************END!!!*************************************************************************/
 
                         String data = serialPort.readData();
                         if (data != null && !data.equals("")) {
@@ -771,10 +772,15 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                                 @Override
                                 public void run() {
                                     try {
-                                        for (Marker marker : markers){
-                                            double latitude = marker.getPosition().latitude;
-                                            double longitude = marker.getPosition().longitude;
-                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#",latitude, longitude), 100);
+                                        for (int i = 0; i < markers.size(); i++){
+                                            double latitude = markers.get(i).getPosition().latitude;
+                                            double longitude = markers.get(i).getPosition().longitude;
+                                            if (!(sw_nav.getSelectedTab() == 1 && i == markers.size() - 1
+                                                    && latitude == markers.get(0).getPosition().latitude
+                                                    && longitude == markers.get(0).getPosition().longitude)){
+                                                serialPort.writeData(String.format(Locale.getDefault(),
+                                                        "$GNGGA,%.6f,%.6f#",latitude, longitude), 300);
+                                            }
                                         }
                                         mHandler.sendEmptyMessage(4);
                                     } catch (InterruptedException | IOException e) {
@@ -800,31 +806,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         fab_menu.hideMenuButton(false);
                         String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
                         new Thread(new WriteSeiralThread(data, GONE)).start();
-//                        new Thread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                try {
-//                                    do {
-//                                        Thread.sleep(200);
-//                                        serialPort.writeData("$NAV#", 100);
-//                                        String data = serialPort.readData();
-//                                        if (data != null && data.contains("$NAV#")){
-//                                            Message msg = mHandler.obtainMessage();
-//                                            msg.what = 8;
-//                                            msg.obj = GONE;
-//                                            mHandler.sendMessage(msg);
-//                                            break;
-//                                        }
-//                                        Thread.sleep(200);
-//                                    } while (true);
-//                                } catch (IOException | InterruptedException e) {
-//                                    e.printStackTrace();
-//                                    mHandler.sendEmptyMessage(3);
-//                                } finally {
-//                                    mHandler.sendEmptyMessage(7);
-//                                }
-//                            }
-//                        }).start();
                         break;
                     case GONE:
                         state = UNREADY;
@@ -832,32 +813,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         btn_start.setEnabled(false);
                         fab_menu.hideMenuButton(false);
                         new Thread(new WriteSeiralThread("$STOP#", READY)).start();
-//                        new Thread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                try {
-//                                    do {
-//                                        Thread.sleep(200);
-//                                        serialPort.writeData("$STOP#", 100);
-//                                        String data = serialPort.readData();
-//                                        if (data != null && data.contains("$STOP#")){
-//                                            Message msg = mHandler.obtainMessage();
-//                                            msg.what = 8;
-//                                            msg.obj = READY;
-//                                            mHandler.sendMessage(msg);
-//                                            break;
-//                                        }
-//                                        Thread.sleep(200);
-//                                    } while (true);
-//                                } catch (IOException | InterruptedException e) {
-//                                    e.printStackTrace();
-//                                    mHandler.sendEmptyMessage(3);
-//                                } finally {
-//                                    mHandler.sendEmptyMessage(7);
-//                                }
-//                            }
-//                        }).start();
-//                        resetMap();
                         break;
                 }
                 break;
@@ -893,6 +848,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 break;
             case R.id.btn_satellite:
                 aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
+                break;
+            case R.id.btn_trace:
+                for (Polyline aTrace : trace){
+                    aTrace.setVisible(!aTrace.isVisible());
+                }
                 break;
         }
     }
@@ -1072,7 +1032,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         shipPointList.add(new LatLng(0, 0));
         smoothMoveMarker = new SmoothMoveMarker(aMap);
         smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromResource(R.drawable.ship));
-
     }
 
     private void focusShip(){
@@ -1089,8 +1048,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             smoothMoveMarker.setPoints(subList);
             smoothMoveMarker.setTotalDuration(1);
             smoothMoveMarker.startSmoothMove();
-            aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
-                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.rgb(61, 110, 234)));
+            trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
+                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.rgb(61, 110, 234))));
         }
     }
 
@@ -1155,6 +1114,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aimPointList.removeAll(aimPointList);
         markers.removeAll(markers);
         polylines.removeAll(polylines);
+        trace.removeAll(trace);
         initSmoothMove();
     }
 }
