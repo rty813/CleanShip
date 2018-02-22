@@ -2,7 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.xyz.rty813.cleanship">
 
-    <uses-feature android:name="android.hardware.usb.host" />
+    <uses-feature
+        android:name="android.hardware.usb.host"
+        android:required="true" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -14,26 +16,17 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <meta-data
             android:name="com.amap.api.v2.apikey"
             android:value="c026cc87761755de77828d295b844238" />
 
-        <activity
-            android:name=".MainActivity"
-            android:launchMode="singleTop">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+        <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
@@ -48,6 +41,20 @@
         <receiver
             android:name=".MyReceiver"
             android:enabled="true" />
+
+        <activity android:name=".ControllerActivity" />
+        <activity
+            android:name=".MapActivity"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ConnectActivity"
+            android:launchMode="singleTop">
+        </activity>
     </application>
 
 </manifest>

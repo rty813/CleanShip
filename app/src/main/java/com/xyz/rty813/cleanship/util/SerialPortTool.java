@@ -9,16 +9,21 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Message;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
+import com.xyz.rty813.cleanship.ConnectActivity;
 import com.xyz.rty813.cleanship.MainActivity;
+import com.xyz.rty813.cleanship.MapActivity;
 import com.xyz.rty813.cleanship.MyReceiver;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Locale;
 
@@ -26,10 +31,12 @@ import java.util.Locale;
  * Created by doufu on 2017/12/1.
  */
 
-public class SerialPortTool {
+public class SerialPortTool{
     private PendingIntent mPermissionIntent;
     private UsbManager mUsbManager;
-    private MainActivity mContext;
+//    private ConnectActivity mContext;
+//    private MapActivity mContext;
+    private Context mContext;
     private UsbSerialPort mPort;
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private UsbSerialDriver mDriver;
@@ -42,7 +49,8 @@ public class SerialPortTool {
     private onConnectedListener mListener;
 
     public SerialPortTool(Context context) {
-        mContext = (MainActivity) context;
+//        mContext = (ConnectActivity) context;
+        mContext = context;
         mUsbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
         registerReceiver();
     }

@@ -12,7 +12,7 @@ public class MyReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        MainActivity activity = (MainActivity) context;
+        MapActivity activity = (MapActivity) context;
         activity.setRawData(intent.getStringExtra("rawData"));
         String data = intent.getStringExtra("data");
         if (data == null){

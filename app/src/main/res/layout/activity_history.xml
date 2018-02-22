@@ -1,30 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/coordinatorlayout"
+    android:id="@+id/linearlayout"
+    android:background="@drawable/shape_gradient"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
     tools:context="com.xyz.rty813.cleanship.HistoryActivity">
-    <android.support.design.widget.AppBarLayout
+
+    <android.support.v7.widget.Toolbar
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/appbar">
-        <android.support.v7.widget.Toolbar
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_scrollFlags="enterAlways|scroll"
-            app:title="历史记录"
-            app:titleTextColor="@android:color/white">
-        </android.support.v7.widget.Toolbar>
+        android:background="@drawable/shape_gradient"
+        app:title="历史记录"
+        app:titleTextColor="@android:color/white">
+    </android.support.v7.widget.Toolbar>
 
-    </android.support.design.widget.AppBarLayout>
     <com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView
+        android:background="#ffffff"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/recyclerView"
-        android:scrollbars="vertical"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-    </com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView>
-</android.support.design.widget.CoordinatorLayout>
+        android:scrollbars="vertical"/>
+</LinearLayout>

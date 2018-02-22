@@ -111,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ArrayList<Polyline> polylines;
     private ArrayList<Polyline> trace;
     public static SQLiteDBHelper dbHelper;
-    private SerialPortTool serialPort;
+    private static SerialPortTool serialPort;
     private MorphingButton btn_start;
     private FloatingActionMenu fab_menu;
     private static final int READY = 1;
@@ -246,6 +246,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_trace).setOnClickListener(this);
         findViewById(R.id.fab_home).setOnClickListener(this);
         findViewById(R.id.fab_mark).setOnClickListener(this);
+        findViewById(R.id.fab_ctrl).setOnClickListener(this);
         sw_nav = findViewById(R.id.sw_nav);
         tvAimAngle = findViewById(R.id.tv_aim_angle);
         tvCurrGas = findViewById(R.id.tv_curr_gas);
@@ -274,6 +275,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     public void onConnected() {
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage("更新固件中");
+        mHandler.sendEmptyMessage(10);
         new Thread(new CheckFirmwareUpdate()).start();
     }
 
@@ -286,7 +288,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         .replace("\n", "")
                         .replace("\r", ""));
                 if (lfVersion < rfVersion){
-                    mHandler.sendEmptyMessage(10);
                     String url = "http://rty813.xyz/cleanship/bin/" + rfName;
                     String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/cleanship/";
                     DownloadRequest request = new DownloadRequest(url, RequestMethod.GET, path, true, true);
@@ -840,6 +841,14 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             markers.get(0).getPosition().longitude), pre_state)).start();
                 }
                 break;
+            case R.id.fab_ctrl:
+                startActivity(new Intent(MainActivity.this, MapActivity.class));
+                if (state != UNREADY){
+//                    morph(UNREADY, 0);
+//                    Intent intent = new Intent(this, ControllerActivity.class);
+//                    startActivity(intent);
+                }
+                break;
             case R.id.btn_history:
                 startActivityForResult(new Intent(this, HistoryActivity.class), 200);
                 break;
@@ -1116,6 +1125,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         polylines.removeAll(polylines);
         trace.removeAll(trace);
         initSmoothMove();
+    }
+
+    public static SerialPortTool getSerialPort() {
+        return serialPort;
     }
 }
 

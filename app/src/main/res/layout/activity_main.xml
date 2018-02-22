@@ -50,6 +50,15 @@
             app:fab_label="返航"
             app:fab_colorNormal="@color/colorAccent"
             android:src="@drawable/home"/>
+
+        <com.github.clans.fab.FloatingActionButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fab_size="mini"
+            android:id="@+id/fab_ctrl"
+            app:fab_label="遥控器"
+            app:fab_colorNormal="@color/colorAccent"
+            android:src="@drawable/remotecontroller"/>
     </com.github.clans.fab.FloatingActionMenu>
 
     <lib.kingja.switchbutton.SwitchMultiButton
