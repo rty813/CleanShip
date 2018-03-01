@@ -109,7 +109,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
                 android:textColor="@color/mb_white"
-                android:text="@string/curr_gas"/>
+                android:text="@string/curr_vel"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -176,7 +176,6 @@
                 android:id="@+id/tv_raw_data"
                 android:scrollbars="vertical"/>
         </LinearLayout>
-
 
     </LinearLayout>
 

@@ -211,6 +211,7 @@ public class ConnectActivity extends AppCompatActivity implements SerialPortTool
                         state = READY;
                         serialPort.notify();
                         startActivity(new Intent(ConnectActivity.this, MapActivity.class));
+                        finish();
                     }
                     break;
                 case 10:
@@ -235,11 +236,11 @@ public class ConnectActivity extends AppCompatActivity implements SerialPortTool
         @Override
         public void run() {
             try {
-                serialPort.writeData("$VERSION#", 10);
+                serialPort.writeData("", 10);
                 int lfVersion = Integer.parseInt(serialPort.readData()
                         .replace("\n", "")
                         .replace("\r", ""));
-                if (lfVersion < rfVersion){
+                if (lfVersion < rfVersion) {
                     String url = "http://rty813.xyz/cleanship/bin/" + rfName;
                     String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/cleanship/";
                     DownloadRequest request = new DownloadRequest(url, RequestMethod.GET, path, true, true);
@@ -271,7 +272,7 @@ public class ConnectActivity extends AppCompatActivity implements SerialPortTool
                                     msg.obj = "固件更新失败";
                                 }
                                 mHandler.sendMessage(msg);
-                            } catch (IOException e){
+                            } catch (IOException e) {
                                 e.printStackTrace();
                                 mHandler.sendEmptyMessage(3);
                             } catch (Exception e) {
@@ -282,9 +283,8 @@ public class ConnectActivity extends AppCompatActivity implements SerialPortTool
                             }
                         }
                     });
-                }
-                else{
-                    synchronized (serialPort){
+                } else {
+                    synchronized (serialPort) {
                         Message msg = mHandler.obtainMessage(9);
                         msg.obj = "已是最新版";
                         mHandler.sendMessage(msg);

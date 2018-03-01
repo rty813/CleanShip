@@ -52,21 +52,21 @@ public class SerialPortTool{
 //        mContext = (ConnectActivity) context;
         mContext = context;
         mUsbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
-        registerReceiver();
+//        registerReceiver();
     }
 
     public void setListener(onConnectedListener listener) {
         this.mListener = listener;
     }
 
-    private void registerReceiver(){
-        mPermissionIntent = PendingIntent.getBroadcast(mContext, 0, new Intent(ACTION_USB_PERMISSION), 0);
+    public void registerReceiver(Context context){
+        mPermissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
         IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
-        mContext.registerReceiver(mUsbReceiver, filter);
+        context.registerReceiver(mUsbReceiver, filter);
     }
 
-    public void unregisterReceiver(){
-        mContext.unregisterReceiver(mUsbReceiver);
+    public void unregisterReceiver(Context context){
+        context.unregisterReceiver(mUsbReceiver);
     }
 
     public List<UsbSerialDriver> searchSerialPort() {
@@ -122,6 +122,9 @@ public class SerialPortTool{
     }
 
     public synchronized void writeData(String data, long delay) throws IOException, InterruptedException {
+        if (data.equals("")){
+            return;
+        }
         writeData(data, delay, true);
     }
 
@@ -142,7 +145,7 @@ public class SerialPortTool{
             return "";
         }
         try {
-            int len = mPort.read(bytes, 2000);
+            int len = mPort.read(bytes, 500);
             return new String(bytes, 0, len);
         } catch (IOException e) {
             e.printStackTrace();

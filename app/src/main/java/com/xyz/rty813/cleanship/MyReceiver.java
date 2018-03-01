@@ -21,7 +21,7 @@ public class MyReceiver extends BroadcastReceiver {
         }
         String[] datas = data.split(",");
 //        type代表数据类型
-//        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前舵量
+//        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前速度
         try {
             switch (intent.getIntExtra("type", -1)) {
                 case 0:
@@ -50,7 +50,7 @@ public class MyReceiver extends BroadcastReceiver {
                     activity.setAimAngle(aimAngle);
                     break;
                 case 4:
-                    activity.setCurrGas(data);
+                    activity.setCurrVel(data);
                     break;
                 case 5:
                     activity.setGpsNum(data);

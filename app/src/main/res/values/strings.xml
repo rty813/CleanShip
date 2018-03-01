@@ -2,7 +2,7 @@
     <string name="app_name">清洁船内测版</string>
     <string name="aim_angle">目标方向角：</string>
     <string name="gyro_angle">陀螺仪方向角：</string>
-    <string name="curr_gas">当前舵量：</string>
+    <string name="curr_vel">当前速度</string>
     <string name="curr_lat">当前纬度：</string>
     <string name="curr_lng">当前经度：</string>
     <string name="raw_data">原始数据：</string>

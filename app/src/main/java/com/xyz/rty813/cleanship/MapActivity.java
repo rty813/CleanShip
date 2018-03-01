@@ -1,13 +1,6 @@
 package com.xyz.rty813.cleanship;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
-import android.app.Activity;
-import android.app.MediaRouteButton;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -28,6 +21,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -37,7 +31,6 @@ import android.view.WindowManager;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
-import android.view.animation.OvershootInterpolator;
 import android.view.animation.RotateAnimation;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -65,17 +58,10 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
-import com.github.clans.fab.FloatingActionMenu;
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
-import com.yanzhenjie.permission.Action;
-import com.yanzhenjie.permission.AndPermission;
-import com.yanzhenjie.permission.Permission;
-import com.yanzhenjie.permission.Rationale;
-import com.yanzhenjie.permission.RequestExecutor;
-import com.yanzhenjie.permission.SettingService;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -83,7 +69,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
+import java.util.regex.Matcher;
 
 import app.dinus.com.loadingdrawable.LoadingView;
 import lib.kingja.switchbutton.SwitchMultiButton;
@@ -118,7 +104,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
 
     private TextView tvAimAngle;
     private TextView tvGyroAngle;
-    private TextView tvCurrGas;
+    private TextView tvCurrVel;
     private TextView tvCurrLat;
     private TextView tvCurrLng;
     private TextView tvRawData;
@@ -212,9 +198,9 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         aimPointList = new ArrayList<>();
         initSmoothMove();
         state = ConnectActivity.getState();
-        state = UNREADY;
-//        serialPort = ConnectActivity.getSerialPort();
-        serialPort = new SerialPortTool(this);
+        serialPort = ConnectActivity.getSerialPort();
+        serialPort.registerReceiver(this);
+//        serialPort = new SerialPortTool(this);
         new Thread(new QueryThread()).start();
     }
 
@@ -222,7 +208,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         loadingView = findViewById(R.id.loadingview);
 
         tvAimAngle = findViewById(R.id.tv_aim_angle);
-        tvCurrGas = findViewById(R.id.tv_curr_gas);
+        tvCurrVel = findViewById(R.id.tv_curr_vel);
         tvGyroAngle = findViewById(R.id.tv_gyro_angle);
         tvCurrLat = findViewById(R.id.tv_curr_lat);
         tvCurrLng = findViewById(R.id.tv_curr_lng);
@@ -240,6 +226,12 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         picNav = getResources().getDrawable(R.drawable.new_nav);
         picWorking = getResources().getDrawable(R.drawable.working);
 
+        picStart.setBounds(0, 0, picStart.getMinimumWidth(), picStart.getMinimumHeight());
+        picPause.setBounds(0, 0, picPause.getMinimumWidth(), picPause.getMinimumHeight());
+        picCalc.setBounds(0, 0, picCalc.getMinimumWidth(), picCalc.getMinimumHeight());
+        picNav.setBounds(0, 0, picNav.getMinimumWidth(), picNav.getMinimumHeight());
+        picWorking.setBounds(0, 0, picWorking.getMinimumWidth(), picWorking.getMinimumHeight());
+
         findViewById(R.id.btn_more).setOnClickListener(this);
         findViewById(R.id.btn_connect).setOnClickListener(this);
         findViewById(R.id.btn_route).setOnClickListener(this);
@@ -254,38 +246,61 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         public void run() {
             synchronized (serialPort){
                 int type = 0;
+                boolean err = false;
                 while (true) {
                     try {
                         if (state == UNREADY){
                             serialPort.wait();
                         }
-                        Thread.sleep(100);
+                        if (!err){
+                            serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 10);
+                        }
+                        String data;
+                        StringBuilder builder = new StringBuilder();
+                        while (!(data = serialPort.readData()).equals("")){
+                            builder.append(data);
+                            if (data.endsWith("#")){
+                                break;
+                            }
+                        }
+                        data = builder.toString();
+                        if (!data.startsWith("$") || !data.endsWith("#")){
+                            err = false;
+                            Thread.sleep(400);
+                            continue;
+                        }
+                        else{
+                            data = data.replaceAll("#", "");
+                            data = data.replaceAll(Matcher.quoteReplacement("$"), "");
+                        }
 
-                        serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
-
-/**************************************临时测试**********************************************************************
- serialPort.writeData("$YAW#", 10);
- type = 2;
- ***************************************END!!!*************************************************************************/
-
-                        String data = serialPort.readData();
-                        if (data != null && !data.equals("")) {
+                        if (!data.equals("")) {
                             String[] strings = data.split(";");
                             Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
                             if (strings.length == 2){
-                                intent.putExtra("rawData", "|" + strings[0] + "|" + strings[1] + "|");
+                                intent.putExtra("rawData", String.format(Locale.getDefault(),
+                                        "|%d|%s|%s", type, strings[0], strings[1]));
                             }
                             else{
                                 intent.putExtra("rawData", data);
                             }
-                            if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
-                                intent.putExtra("type", type);
+                            if (strings.length == 2 && Integer.parseInt(strings[0]) < 6) {
+                                intent.putExtra("type", Integer.parseInt(strings[0]));
                                 intent.putExtra("data", strings[1]);
+                            }
+                            if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
                                 type = (type + 1) % 6;
+                                err = false;
+                            }
+                            else if (strings.length == 2){
+                                err = true;
                             }
                             sendBroadcast(intent);
                         }
-                        Thread.sleep(100);
+                        else{
+                            err = false;
+                        }
+                        Thread.sleep(400);
                     } catch (NumberFormatException | InterruptedException e) {
                         mHandler.sendEmptyMessage(5);
                         e.printStackTrace();
@@ -301,7 +316,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
     private class WriteSeiralThread implements Runnable{
         private final String mData;
         private final int mState;
-
         WriteSeiralThread(String data, int state){
             mData = data;
             mState = state;
@@ -311,9 +325,17 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         public void run() {
             try {
                 do {
-                    Thread.sleep(200);
-                    serialPort.writeData(mData, 100);
-                    String data = serialPort.readData();
+                    serialPort.writeData(mData, 10);
+                    String data;
+                    StringBuilder builder = new StringBuilder();
+                    while (!(data = serialPort.readData()).equals("")){
+                        builder.append(data);
+                        if (data.endsWith("#")){
+                            break;
+                        }
+                    }
+                    data = builder.toString();
+                    Log.i("writeSerialPort", data);
                     if (data != null && data.contains(mData)){
                         Message msg = mHandler.obtainMessage();
                         msg.what = 8;
@@ -321,7 +343,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                         mHandler.sendMessage(msg);
                         break;
                     }
-                    Thread.sleep(200);
+                    Thread.sleep(400);
                 } while (true);
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
@@ -364,8 +386,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                         loadingView.startAnimation(animation);
                     }
                     morph(UNREADY, 200);
-                    Toast.makeText(MapActivity.this, "连接中断！", Toast.LENGTH_SHORT).show();
-                    serialPort.closeDevice();
                     break;
                 case 4:
                     if (loadingView.getVisibility() == View.VISIBLE){
@@ -412,6 +432,13 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
 //                临时测试遥控器功能
                 contentView.findViewById(R.id.menu_btn_rc).setOnClickListener(this);
                 contentView.findViewById(R.id.menu_btn_trace).setOnClickListener(this);
+                contentView.findViewById(R.id.menu_btn_clear).setOnClickListener(this);
+                contentView.findViewById(R.id.menu_btn_order5).setOnClickListener(this);
+                contentView.findViewById(R.id.menu_btn_nav).setOnClickListener(this);
+                contentView.findViewById(R.id.menu_btn_go).setOnClickListener(this);
+                contentView.findViewById(R.id.menu_btn_stop).setOnClickListener(this);
+                contentView.findViewById(R.id.menu_btn_startquery).setOnClickListener(this);
+                contentView.findViewById(R.id.menu_btn_closequery).setOnClickListener(this);
                 popupWindow = new PopupWindow();
                 popupWindow.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
                 popupWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -452,7 +479,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 Toast.makeText(MapActivity.this, "帮助", Toast.LENGTH_SHORT).show();
                 break;
             case R.id.menu_btn_home:
-                if (state != UNREADY){
+                if (state != UNREADY || true){
                     popupWindow.dismiss();
                     int pre_state = state;
                     state = UNREADY;
@@ -621,7 +648,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 }
                 break;
             case R.id.btn_calc:
-                if (state == READY){
+                if (state == READY || state == UNREADY){
                     if (markers.size() > 0){
                         StringBuilder stringBuilder = new StringBuilder();
                         for (Marker marker : markers){
@@ -664,13 +691,55 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                     state = UNREADY;
                     showLoadingView();
                     String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
-                    new Thread(new WriteSeiralThread(data, GONE)).start();
+                    new Thread(new WriteSeiralThread(data, PAUSE)).start();
                 }
                 else if (state == GONE){
                     state = UNREADY;
                     showLoadingView();
                     new Thread(new WriteSeiralThread("$STOP#", READY)).start();
                 }
+                break;
+            case R.id.menu_btn_clear:
+                int preState = state;
+                state = UNREADY;
+                showLoadingView();
+                new Thread(new WriteSeiralThread("$CLEAR#", preState)).start();
+                break;
+            case R.id.menu_btn_order5:
+                preState = state;
+                state = UNREADY;
+                showLoadingView();
+                new Thread(new WriteSeiralThread("$ORDER,5#", preState)).start();
+                break;
+            case R.id.menu_btn_nav:
+                preState = state;
+                state = UNREADY;
+                showLoadingView();
+                String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
+                new Thread(new WriteSeiralThread(data, preState)).start();
+                break;
+            case R.id.menu_btn_go:
+                preState = state;
+                state = UNREADY;
+                showLoadingView();
+                new Thread(new WriteSeiralThread("$GO#", preState)).start();
+                break;
+            case R.id.menu_btn_stop:
+                preState = state;
+                state = UNREADY;
+                showLoadingView();
+                new Thread(new WriteSeiralThread("$STOP#", preState)).start();
+                break;
+            case R.id.menu_btn_startquery:
+                Toast.makeText(this, "开始问询", Toast.LENGTH_SHORT).show();
+                synchronized (serialPort){
+                    state = READY;
+                    serialPort.notify();
+                }
+                break;
+            case R.id.menu_btn_closequery:
+                state = UNREADY;
+                Toast.makeText(this, "停止问询", Toast.LENGTH_SHORT).show();
                 break;
         }
     }
@@ -691,30 +760,37 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         this.state = state;
         switch (state){
             case UNREADY:
+                Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(this, ConnectActivity.class));
+                finish();
                 break;
             case READY:
-                btnGostop.setText("暂停");
+                btnGostop.setText("开始");
                 btnCalc.setCompoundDrawables(null, picCalc, null, null);
-                btnGostop.setCompoundDrawables(null, picPause, null, null);
+                btnGostop.setCompoundDrawables(null, picStart, null, null);
                 btnGostop.setEnabled(false);
+                btnCalc.setText("计算");
                 break;
             case NAV:
-                btnGostop.setText("暂停");
+                btnGostop.setText("开始");
                 btnCalc.setCompoundDrawables(null, picNav, null, null);
-                btnGostop.setCompoundDrawables(null, picPause, null, null);
+                btnGostop.setCompoundDrawables(null, picStart, null, null);
                 btnGostop.setEnabled(false);
+                btnCalc.setText("导航");
                 break;
             case GONE:
                 btnGostop.setText("暂停");
                 btnCalc.setCompoundDrawables(null, picWorking, null, null);
                 btnGostop.setCompoundDrawables(null, picPause, null, null);
                 btnGostop.setEnabled(true);
+                btnCalc.setText("正在导航");
                 break;
             case PAUSE:
                 btnGostop.setText("开始");
                 btnCalc.setCompoundDrawables(null, picCalc, null, null);
-                btnGostop.setCompoundDrawables(null, picStart, null, null);
+                btnGostop.setCompoundDrawables(null, picWorking, null, null);
                 btnGostop.setEnabled(true);
+                btnCalc.setText("正在导航");
         }
         btnCalc.setEnabled(true);
         btnRoute.setEnabled(true);
@@ -781,7 +857,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     private void loadRoute(@Nullable String id){
-        SQLiteDatabase database = MainActivity.dbHelper.getReadableDatabase();
+        SQLiteDatabase database = dbHelper.getReadableDatabase();
         resetMap();
         Cursor cursor;
         if (id != null){
@@ -872,8 +948,8 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
-    public void setCurrGas(String currGas) {
-        this.tvCurrGas.setText(currGas);
+    public void setCurrVel(String currVel) {
+        this.tvCurrVel.setText(currVel);
     }
 
     public void setCurrLatlng(String lat, String lng) {
@@ -938,6 +1014,17 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == RESULT_OK){
+            if (requestCode == 200){
+                if (data.getStringExtra("id") != null){
+                    loadRoute(data.getStringExtra("id"));
+                }
+            }
+        }
+    }
+
+    @Override
     protected void onPause() {
         mMapView.onPause();
         unregisterReceiver(receiver);
@@ -954,9 +1041,10 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
 
     @Override
     protected void onDestroy() {
-        mMapView.onDestroy();
         state = UNREADY;
-        serialPort.unregisterReceiver();
+        mMapView.onDestroy();
+        serialPort.closeDevice();
+        serialPort.unregisterReceiver(this);
         super.onDestroy();
     }
 

@@ -568,7 +568,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         super.onDestroy();
         System.out.println("onDestory");
         state = UNREADY;
-        serialPort.unregisterReceiver();
+        serialPort.unregisterReceiver(this);
         mMapView.onDestroy();
     }
 
