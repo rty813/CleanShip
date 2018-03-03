@@ -33,6 +33,7 @@ import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
@@ -64,6 +65,8 @@ import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
+import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -123,6 +126,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
     private Drawable picWorking;
     private SwitchMultiButton sw_nav;
     private Button btnRoute;
+    private ImageButton btnMore;
 
     private static final String MY_APPID = "2882303761517676503";
     private static final String MY_APP_KEY = "5131767662503";
@@ -190,7 +194,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         });
         aMap.setOnMapClickListener(this);
         initView();
-        mHandler = new MyHandler();
+        mHandler = new MyHandler(this);
         dbHelper = new SQLiteDBHelper(this);
         markers = new ArrayList<>();
         polylines = new ArrayList<>();
@@ -220,6 +224,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         btnGostop = findViewById(R.id.btn_gostop);
         btnCalc = findViewById(R.id.btn_calc);
         btnRoute = findViewById(R.id.btn_route);
+        btnMore = findViewById(R.id.btn_more);
         picStart = getResources().getDrawable(R.drawable.start);
         picPause = getResources().getDrawable(R.drawable.pause);
         picCalc = getResources().getDrawable(R.drawable.calc);
@@ -233,7 +238,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         picWorking.setBounds(0, 0, picWorking.getMinimumWidth(), picWorking.getMinimumHeight());
 
         findViewById(R.id.btn_more).setOnClickListener(this);
-        findViewById(R.id.btn_connect).setOnClickListener(this);
+        findViewById(R.id.btn_disconnect).setOnClickListener(this);
         findViewById(R.id.btn_route).setOnClickListener(this);
         findViewById(R.id.btn_gostop).setOnClickListener(this);
         findViewById(R.id.btn_calc).setOnClickListener(this);
@@ -248,6 +253,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 int type = 0;
                 boolean err = false;
                 while (true) {
+                    String data = null;
                     try {
                         if (state == UNREADY){
                             serialPort.wait();
@@ -255,7 +261,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                         if (!err){
                             serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 10);
                         }
-                        String data;
                         StringBuilder builder = new StringBuilder();
                         while (!(data = serialPort.readData()).equals("")){
                             builder.append(data);
@@ -302,7 +307,9 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                         }
                         Thread.sleep(400);
                     } catch (NumberFormatException | InterruptedException e) {
-                        mHandler.sendEmptyMessage(5);
+                        Message msg = mHandler.obtainMessage(5);
+                        msg.obj = data;
+                        mHandler.sendMessage(msg);
                         e.printStackTrace();
                     } catch (IOException e){
                         e.printStackTrace();
@@ -313,14 +320,13 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
-    private class WriteSeiralThread implements Runnable{
+    private class WriteSerialThread implements Runnable{
         private final String mData;
         private final int mState;
-        WriteSeiralThread(String data, int state){
+        WriteSerialThread(String data, int state){
             mData = data;
             mState = state;
         }
-
         @Override
         public void run() {
             try {
@@ -336,9 +342,8 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     data = builder.toString();
                     Log.i("writeSerialPort", data);
-                    if (data != null && data.contains(mData)){
-                        Message msg = mHandler.obtainMessage();
-                        msg.what = 8;
+                    if (data.contains(mData)){
+                        Message msg = mHandler.obtainMessage(8);
                         msg.obj = mState;
                         mHandler.sendMessage(msg);
                         break;
@@ -354,9 +359,14 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
-    public class MyHandler extends Handler {
+    static class MyHandler extends Handler {
+        WeakReference<MapActivity> mActivity;
+        MyHandler(MapActivity activity){
+            mActivity = new WeakReference<>(activity);
+        }
         @Override
         public void handleMessage(Message msg) {
+            final MapActivity activity = mActivity.get();
             AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
             animation.setDuration(300);
             animation.setInterpolator(new AccelerateDecelerateInterpolator());
@@ -366,7 +376,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 }
                 @Override
                 public void onAnimationEnd(Animation animation) {
-                    loadingView.setVisibility(View.GONE);
+                    activity.loadingView.setVisibility(View.GONE);
                 }
                 @Override
                 public void onAnimationRepeat(Animation animation) {
@@ -374,46 +384,46 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
             });
             switch (msg.what){
                 case 1:
-                    WindowManager.LayoutParams lp = getWindow().getAttributes();
+                    WindowManager.LayoutParams lp = activity.getWindow().getAttributes();
                     lp.alpha = (float) msg.obj;
-                    getWindow().setAttributes(lp);
+                    activity.getWindow().setAttributes(lp);
                     break;
                 case 2:
-                    ((PopupWindow)msg.obj).showAtLocation(mMapView, Gravity.CENTER, 0, 0);
+                    ((PopupWindow)msg.obj).showAtLocation(activity.mMapView, Gravity.CENTER, 0, 0);
                     break;
                 case 3:
-                    if (loadingView.getVisibility() == View.VISIBLE){
-                        loadingView.startAnimation(animation);
+                    if (activity.loadingView.getVisibility() == View.VISIBLE){
+                        activity.loadingView.startAnimation(animation);
                     }
-                    morph(UNREADY, 200);
+                    activity.morph(UNREADY, 200);
                     break;
                 case 4:
-                    if (loadingView.getVisibility() == View.VISIBLE){
-                        loadingView.startAnimation(animation);
+                    if (activity.loadingView.getVisibility() == View.VISIBLE){
+                        activity.loadingView.startAnimation(animation);
                     }
-                    synchronized (serialPort){
-                        morph(NAV, 300);
-                        serialPort.notify();
+                    synchronized (activity.serialPort){
+                        activity.morph(NAV, 300);
+                        activity.serialPort.notify();
                     }
                     break;
                 case 5:
-                    //Toast.makeText(MapActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
+                    Log.d("非法数据", (String) msg.obj);
                     break;
                 case 6:
-                    if (loadingView.getVisibility() == View.VISIBLE){
-                        loadingView.startAnimation(animation);
+                    if (activity.loadingView.getVisibility() == View.VISIBLE){
+                        activity.loadingView.startAnimation(animation);
                     }
                     break;
                 case 7:
 //                    btn_start.setEnabled(true);
                     break;
                 case 8:
-                    synchronized (serialPort) {
-                        if (loadingView.getVisibility() == View.VISIBLE){
-                            loadingView.startAnimation(animation);
+                    synchronized (activity.serialPort) {
+                        if (activity.loadingView.getVisibility() == View.VISIBLE){
+                            activity.loadingView.startAnimation(animation);
                         }
-                        morph((Integer) msg.obj, 300);
-                        serialPort.notify();
+                        activity.morph((Integer) msg.obj, 300);
+                        activity.serialPort.notify();
                     }
                     break;
                 default:
@@ -424,6 +434,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
 
     @Override
     public void onClick(View view) {
+        int preState = state;
         switch (view.getId()) {
             case R.id.btn_more:
                 View contentView = LayoutInflater.from(this).inflate(R.layout.menu_more, null);
@@ -472,7 +483,9 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 popupWindow.showAtLocation(findViewById(R.id.btn_route),
                         Gravity.NO_GRAVITY, (int)(location[0] + popupWidth * 0.2), location[1] - popupHeight);
                 break;
-            case R.id.btn_connect:
+            case R.id.btn_disconnect:
+                startActivity(new Intent(this, ConnectActivity.class));
+                finish();
                 break;
             case R.id.menu_btn_help:
                 popupWindow.dismiss();
@@ -481,11 +494,10 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.menu_btn_home:
                 if (state != UNREADY || true){
                     popupWindow.dismiss();
-                    int pre_state = state;
                     state = UNREADY;
                     showLoadingView();
 //                    btn_start.setEnabled(false);
-                    new Thread(new WriteSeiralThread("$ORDER,2#", pre_state)).start();
+                    new Thread(new WriteSerialThread("$ORDER,2#", preState)).start();
                 }
                 break;
             case R.id.menu_btn_cancel:
@@ -609,13 +621,12 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.menu_btn_mark:
                 if (state != UNREADY && markers.size() == 1){
                     popupWindow.dismiss();
-                    int pre_state = state;
                     state = UNREADY;
                     showLoadingView();
 //                    btn_start.setEnabled(false);
-                    new Thread(new WriteSeiralThread(String.format(Locale.getDefault(),
+                    new Thread(new WriteSerialThread(String.format(Locale.getDefault(),
                             "$ORDER,1,%.6f,%.6f#", markers.get(0).getPosition().latitude,
-                            markers.get(0).getPosition().longitude), pre_state)).start();
+                            markers.get(0).getPosition().longitude), preState)).start();
                 }
                 break;
             case R.id.menu_btn_rc:
@@ -639,12 +650,12 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 if (state == PAUSE){
                     state = UNREADY;
                     showLoadingView();
-                    new Thread(new WriteSeiralThread("$GO#", GONE)).start();
+                    new Thread(new WriteSerialThread("$GO#", GONE)).start();
                 }
                 else if (state == GONE){
                     state = UNREADY;
                     showLoadingView();
-                    new Thread(new WriteSeiralThread("$STOP#", PAUSE)).start();
+                    new Thread(new WriteSerialThread("$STOP#", PAUSE)).start();
                 }
                 break;
             case R.id.btn_calc:
@@ -662,7 +673,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                             @Override
                             public void run() {
                                 try {
-                                    serialPort.writeData("$CLEAR#", 300);
+                                    serialPort.writeData("$CLEAR#", 1000);
                                     for (int i = 0; i < markers.size(); i++){
                                         double latitude = markers.get(i).getPosition().latitude;
                                         double longitude = markers.get(i).getPosition().longitude;
@@ -691,44 +702,41 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                     state = UNREADY;
                     showLoadingView();
                     String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
-                    new Thread(new WriteSeiralThread(data, PAUSE)).start();
+                    new Thread(new WriteSerialThread(data, GONE)).start();
                 }
                 else if (state == GONE){
                     state = UNREADY;
                     showLoadingView();
-                    new Thread(new WriteSeiralThread("$STOP#", READY)).start();
+                    new Thread(new WriteSerialThread("$STOP#", READY)).start();
                 }
                 break;
             case R.id.menu_btn_clear:
-                int preState = state;
                 state = UNREADY;
                 showLoadingView();
-                new Thread(new WriteSeiralThread("$CLEAR#", preState)).start();
+                new Thread(new WriteSerialThread("$CLEAR#", READY)).start();
                 break;
             case R.id.menu_btn_order5:
-                preState = state;
                 state = UNREADY;
                 showLoadingView();
-                new Thread(new WriteSeiralThread("$ORDER,5#", preState)).start();
+                new Thread(new WriteSerialThread("$ORDER,5#", preState)).start();
                 break;
             case R.id.menu_btn_nav:
-                preState = state;
                 state = UNREADY;
                 showLoadingView();
                 String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
-                new Thread(new WriteSeiralThread(data, preState)).start();
+                new Thread(new WriteSerialThread(data, preState)).start();
                 break;
             case R.id.menu_btn_go:
-                preState = state;
                 state = UNREADY;
                 showLoadingView();
-                new Thread(new WriteSeiralThread("$GO#", preState)).start();
+                new Thread(new WriteSerialThread("$GO#", preState)).start();
                 break;
             case R.id.menu_btn_stop:
-                preState = state;
                 state = UNREADY;
+                btnCalc.setEnabled(false);
+                btnGostop.setEnabled(false);
                 showLoadingView();
-                new Thread(new WriteSeiralThread("$STOP#", preState)).start();
+                new Thread(new WriteSerialThread("$STOP#", preState)).start();
                 break;
             case R.id.menu_btn_startquery:
                 Toast.makeText(this, "开始问询", Toast.LENGTH_SHORT).show();
@@ -757,7 +765,20 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     private void morph(int state, int duration){
-        this.state = state;
+        if (state != NONE){
+            this.state = state;
+            btnCalc.setEnabled(true);
+            btnGostop.setEnabled(true);
+            btnRoute.setEnabled(true);
+            btnMore.setEnabled(true);
+        }
+        else{
+            this.state = UNREADY;
+            btnCalc.setEnabled(false);
+            btnGostop.setEnabled(false);
+            btnMore.setEnabled(false);
+            btnRoute.setEnabled(false);
+        }
         switch (state){
             case UNREADY:
                 Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
@@ -766,34 +787,33 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 break;
             case READY:
                 btnGostop.setText("开始");
-                btnCalc.setCompoundDrawables(null, picCalc, null, null);
                 btnGostop.setCompoundDrawables(null, picStart, null, null);
                 btnGostop.setEnabled(false);
                 btnCalc.setText("计算");
+                btnCalc.setCompoundDrawables(null, picCalc, null, null);
                 break;
             case NAV:
                 btnGostop.setText("开始");
-                btnCalc.setCompoundDrawables(null, picNav, null, null);
                 btnGostop.setCompoundDrawables(null, picStart, null, null);
                 btnGostop.setEnabled(false);
                 btnCalc.setText("导航");
+                btnCalc.setCompoundDrawables(null, picNav, null, null);
                 break;
             case GONE:
                 btnGostop.setText("暂停");
-                btnCalc.setCompoundDrawables(null, picWorking, null, null);
                 btnGostop.setCompoundDrawables(null, picPause, null, null);
                 btnGostop.setEnabled(true);
                 btnCalc.setText("正在导航");
+                btnCalc.setCompoundDrawables(null, picWorking, null, null);
                 break;
             case PAUSE:
                 btnGostop.setText("开始");
-                btnCalc.setCompoundDrawables(null, picCalc, null, null);
-                btnGostop.setCompoundDrawables(null, picWorking, null, null);
+                btnGostop.setCompoundDrawables(null, picStart, null, null);
                 btnGostop.setEnabled(true);
                 btnCalc.setText("正在导航");
+                btnCalc.setCompoundDrawables(null, picWorking, null, null);
+                break;
         }
-        btnCalc.setEnabled(true);
-        btnRoute.setEnabled(true);
     }
 
     @Override

@@ -18,7 +18,7 @@
             android:scaleType="centerInside"
             android:src="@drawable/new_connect2"
             android:background="#00FFFFFF"
-            android:id="@+id/btn_connect"
+            android:id="@+id/btn_disconnect"
         />
         <LinearLayout
             android:layout_width="wrap_content"

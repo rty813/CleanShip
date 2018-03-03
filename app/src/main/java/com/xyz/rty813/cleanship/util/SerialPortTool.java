@@ -145,7 +145,7 @@ public class SerialPortTool{
             return "";
         }
         try {
-            int len = mPort.read(bytes, 500);
+            int len = mPort.read(bytes, 2000);
             return new String(bytes, 0, len);
         } catch (IOException e) {
             e.printStackTrace();
