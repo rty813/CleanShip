@@ -12,16 +12,16 @@ public class MyReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        MainActivity activity = (MainActivity) context;
+        MapActivity activity = (MapActivity) context;
         activity.setRawData(intent.getStringExtra("rawData"));
         String data = intent.getStringExtra("data");
         if (data == null){
-            Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
             return;
         }
         String[] datas = data.split(",");
 //        type代表数据类型
-//        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前舵量
+//        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前速度
         try {
             switch (intent.getIntExtra("type", -1)) {
                 case 0:
@@ -50,18 +50,18 @@ public class MyReceiver extends BroadcastReceiver {
                     activity.setAimAngle(aimAngle);
                     break;
                 case 4:
-                    activity.setCurrGas(data);
+                    activity.setCurrVel(data);
                     break;
                 case 5:
                     activity.setGpsNum(data);
                     break;
                 default:
-                    Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
                     break;
             }
         }
         catch (Exception e){
-            Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
+//            Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
     }

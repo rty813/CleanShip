@@ -6,11 +6,18 @@
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@drawable/background</item>
+
     </style>
 
     <style name="dismiss_anim">
         <item name="android:windowExitAnimation">@anim/popupwindow_dismiss</item>
         <item name="android:windowEnterAnimation">@anim/popupwindow_show</item>
+    </style>
+
+    <style name="bottom_menu_anim">
+        <item name="android:windowEnterAnimation">@anim/bottom_menu_in</item>
+        <item name="android:windowExitAnimation">@anim/bottom_menu_out</item>
     </style>
 
 </resources>

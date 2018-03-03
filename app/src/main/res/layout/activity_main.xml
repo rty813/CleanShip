@@ -27,6 +27,53 @@
         android:textColor="@android:color/white"
         android:layout_gravity="center_horizontal|bottom"
         android:layout_marginBottom="30dp"/>
+    <com.github.clans.fab.FloatingActionMenu
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|bottom"
+        android:layout_margin="20dp"
+        android:id="@+id/fab_menu"
+        app:menu_colorNormal="@color/colorAccent">
+        <com.github.clans.fab.FloatingActionButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fab_size="mini"
+            android:id="@+id/fab_mark"
+            app:fab_label="标记起始点"
+            android:src="@drawable/mark"
+            app:fab_colorNormal="@color/colorAccent"/>
+        <com.github.clans.fab.FloatingActionButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fab_size="mini"
+            android:id="@+id/fab_home"
+            app:fab_label="返航"
+            app:fab_colorNormal="@color/colorAccent"
+            android:src="@drawable/home"/>
+
+        <com.github.clans.fab.FloatingActionButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:fab_size="mini"
+            android:id="@+id/fab_ctrl"
+            app:fab_label="遥控器"
+            app:fab_colorNormal="@color/colorAccent"
+            android:src="@drawable/remotecontroller"/>
+    </com.github.clans.fab.FloatingActionMenu>
+
+    <lib.kingja.switchbutton.SwitchMultiButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_margin="20dp"
+        android:id="@+id/sw_nav"
+        android:background="#a3ffffff"
+        android:padding="8dp"
+        app:strokeRadius="5dp"
+        app:strokeWidth="1dp"
+        app:selectedColor="@color/colorAccent"
+        app:switchTabs="@array/switch_tabs"
+        app:textSize="14sp"/>
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -62,7 +109,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
                 android:textColor="@color/mb_white"
-                android:text="@string/curr_gas"/>
+                android:text="@string/curr_vel"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -130,7 +177,6 @@
                 android:scrollbars="vertical"/>
         </LinearLayout>
 
-
     </LinearLayout>
 
     <FrameLayout
@@ -151,17 +197,6 @@
             android:src="@drawable/pointer_gyro"
             android:id="@+id/ivPointerGyro"/>
     </FrameLayout>
-
-    <SeekBar
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/seekbar"
-        android:visibility="gone"
-        android:max="360"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp"
-        android:layout_gravity="bottom"
-        android:layout_marginBottom="100dp"/>
 
     <app.dinus.com.loadingdrawable.LoadingView
         android:id="@+id/loadingview"
@@ -220,6 +255,13 @@
             android:layout_margin="5dp"
             android:id="@+id/btn_satellite"
             android:background="@drawable/map_satellite" />
+        <include layout="@layout/divide_line"/>
+        <ImageButton
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_margin="5dp"
+            android:id="@+id/btn_trace"
+            android:background="@drawable/trace"/>
     </LinearLayout>
 
 </android.support.design.widget.CoordinatorLayout>

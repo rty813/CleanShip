@@ -10,6 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
@@ -40,7 +41,7 @@ public class HistoryActivity extends AppCompatActivity {
         list = new ArrayList<>();
 
         recyclerView = findViewById(R.id.recyclerView);
-        SQLiteDatabase database = MainActivity.dbHelper.getReadableDatabase();
+        SQLiteDatabase database = MapActivity.dbHelper.getReadableDatabase();
         Cursor cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null ,null, null, null);
         if (cursor.getCount() > 0){
             cursor.moveToLast();
@@ -78,9 +79,9 @@ public class HistoryActivity extends AppCompatActivity {
                 adapter.notifyItemRemoved(pos);
                 adapter.notifyItemRangeChanged(pos, list.size() - pos);
 
-                CoordinatorLayout coordinatorLayout = findViewById(R.id.coordinatorlayout);
+                LinearLayout linearlayout = findViewById(R.id.linearlayout);
                 isCancel = false;
-                Snackbar.make(coordinatorLayout, "删除记录", Snackbar.LENGTH_LONG)
+                Snackbar.make(linearlayout, "删除记录", Snackbar.LENGTH_LONG)
                         .setAction("撤销", new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {

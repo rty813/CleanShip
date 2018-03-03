@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/border"
+    android:orientation="vertical">
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="返航"
+        android:background="#00000000"
+        android:drawableLeft="@drawable/nav"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_home"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="帮助"
+        android:background="#00000000"
+        android:drawableLeft="@drawable/help"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_help"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="轨迹开关"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_trace"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="遥控器"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_rc"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CLEAN"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_clear"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ORDER5"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_order5"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="NAV"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_nav"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="GO"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_go"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="STOP"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_stop"/>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="开启问询"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_startquery"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/colorBlue"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="关闭问询"
+        android:background="#00000000"
+        android:layout_margin="5dp"
+        android:id="@+id/menu_btn_closequery"/>
+
+</LinearLayout>

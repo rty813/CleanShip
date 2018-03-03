@@ -9,16 +9,21 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Message;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
+import com.xyz.rty813.cleanship.ConnectActivity;
 import com.xyz.rty813.cleanship.MainActivity;
+import com.xyz.rty813.cleanship.MapActivity;
 import com.xyz.rty813.cleanship.MyReceiver;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Locale;
 
@@ -26,10 +31,12 @@ import java.util.Locale;
  * Created by doufu on 2017/12/1.
  */
 
-public class SerialPortTool {
+public class SerialPortTool{
     private PendingIntent mPermissionIntent;
     private UsbManager mUsbManager;
-    private MainActivity mContext;
+//    private ConnectActivity mContext;
+//    private MapActivity mContext;
+    private Context mContext;
     private UsbSerialPort mPort;
     private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private UsbSerialDriver mDriver;
@@ -42,23 +49,24 @@ public class SerialPortTool {
     private onConnectedListener mListener;
 
     public SerialPortTool(Context context) {
-        mContext = (MainActivity) context;
+//        mContext = (ConnectActivity) context;
+        mContext = context;
         mUsbManager = (UsbManager) mContext.getSystemService(Context.USB_SERVICE);
-        registerReceiver();
+//        registerReceiver();
     }
 
     public void setListener(onConnectedListener listener) {
         this.mListener = listener;
     }
 
-    private void registerReceiver(){
-        mPermissionIntent = PendingIntent.getBroadcast(mContext, 0, new Intent(ACTION_USB_PERMISSION), 0);
+    public void registerReceiver(Context context){
+        mPermissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
         IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
-        mContext.registerReceiver(mUsbReceiver, filter);
+        context.registerReceiver(mUsbReceiver, filter);
     }
 
-    public void unregisterReceiver(){
-        mContext.unregisterReceiver(mUsbReceiver);
+    public void unregisterReceiver(Context context){
+        context.unregisterReceiver(mUsbReceiver);
     }
 
     public List<UsbSerialDriver> searchSerialPort() {
@@ -104,7 +112,19 @@ public class SerialPortTool {
         mPort = null;
     }
 
+    public synchronized void writeByte(byte[] data, int delay) throws IOException, InterruptedException {
+        if (mPort != null){
+            mPort.write(data, 1000);
+            if (delay != 0){
+                Thread.sleep(delay);
+            }
+        }
+    }
+
     public synchronized void writeData(String data, long delay) throws IOException, InterruptedException {
+        if (data.equals("")){
+            return;
+        }
         writeData(data, delay, true);
     }
 
@@ -113,12 +133,17 @@ public class SerialPortTool {
         if (newLine){
             str = str + "\r\n";
         }
-        mPort.write(str.getBytes(), 1000);
+        if (mPort != null){
+            mPort.write(str.getBytes(), 1000);
+        }
         Thread.sleep(delay);
     }
 
     public synchronized String readData(){
         byte[] bytes = new byte[255];
+        if (mPort == null){
+            return "";
+        }
         try {
             int len = mPort.read(bytes, 2000);
             return new String(bytes, 0, len);

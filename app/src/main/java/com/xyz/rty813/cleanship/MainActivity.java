@@ -2,6 +2,7 @@ package com.xyz.rty813.cleanship;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -14,6 +15,7 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PersistableBundle;
@@ -35,9 +37,7 @@ import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -62,13 +62,14 @@ import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.dd.morphingbutton.MorphingButton;
+import com.github.clans.fab.FloatingActionButton;
+import com.github.clans.fab.FloatingActionMenu;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.karumi.dexter.Dexter;
+import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
-import com.karumi.dexter.listener.PermissionDeniedResponse;
-import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
-import com.karumi.dexter.listener.single.PermissionListener;
+import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 import com.kcode.lib.UpdateWrapper;
 import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
@@ -76,29 +77,48 @@ import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
+import com.yanzhenjie.nohttp.NoHttp;
+import com.yanzhenjie.nohttp.RequestMethod;
+import com.yanzhenjie.nohttp.download.DownloadRequest;
+import com.yanzhenjie.nohttp.download.SimpleDownloadListener;
+import com.yanzhenjie.nohttp.download.SyncDownloadExecutor;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.math.BigInteger;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
 import app.dinus.com.loadingdrawable.LoadingView;
+import lib.kingja.switchbutton.SwitchMultiButton;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener, SerialPortTool.onConnectedListener {
     private MapView mMapView;
     private AMap aMap;
     private ArrayList<Marker> markers;
     private ArrayList<Polyline> polylines;
+    private ArrayList<Polyline> trace;
     public static SQLiteDBHelper dbHelper;
-    private SerialPortTool serialPort;
+    private static SerialPortTool serialPort;
     private MorphingButton btn_start;
+    private FloatingActionMenu fab_menu;
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
     private static final int NAV = 3;
+    private static final int NONE = -1;
     public static int state = UNREADY;
     private String pos = null;
     private float alpha = 1.0f;
@@ -110,6 +130,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ArrayList<LatLng> aimPointList;
     private SmoothMoveMarker smoothMoveMarker;
     private LoadingView loadingView;
+    private SwitchMultiButton sw_nav;
     private TextView tvAimAngle;
     private TextView tvGyroAngle;
     private TextView tvCurrGas;
@@ -122,7 +143,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private double lastAimAngle;
     private double lastGyroAngle;
     public MyHandler mHandler = null;
-    private Thread myThread;
+    private int rfVersion = 0;
+    private String rfSha256 = "";
+    private String rfName = "";
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,48 +157,82 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         MiStatInterface.setUploadPolicy(MiStatInterface.UPLOAD_POLICY_REALTIME, 0);
         MiStatInterface.enableExceptionCatcher(true);
         URLStatsRecorder.enableAutoRecord();
+        NoHttp.initialize(this);
         dbHelper = new SQLiteDBHelper(this);
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
         markers = new ArrayList<>();
         polylines = new ArrayList<>();
+        trace = new ArrayList<>();
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
         Dexter.withActivity(this)
-                .withPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-                .withListener(new PermissionListener() {
+                .withPermissions(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                .withListener(new MultiplePermissionsListener() {
                     @Override
-                    public void onPermissionGranted(PermissionGrantedResponse response) {
-                        MyLocationStyle myLocationStyle = new MyLocationStyle();
-                        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
-                        aMap.setMyLocationStyle(myLocationStyle);
-                        aMap.setMyLocationEnabled(true);
+                    public void onPermissionsChecked(MultiplePermissionsReport report) {
+                        if (report.areAllPermissionsGranted()){
+                            MyLocationStyle myLocationStyle = new MyLocationStyle();//初始化定位蓝点样式类myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
+                            myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE) ;
+                            aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
+                            aMap.setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
+                        }
                     }
 
                     @Override
-                    public void onPermissionDenied(PermissionDeniedResponse response) {
-                        Toast.makeText(MainActivity.this, "请赋予定位权限", Toast.LENGTH_SHORT).show();
-                        finish();
-                    }
-
-                    @Override
-                    public void onPermissionRationaleShouldBeShown(PermissionRequest permission, PermissionToken token) {
+                    public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
 
                     }
-                })
-                .check();
+                }).check();
         serialPort = new SerialPortTool(this);
         serialPort.setListener(this);
-        myThread = new Thread(new QueryThread());
-        myThread.start();
         btn_start = findViewById(R.id.btn_start);
+        fab_menu = findViewById(R.id.fab_menu);
         morph(state, 0);
         mHandler = new MyHandler();
         aMap.getUiSettings().setCompassEnabled(true);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
-        aMap.getUiSettings().setScaleControlsEnabled(true);
+        aMap.getUiSettings().setZoomControlsEnabled(false);
         aMap.setOnMarkerClickListener(this);
+        aMap.setOnMarkerDragListener(new AMap.OnMarkerDragListener() {
+            private int index;
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+                for (index = 0; index < markers.size(); index++){
+                    if (markers.get(index).hashCode() == marker.hashCode()){
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public void onMarkerDrag(Marker marker) {
+                LatLng latLng = marker.getPosition();
+                marker.setSnippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
+                if (markers.size() > 1){
+                    PolylineOptions options = new PolylineOptions().width(10).color(Color.RED);
+                    if (index == 0){
+                        options.add(latLng, markers.get(1).getPosition());
+                        polylines.get(0).setOptions(options);
+                    }
+                    else if (index == markers.size() - 1){
+                        options.add(markers.get(markers.size() - 2).getPosition(), latLng);
+                        polylines.get(polylines.size() - 1).setOptions(options);
+                    }
+                    else {
+                        options.add(markers.get(index - 1).getPosition(), latLng);
+                        polylines.get(index - 1).setOptions(options);
+                        options = new PolylineOptions().width(10).color(Color.RED).add(latLng, markers.get(index + 1).getPosition());
+                        polylines.get(index).setOptions(options);
+                    }
+                }
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+            }
+        });
         aMap.setOnMapClickListener(this);
         initSmoothMove();
         aimPointList = new ArrayList<>();
@@ -185,6 +243,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         findViewById(R.id.btn_history).setOnClickListener(this);
         findViewById(R.id.btn_plane).setOnClickListener(this);
         findViewById(R.id.btn_satellite).setOnClickListener(this);
+        findViewById(R.id.btn_trace).setOnClickListener(this);
+        findViewById(R.id.fab_home).setOnClickListener(this);
+        findViewById(R.id.fab_mark).setOnClickListener(this);
+        findViewById(R.id.fab_ctrl).setOnClickListener(this);
+        sw_nav = findViewById(R.id.sw_nav);
         tvAimAngle = findViewById(R.id.tv_aim_angle);
         tvCurrGas = findViewById(R.id.tv_curr_gas);
         tvGyroAngle = findViewById(R.id.tv_gyro_angle);
@@ -204,30 +267,109 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             }
         });
         checkUpdate();
-        ((SeekBar)findViewById(R.id.seekbar)).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                setAimAngle(i);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
+        new Thread(new QueryThread()).start();
+        new Thread(new GetRFInfo()).start();
     }
 
     @Override
     public void onConnected() {
-        Toast.makeText(this, "已连接", Toast.LENGTH_SHORT).show();
-        morph(READY, 200);
-        synchronized (serialPort){
-            serialPort.notify();
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage("更新固件中");
+        mHandler.sendEmptyMessage(10);
+        new Thread(new CheckFirmwareUpdate()).start();
+    }
+
+    private class CheckFirmwareUpdate implements Runnable {
+        @Override
+        public void run() {
+            try {
+                serialPort.writeData("$VERSION#", 10);
+                int lfVersion = Integer.parseInt(serialPort.readData()
+                        .replace("\n", "")
+                        .replace("\r", ""));
+                if (lfVersion < rfVersion){
+                    String url = "http://rty813.xyz/cleanship/bin/" + rfName;
+                    String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/cleanship/";
+                    DownloadRequest request = new DownloadRequest(url, RequestMethod.GET, path, true, true);
+                    SyncDownloadExecutor.INSTANCE.execute(0, request, new SimpleDownloadListener() {
+                        @Override
+                        public void onFinish(int what, String filePath) {
+                            try {
+                                InputStream inputStream = new FileInputStream(filePath);
+                                int size = inputStream.available();
+                                byte[] buffer = new byte[size];
+                                inputStream.read(buffer);
+                                inputStream.close();
+                                // 计算SHA-256 校验
+                                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                                digest.update(buffer);
+                                BigInteger bigInteger = new BigInteger(1, digest.digest());
+                                Message msg = mHandler.obtainMessage(9);
+                                if (!bigInteger.toString(16).equals(rfSha256)) {
+                                    msg.obj = "校验错误！";
+                                    mHandler.sendMessage(msg);
+                                    return;
+                                }
+                                serialPort.writeData("y", 1000);
+                                serialPort.writeByte(buffer, 0);
+                                final String response = serialPort.readData();
+                                if (response.contains("Success")) {
+                                    msg.obj = "固件更新成功";
+                                } else {
+                                    msg.obj = "固件更新失败";
+                                }
+                                mHandler.sendMessage(msg);
+                            } catch (IOException e){
+                                e.printStackTrace();
+                                mHandler.sendEmptyMessage(3);
+                            } catch (Exception e) {
+                                Message msg = mHandler.obtainMessage(9);
+                                msg.obj = "固件更新失败";
+                                mHandler.sendMessage(msg);
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                }
+                else{
+                    synchronized (serialPort){
+                        Message msg = mHandler.obtainMessage(9);
+                        msg.obj = "已是最新版";
+                        mHandler.sendMessage(msg);
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
+            } catch (InterruptedException|NumberFormatException e) {
+                e.printStackTrace();
+                Message msg = mHandler.obtainMessage(9);
+                msg.obj = "固件更新失败";
+                mHandler.sendMessage(msg);
+            }
+        }
+    }
+
+    private class GetRFInfo implements Runnable{
+        @Override
+        public void run() {
+            try {
+                HttpURLConnection connection = (HttpURLConnection) new URL("http://139.199.37.92/cleanship/bin.json").openConnection();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String line;
+                StringBuilder builder = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    builder.append(line);
+                }
+                final JSONObject json = new JSONObject(builder.toString());
+                rfName = json.getString("name");
+                rfVersion = json.getInt("version");
+                rfSha256 = json.getString("sha256");
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            }
         }
     }
 
@@ -242,7 +384,14 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             serialPort.wait();
                         }
                         Thread.sleep(100);
+
                         serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
+
+/**************************************临时测试**********************************************************************
+ serialPort.writeData("$YAW#", 10);
+ type = 2;
+ ***************************************END!!!*************************************************************************/
+
                         String data = serialPort.readData();
                         if (data != null && !data.equals("")) {
                             String[] strings = data.split(";");
@@ -269,6 +418,40 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         mHandler.sendEmptyMessage(3);
                     }
                 }
+            }
+        }
+    }
+
+    private class WriteSeiralThread implements Runnable{
+        private final String mData;
+        private final int mState;
+
+        WriteSeiralThread(String data, int state){
+            mData = data;
+            mState = state;
+        }
+
+        @Override
+        public void run() {
+            try {
+                do {
+                    Thread.sleep(200);
+                    serialPort.writeData(mData, 100);
+                    String data = serialPort.readData();
+                    if (data != null && data.contains(mData)){
+                        Message msg = mHandler.obtainMessage();
+                        msg.what = 8;
+                        msg.obj = mState;
+                        mHandler.sendMessage(msg);
+                        break;
+                    }
+                    Thread.sleep(200);
+                } while (true);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
+            } finally {
+                mHandler.sendEmptyMessage(7);
             }
         }
     }
@@ -318,7 +501,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     }
                     break;
                 case 5:
-                    Toast.makeText(MainActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(MainActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
                     break;
                 case 6:
                     if (loadingView.getVisibility() == View.VISIBLE){
@@ -327,6 +510,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                     break;
                 case 7:
                     btn_start.setEnabled(true);
+                    fab_menu.showMenuButton(true);
                     break;
                 case 8:
                     synchronized (serialPort) {
@@ -336,6 +520,18 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         morph((Integer) msg.obj, 300);
                         serialPort.notify();
                     }
+                    break;
+                case 9:
+                    synchronized (serialPort){
+                        Toast.makeText(MainActivity.this, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
+                        progressDialog.dismiss();
+                        morph(READY, 200);
+                        serialPort.notify();
+                    }
+                    break;
+                case 10:
+                    progressDialog.show();
+                    break;
                 default:
                     super.handleMessage(msg);
             }
@@ -347,7 +543,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         UpdateWrapper updateWrapper = new UpdateWrapper.Builder(getApplicationContext())
                 .setTime(1000)
                 .setNotificationIcon(R.mipmap.ic_launcher)
-                .setUrl("http://rty813.xyz/cleanship.json")
+                .setUrl("http://rty813.xyz/cleanship/app.json")
                 .setIsShowToast(false)
                 .setCallback(new CheckUpdateTask.Callback() {
                     @Override
@@ -372,7 +568,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         super.onDestroy();
         System.out.println("onDestory");
         state = UNREADY;
-        serialPort.unregisterReceiver();
+        serialPort.unregisterReceiver(this);
         mMapView.onDestroy();
     }
 
@@ -399,10 +595,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
         markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
         markerOptions.anchor(0.5f, 0.5f);
+        markerOptions.setFlat(true);
+        markerOptions.draggable(true);
 
-        Marker marker = aMap.addMarker(markerOptions);
         System.out.println(latLng.toString());
-        markers.add(marker);
+        markers.add(aMap.addMarker(markerOptions));
         if (markers.size() > 1) {
             LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
             LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
@@ -430,7 +627,10 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
             markerOptions.anchor(0.5f, 0.5f);
+            markerOptions.setFlat(true);
+            markerOptions.draggable(true);
             markers.add(aMap.addMarker(markerOptions));
+
             polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(10).color(Color.RED)));
             Toast.makeText(this, "完成闭合回路！", Toast.LENGTH_SHORT).show();
         }
@@ -565,16 +765,23 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
                             showLoadingView();
+//                            使QueryThread进入Wait
                             state = UNREADY;
                             btn_start.setEnabled(false);
+                            fab_menu.hideMenuButton(false);
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
                                     try {
-                                        for (Marker marker : markers){
-                                            double latitude = marker.getPosition().latitude;
-                                            double longitude = marker.getPosition().longitude;
-                                            serialPort.writeData(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#",latitude, longitude), 100);
+                                        for (int i = 0; i < markers.size(); i++){
+                                            double latitude = markers.get(i).getPosition().latitude;
+                                            double longitude = markers.get(i).getPosition().longitude;
+                                            if (!(sw_nav.getSelectedTab() == 1 && i == markers.size() - 1
+                                                    && latitude == markers.get(0).getPosition().latitude
+                                                    && longitude == markers.get(0).getPosition().longitude)){
+                                                serialPort.writeData(String.format(Locale.getDefault(),
+                                                        "$GNGGA,%.6f,%.6f#",latitude, longitude), 300);
+                                            }
                                         }
                                         mHandler.sendEmptyMessage(4);
                                     } catch (InterruptedException | IOException e) {
@@ -594,66 +801,52 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                         initSerialPort(115200);
                         break;
                     case NAV:
-                            state = UNREADY;
-                            showLoadingView();
-                            btn_start.setEnabled(false);
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        do {
-                                            Thread.sleep(200);
-                                            serialPort.writeData("$NAV#", 100);
-                                            String data = serialPort.readData();
-                                            if (data != null && data.contains("$NAV#")){
-                                                Message msg = mHandler.obtainMessage();
-                                                msg.what = 8;
-                                                msg.obj = GONE;
-                                                mHandler.sendMessage(msg);
-                                                break;
-                                            }
-                                            Thread.sleep(200);
-                                        } while (true);
-                                    } catch (IOException | InterruptedException e) {
-                                        e.printStackTrace();
-                                        mHandler.sendEmptyMessage(3);
-                                    } finally {
-                                        mHandler.sendEmptyMessage(7);
-                                    }
-                                }
-                            }).start();
+                        state = UNREADY;
+                        showLoadingView();
+                        btn_start.setEnabled(false);
+                        fab_menu.hideMenuButton(false);
+                        String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
+                        new Thread(new WriteSeiralThread(data, GONE)).start();
                         break;
                     case GONE:
                         state = UNREADY;
                         showLoadingView();
                         btn_start.setEnabled(false);
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    do {
-                                        Thread.sleep(200);
-                                        serialPort.writeData("$STOP#", 100);
-                                        String data = serialPort.readData();
-                                        if (data != null && data.contains("$STOP#")){
-                                            Message msg = mHandler.obtainMessage();
-                                            msg.what = 8;
-                                            msg.obj = READY;
-                                            mHandler.sendMessage(msg);
-                                            break;
-                                        }
-                                        Thread.sleep(200);
-                                    } while (true);
-                                } catch (IOException | InterruptedException e) {
-                                    e.printStackTrace();
-                                    mHandler.sendEmptyMessage(3);
-                                } finally {
-                                    mHandler.sendEmptyMessage(7);
-                                }
-                            }
-                        }).start();
-//                        resetMap();
+                        fab_menu.hideMenuButton(false);
+                        new Thread(new WriteSeiralThread("$STOP#", READY)).start();
                         break;
+                }
+                break;
+            case R.id.fab_home:
+                if (state != UNREADY){
+                    fab_menu.close(true);
+                    int pre_state = state;
+                    state = UNREADY;
+                    showLoadingView();
+                    btn_start.setEnabled(false);
+                    fab_menu.hideMenuButton(false);
+                    new Thread(new WriteSeiralThread("$ORDER,2#", pre_state)).start();
+                }
+                break;
+            case R.id.fab_mark:
+                if (state != UNREADY && markers.size() == 1){
+                    fab_menu.close(true);
+                    int pre_state = state;
+                    state = UNREADY;
+                    showLoadingView();
+                    btn_start.setEnabled(false);
+                    fab_menu.hideMenuButton(false);
+                    new Thread(new WriteSeiralThread(String.format(Locale.getDefault(),
+                            "$ORDER,1,%.6f,%.6f#", markers.get(0).getPosition().latitude,
+                            markers.get(0).getPosition().longitude), pre_state)).start();
+                }
+                break;
+            case R.id.fab_ctrl:
+                startActivity(new Intent(MainActivity.this, MapActivity.class));
+                if (state != UNREADY){
+//                    morph(UNREADY, 0);
+//                    Intent intent = new Intent(this, ControllerActivity.class);
+//                    startActivity(intent);
                 }
                 break;
             case R.id.btn_history:
@@ -664,6 +857,11 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 break;
             case R.id.btn_satellite:
                 aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
+                break;
+            case R.id.btn_trace:
+                for (Polyline aTrace : trace){
+                    aTrace.setVisible(!aTrace.isVisible());
+                }
                 break;
         }
     }
@@ -677,51 +875,53 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     }
 
     public void morph(int state, int duration){
-        MainActivity.state = state;
-        MorphingButton.Params params = null;
-        switch (state){
-            case UNREADY:
-                params = MorphingButton.Params.create()
-                        .duration(duration)
-                        .cornerRadius(dimen(R.dimen.mb_height_56))
-                        .width(dimen(R.dimen.mb_height_56))
-                        .height(dimen(R.dimen.mb_height_56))
-                        .color(color(R.color.mb_blue))
-                        .colorPressed(color(R.color.mb_blue))
-                        .icon(R.drawable.connect);
-                break;
-            case READY:
-                params = MorphingButton.Params.create()
-                        .duration(duration)
-                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
-                        .width(dimen(R.dimen.mb_width_100))
-                        .height(dimen(R.dimen.mb_height_56))
-                        .color(color(R.color.mb_green))
-                        .colorPressed(color(R.color.mb_green))
-                        .text("CALC");
-                break;
-            case NAV:
-                params = MorphingButton.Params.create()
-                        .duration(duration)
-                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
-                        .width(dimen(R.dimen.mb_width_100))
-                        .height(dimen(R.dimen.mb_height_56))
-                        .color(color(R.color.mb_green))
-                        .colorPressed(color(R.color.mb_green))
-                        .text("NAV");
-                break;
-            case GONE:
-                params = MorphingButton.Params.create()
-                        .duration(duration)
-                        .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
-                        .width(dimen(R.dimen.mb_width_100))
-                        .height(dimen(R.dimen.mb_height_56))
-                        .color(color(R.color.mb_red))
-                        .colorPressed(color(R.color.mb_red))
-                        .text("STOP");
-                break;
+        if (state != NONE){
+            MainActivity.state = state;
+            MorphingButton.Params params = null;
+            switch (state){
+                case UNREADY:
+                    params = MorphingButton.Params.create()
+                            .duration(duration)
+                            .cornerRadius(dimen(R.dimen.mb_height_56))
+                            .width(dimen(R.dimen.mb_height_56))
+                            .height(dimen(R.dimen.mb_height_56))
+                            .color(color(R.color.mb_blue))
+                            .colorPressed(color(R.color.mb_blue))
+                            .icon(R.drawable.connect);
+                    break;
+                case READY:
+                    params = MorphingButton.Params.create()
+                            .duration(duration)
+                            .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                            .width(dimen(R.dimen.mb_width_100))
+                            .height(dimen(R.dimen.mb_height_56))
+                            .color(color(R.color.mb_green))
+                            .colorPressed(color(R.color.mb_green))
+                            .text("CALC");
+                    break;
+                case NAV:
+                    params = MorphingButton.Params.create()
+                            .duration(duration)
+                            .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                            .width(dimen(R.dimen.mb_width_100))
+                            .height(dimen(R.dimen.mb_height_56))
+                            .color(color(R.color.mb_green))
+                            .colorPressed(color(R.color.mb_green))
+                            .text("NAV");
+                    break;
+                case GONE:
+                    params = MorphingButton.Params.create()
+                            .duration(duration)
+                            .cornerRadius(dimen(R.dimen.mb_corner_radius_8))
+                            .width(dimen(R.dimen.mb_width_100))
+                            .height(dimen(R.dimen.mb_height_56))
+                            .color(color(R.color.mb_red))
+                            .colorPressed(color(R.color.mb_red))
+                            .text("STOP");
+                    break;
+            }
+            btn_start.morph(params);
         }
-        btn_start.morph(params);
     }
 
     private int dimen(@DimenRes int resId) {
@@ -797,6 +997,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
                 markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
                 markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
                 markerOptions.anchor(0.5f, 0.5f);
+                markerOptions.draggable(true);
+                markerOptions.setFlat(true);
                 markers.add(aMap.addMarker(markerOptions));
                 if (markers.size() > 1) {
                     LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
@@ -839,7 +1041,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         shipPointList.add(new LatLng(0, 0));
         smoothMoveMarker = new SmoothMoveMarker(aMap);
         smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromResource(R.drawable.ship));
-
     }
 
     private void focusShip(){
@@ -856,8 +1057,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             smoothMoveMarker.setPoints(subList);
             smoothMoveMarker.setTotalDuration(1);
             smoothMoveMarker.startSmoothMove();
-            aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
-                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.rgb(61, 110, 234)));
+            trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
+                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.rgb(61, 110, 234))));
         }
     }
 
@@ -909,6 +1110,8 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
             markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", aimPoint.latitude, aimPoint.longitude));
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.aim)));
             markerOptions.anchor(0.5f, 0.5f);
+            markerOptions.draggable(true);
+            markerOptions.setFlat(true);
             aMap.addMarker(markerOptions);
         }
     }
@@ -920,7 +1123,12 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         aimPointList.removeAll(aimPointList);
         markers.removeAll(markers);
         polylines.removeAll(polylines);
+        trace.removeAll(trace);
         initSmoothMove();
+    }
+
+    public static SerialPortTool getSerialPort() {
+        return serialPort;
     }
 }
 
