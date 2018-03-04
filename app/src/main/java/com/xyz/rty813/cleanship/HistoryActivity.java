@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -19,13 +18,9 @@ import com.yanzhenjie.recyclerview.swipe.SwipeItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 import com.yanzhenjie.recyclerview.swipe.touch.OnItemMoveListener;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Date;
 
 public class HistoryActivity extends AppCompatActivity {
     private TextView tv;
@@ -132,7 +127,7 @@ public class HistoryActivity extends AppCompatActivity {
             if (isCancel){
                 return;
             }
-            SQLiteDatabase database = MainActivity.dbHelper.getWritableDatabase();
+            SQLiteDatabase database = MapActivity.dbHelper.getWritableDatabase();
             database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
             database.close();
             super.onDismissed(transientBottomBar, event);
