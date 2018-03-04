@@ -305,7 +305,7 @@
             android:layout_margin="5dp"
             android:layout_weight="1"
             android:background="#00FFFFFF"
-            android:drawableTop="@drawable/start"
+            android:drawableTop="@drawable/pause"
             android:enabled="false"
             android:text="暂停"
             android:textColor="@android:color/white"

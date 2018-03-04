@@ -66,7 +66,6 @@ import com.xyz.rty813.cleanship.util.SerialPortTool;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -79,20 +78,22 @@ import lib.kingja.switchbutton.SwitchMultiButton;
 
 public class MapActivity extends AppCompatActivity implements View.OnClickListener, AMap.OnMapClickListener, AMap.OnMarkerClickListener, GeocodeSearch.OnGeocodeSearchListener {
 
-    private AMap aMap;
-    private MapView mMapView;
-    private long mExitTime;
-    private PopupWindow popupWindow;
-    private SerialPortTool serialPort;
-    private int state;
-
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
     private static final int NAV = 3;
     private static final int NONE = -1;
     private static final int PAUSE = 4;
-
+    private static final String MY_APPID = "2882303761517676503";
+    private static final String MY_APP_KEY = "5131767662503";
+    private static final String CHANNEL = "SELF";
+    public static SQLiteDBHelper dbHelper;
+    private AMap aMap;
+    private MapView mMapView;
+    private long mExitTime;
+    private PopupWindow popupWindow;
+    private SerialPortTool serialPort;
+    private int state;
     private MyHandler mHandler;
     private String pos = null;
     private LoadingView loadingView;
@@ -103,8 +104,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
     private ArrayList<Marker> markers;
     private ArrayList<Polyline> polylines;
     private ArrayList<Polyline> trace;
-    public static SQLiteDBHelper dbHelper;
-
     private TextView tvAimAngle;
     private TextView tvGyroAngle;
     private TextView tvCurrVel;
@@ -127,10 +126,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
     private SwitchMultiButton sw_nav;
     private Button btnRoute;
     private ImageButton btnMore;
-
-    private static final String MY_APPID = "2882303761517676503";
-    private static final String MY_APP_KEY = "5131767662503";
-    private static final String CHANNEL = "SELF";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -246,192 +241,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.fab_satellite).setOnClickListener(this);
     }
 
-    private class QueryThread implements Runnable {
-        @Override
-        public void run() {
-            synchronized (serialPort){
-                int type = 0;
-                boolean err = false;
-                while (true) {
-                    String data = null;
-                    try {
-                        if (state == UNREADY){
-                            serialPort.wait();
-                        }
-                        if (!err){
-                            serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 10);
-                        }
-                        StringBuilder builder = new StringBuilder();
-                        while (!(data = serialPort.readData()).equals("")){
-                            builder.append(data);
-                            if (data.endsWith("#")){
-                                break;
-                            }
-                        }
-                        data = builder.toString();
-                        if (!data.startsWith("$") || !data.endsWith("#")){
-                            err = false;
-                            Thread.sleep(400);
-                            continue;
-                        }
-                        else{
-                            data = data.replaceAll("#", "");
-                            data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-                        }
-
-                        if (!data.equals("")) {
-                            String[] strings = data.split(";");
-                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                            if (strings.length == 2){
-                                intent.putExtra("rawData", String.format(Locale.getDefault(),
-                                        "|%d|%s|%s", type, strings[0], strings[1]));
-                            }
-                            else{
-                                intent.putExtra("rawData", data);
-                            }
-                            if (strings.length == 2 && Integer.parseInt(strings[0]) < 6) {
-                                intent.putExtra("type", Integer.parseInt(strings[0]));
-                                intent.putExtra("data", strings[1]);
-                            }
-                            if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
-                                type = (type + 1) % 6;
-                                err = false;
-                            }
-                            else if (strings.length == 2){
-                                err = true;
-                            }
-                            sendBroadcast(intent);
-                        }
-                        else{
-                            err = false;
-                        }
-                        Thread.sleep(400);
-                    } catch (NumberFormatException | InterruptedException e) {
-                        Message msg = mHandler.obtainMessage(5);
-                        msg.obj = data;
-                        mHandler.sendMessage(msg);
-                        e.printStackTrace();
-                    } catch (IOException e){
-                        e.printStackTrace();
-                        mHandler.sendEmptyMessage(3);
-                    }
-                }
-            }
-        }
-    }
-
-    private class WriteSerialThread implements Runnable{
-        private final String mData;
-        private final int mState;
-        WriteSerialThread(String data, int state){
-            mData = data;
-            mState = state;
-        }
-        @Override
-        public void run() {
-            try {
-                do {
-                    serialPort.writeData(mData, 10);
-                    String data;
-                    StringBuilder builder = new StringBuilder();
-                    while (!(data = serialPort.readData()).equals("")){
-                        builder.append(data);
-                        if (data.endsWith("#")){
-                            break;
-                        }
-                    }
-                    data = builder.toString();
-                    Log.i("writeSerialPort", data);
-                    if (data.contains(mData)){
-                        Message msg = mHandler.obtainMessage(8);
-                        msg.obj = mState;
-                        mHandler.sendMessage(msg);
-                        break;
-                    }
-                    Thread.sleep(400);
-                } while (true);
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-                mHandler.sendEmptyMessage(3);
-            } finally {
-                mHandler.sendEmptyMessage(7);
-            }
-        }
-    }
-
-    static class MyHandler extends Handler {
-        WeakReference<MapActivity> mActivity;
-        MyHandler(MapActivity activity){
-            mActivity = new WeakReference<>(activity);
-        }
-        @Override
-        public void handleMessage(Message msg) {
-            final MapActivity activity = mActivity.get();
-            AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
-            animation.setDuration(300);
-            animation.setInterpolator(new AccelerateDecelerateInterpolator());
-            animation.setAnimationListener(new Animation.AnimationListener() {
-                @Override
-                public void onAnimationStart(Animation animation) {
-                }
-                @Override
-                public void onAnimationEnd(Animation animation) {
-                    activity.loadingView.setVisibility(View.GONE);
-                }
-                @Override
-                public void onAnimationRepeat(Animation animation) {
-                }
-            });
-            switch (msg.what){
-                case 1:
-                    WindowManager.LayoutParams lp = activity.getWindow().getAttributes();
-                    lp.alpha = (float) msg.obj;
-                    activity.getWindow().setAttributes(lp);
-                    break;
-                case 2:
-                    ((PopupWindow)msg.obj).showAtLocation(activity.mMapView, Gravity.CENTER, 0, 0);
-                    break;
-                case 3:
-                    if (activity.loadingView.getVisibility() == View.VISIBLE){
-                        activity.loadingView.startAnimation(animation);
-                    }
-                    activity.morph(UNREADY, 200);
-                    break;
-                case 4:
-                    if (activity.loadingView.getVisibility() == View.VISIBLE){
-                        activity.loadingView.startAnimation(animation);
-                    }
-                    synchronized (activity.serialPort){
-                        activity.morph(NAV, 300);
-                        activity.serialPort.notify();
-                    }
-                    break;
-                case 5:
-                    Log.d("非法数据", (String) msg.obj);
-                    break;
-                case 6:
-                    if (activity.loadingView.getVisibility() == View.VISIBLE){
-                        activity.loadingView.startAnimation(animation);
-                    }
-                    break;
-                case 7:
-//                    btn_start.setEnabled(true);
-                    break;
-                case 8:
-                    synchronized (activity.serialPort) {
-                        if (activity.loadingView.getVisibility() == View.VISIBLE){
-                            activity.loadingView.startAnimation(animation);
-                        }
-                        activity.morph((Integer) msg.obj, 300);
-                        activity.serialPort.notify();
-                    }
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
-        }
-    }
-
     @Override
     public void onClick(View view) {
         int preState = state;
@@ -492,12 +301,9 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 Toast.makeText(MapActivity.this, "帮助", Toast.LENGTH_SHORT).show();
                 break;
             case R.id.menu_btn_home:
-                if (state != UNREADY || true){
+                if (state != UNREADY) {
                     popupWindow.dismiss();
-                    state = UNREADY;
-                    showLoadingView();
-//                    btn_start.setEnabled(false);
-                    new Thread(new WriteSerialThread("$ORDER,2#", preState)).start();
+                    new Thread(new WriteSerialThread(this, "$ORDER,2#", preState)).start();
                 }
                 break;
             case R.id.menu_btn_cancel:
@@ -547,16 +353,10 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                                         } catch (InterruptedException e) {
                                             e.printStackTrace();
                                         }
-                                        Message msg = mHandler.obtainMessage();
-                                        msg.what = 1;
                                         alpha -= 0.01f;
-                                        msg.obj = alpha;
-                                        mHandler.sendMessage(msg);
+                                        mHandler.sendMessage(mHandler.obtainMessage(1, alpha));
                                     }
-                                    Message msg = mHandler.obtainMessage();
-                                    msg.what = 2;
-                                    msg.obj = popupWindow;
-                                    mHandler.sendMessage(msg);
+                                    mHandler.sendMessage(mHandler.obtainMessage(2, popupWindow));
                                 }
                             }).start();
                         }
@@ -602,11 +402,8 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                                         } catch (InterruptedException e) {
                                             e.printStackTrace();
                                         }
-                                        Message msg = mHandler.obtainMessage();
-                                        msg.what = 1;
                                         alpha += 0.01f;
-                                        msg.obj = alpha;
-                                        mHandler.sendMessage(msg);
+                                        mHandler.sendMessage(mHandler.obtainMessage(1, alpha));
                                     }
                                 }
                             }).start();
@@ -621,10 +418,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.menu_btn_mark:
                 if (state != UNREADY && markers.size() == 1){
                     popupWindow.dismiss();
-                    state = UNREADY;
-                    showLoadingView();
-//                    btn_start.setEnabled(false);
-                    new Thread(new WriteSerialThread(String.format(Locale.getDefault(),
+                    new Thread(new WriteSerialThread(this, String.format(Locale.getDefault(),
                             "$ORDER,1,%.6f,%.6f#", markers.get(0).getPosition().latitude,
                             markers.get(0).getPosition().longitude), preState)).start();
                 }
@@ -648,18 +442,14 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 break;
             case R.id.btn_gostop:
                 if (state == PAUSE){
-                    state = UNREADY;
-                    showLoadingView();
-                    new Thread(new WriteSerialThread("$GO#", GONE)).start();
+                    new Thread(new WriteSerialThread(this, "$GO#", GONE)).start();
                 }
                 else if (state == GONE){
-                    state = UNREADY;
-                    showLoadingView();
-                    new Thread(new WriteSerialThread("$STOP#", PAUSE)).start();
+                    new Thread(new WriteSerialThread(this, "$STOP#", PAUSE)).start();
                 }
                 break;
             case R.id.btn_calc:
-                if (state == READY || state == UNREADY){
+                if (state == READY) {
                     if (markers.size() > 0){
                         StringBuilder stringBuilder = new StringBuilder();
                         for (Marker marker : markers){
@@ -684,7 +474,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                                                     "$GNGGA,%.6f,%.6f#",latitude, longitude), 300);
                                         }
                                     }
-                                    mHandler.sendEmptyMessage(4);
+                                    mHandler.sendMessage(mHandler.obtainMessage(8, NAV));
                                 } catch (InterruptedException | IOException e) {
                                     e.printStackTrace();
                                     mHandler.sendEmptyMessage(3);
@@ -699,44 +489,27 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                     }
                 }
                 else if (state == NAV){
-                    state = UNREADY;
-                    showLoadingView();
                     String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
-                    new Thread(new WriteSerialThread(data, GONE)).start();
+                    new Thread(new WriteSerialThread(this, data, GONE)).start();
                 }
                 else if (state == GONE){
-                    state = UNREADY;
-                    showLoadingView();
-                    new Thread(new WriteSerialThread("$STOP#", READY)).start();
+                    new Thread(new WriteSerialThread(this, "$STOP#", READY)).start();
                 }
                 break;
             case R.id.menu_btn_clear:
-                state = UNREADY;
-                showLoadingView();
-                new Thread(new WriteSerialThread("$CLEAR#", READY)).start();
+                new Thread(new WriteSerialThread(this, "$CLEAR#", READY)).start();
                 break;
             case R.id.menu_btn_order5:
-                state = UNREADY;
-                showLoadingView();
-                new Thread(new WriteSerialThread("$ORDER,5#", preState)).start();
+                new Thread(new WriteSerialThread(this, "$ORDER,5#", preState)).start();
                 break;
             case R.id.menu_btn_nav:
-                state = UNREADY;
-                showLoadingView();
-                String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
-                new Thread(new WriteSerialThread(data, preState)).start();
+                new Thread(new WriteSerialThread(this, sw_nav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#", preState)).start();
                 break;
             case R.id.menu_btn_go:
-                state = UNREADY;
-                showLoadingView();
-                new Thread(new WriteSerialThread("$GO#", preState)).start();
+                new Thread(new WriteSerialThread(this, "$GO#", preState)).start();
                 break;
             case R.id.menu_btn_stop:
-                state = UNREADY;
-                btnCalc.setEnabled(false);
-                btnGostop.setEnabled(false);
-                showLoadingView();
-                new Thread(new WriteSerialThread("$STOP#", preState)).start();
+                new Thread(new WriteSerialThread(this, "$STOP#", preState)).start();
                 break;
             case R.id.menu_btn_startquery:
                 Toast.makeText(this, "开始问询", Toast.LENGTH_SHORT).show();
@@ -786,15 +559,15 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 finish();
                 break;
             case READY:
-                btnGostop.setText("开始");
-                btnGostop.setCompoundDrawables(null, picStart, null, null);
+                btnGostop.setText("暂停");
+                btnGostop.setCompoundDrawables(null, picPause, null, null);
                 btnGostop.setEnabled(false);
                 btnCalc.setText("计算");
                 btnCalc.setCompoundDrawables(null, picCalc, null, null);
                 break;
             case NAV:
-                btnGostop.setText("开始");
-                btnGostop.setCompoundDrawables(null, picStart, null, null);
+                btnGostop.setText("暂停");
+                btnGostop.setCompoundDrawables(null, picPause, null, null);
                 btnGostop.setEnabled(false);
                 btnCalc.setText("导航");
                 btnCalc.setCompoundDrawables(null, picNav, null, null);
@@ -864,7 +637,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
         }
         return true;
     }
-
 
     private void saveRoute(String time, String route, String address){
         SQLiteDatabase database = dbHelper.getWritableDatabase();
@@ -1092,5 +864,207 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    static class MyHandler extends Handler {
+        WeakReference<MapActivity> mActivity;
+
+        MyHandler(MapActivity activity) {
+            mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            final MapActivity activity = mActivity.get();
+            AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
+            animation.setDuration(300);
+            animation.setInterpolator(new AccelerateDecelerateInterpolator());
+            animation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    activity.loadingView.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+                }
+            });
+            switch (msg.what) {
+                case 1:
+                    WindowManager.LayoutParams lp = activity.getWindow().getAttributes();
+                    lp.alpha = (float) msg.obj;
+                    activity.getWindow().setAttributes(lp);
+                    break;
+                case 2:
+                    ((PopupWindow) msg.obj).showAtLocation(activity.mMapView, Gravity.CENTER, 0, 0);
+                    break;
+                case 3:
+                    if (activity.loadingView.getVisibility() == View.VISIBLE) {
+                        activity.loadingView.startAnimation(animation);
+                    }
+                    activity.morph(UNREADY, 200);
+                    break;
+                case 4:
+                    break;
+                case 5:
+                    Log.d("非法数据", (String) msg.obj);
+                    break;
+                case 6:
+                    if (activity.loadingView.getVisibility() == View.VISIBLE) {
+                        activity.loadingView.startAnimation(animation);
+                    }
+                    break;
+                case 7:
+//                    btn_start.setEnabled(true);
+                    break;
+                case 8:
+                    if (activity.loadingView.getVisibility() == View.VISIBLE) {
+                        activity.loadingView.startAnimation(animation);
+                    }
+                    synchronized (activity.serialPort) {
+                        activity.morph((Integer) msg.obj, 300);
+                        activity.serialPort.notify();
+                    }
+                    break;
+                case 9:
+                    Toast.makeText(activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                default:
+                    super.handleMessage(msg);
+            }
+        }
+    }
+
+    private class QueryThread implements Runnable {
+        @Override
+        public void run() {
+            synchronized (serialPort) {
+                int type = 0;
+                boolean err = false;
+                long retry_times = 0;
+                while (true) {
+                    String data = null;
+                    try {
+                        if (state == UNREADY) {
+                            serialPort.wait();
+                        }
+                        if (!err) {
+                            serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 10);
+                        }
+                        StringBuilder builder = new StringBuilder();
+                        while (!(data = serialPort.readData()).equals("")) {
+                            builder.append(data);
+                            if (data.endsWith("#")) {
+                                break;
+                            }
+                        }
+                        data = builder.toString();
+                        if (!data.startsWith("$") || !data.endsWith("#")) {
+                            err = false;
+                            Thread.sleep(400);
+                            continue;
+                        } else {
+                            data = data.replaceAll("#", "");
+                            data = data.replaceAll(Matcher.quoteReplacement("$"), "");
+                        }
+
+                        if (!data.equals("")) {
+                            retry_times = 0;
+                            String[] strings = data.split(";");
+                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                            if (strings.length == 2) {
+                                intent.putExtra("rawData", String.format(Locale.getDefault(),
+                                        "|%d|%s|%s", type, strings[0], strings[1]));
+                            } else {
+                                intent.putExtra("rawData", data);
+                            }
+                            if (strings.length == 2 && Integer.parseInt(strings[0]) < 6) {
+                                intent.putExtra("type", Integer.parseInt(strings[0]));
+                                intent.putExtra("data", strings[1]);
+                            }
+                            if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
+                                type = (type + 1) % 6;
+                                err = false;
+                            } else if (strings.length == 2) {
+                                err = true;
+                            }
+                            sendBroadcast(intent);
+                        } else {
+                            err = false;
+                            retry_times++;
+                            if (retry_times % 5 == 0) {
+                                mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+                            }
+                        }
+                        Thread.sleep(400);
+                    } catch (NumberFormatException | InterruptedException e) {
+                        mHandler.sendMessage(mHandler.obtainMessage(5, data));
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        mHandler.sendEmptyMessage(3);
+                    }
+                }
+            }
+        }
+    }
+
+    private class WriteSerialThread implements Runnable {
+        private final String mData;
+        private final int mState;
+        private final int mPreState;
+
+        WriteSerialThread(MapActivity activity, String data, int state) {
+            mData = data;
+            mState = state;
+            mPreState = activity.state;
+            activity.state = UNREADY;
+            btnCalc.setEnabled(false);
+            btnGostop.setEnabled(false);
+            showLoadingView();
+        }
+
+        @Override
+        public void run() {
+            int retry_times = 0;
+            try {
+                do {
+                    serialPort.writeData(mData, 10);
+                    String data;
+                    StringBuilder builder = new StringBuilder();
+                    while (!(data = serialPort.readData()).equals("")) {
+                        builder.append(data);
+                        if (data.endsWith("#")) {
+                            break;
+                        }
+                    }
+                    data = builder.toString();
+                    Log.i("writeSerialPort", data);
+                    if (data.contains(mData)) {
+                        mHandler.sendMessage(mHandler.obtainMessage(8, mState));
+                        break;
+                    }
+                    retry_times++;
+                    if (retry_times == 2) {
+                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+                    }
+                    if (retry_times == 4) {
+                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
+                        mHandler.sendMessage(mHandler.obtainMessage(8, mPreState));
+                        break;
+                    }
+                    Thread.sleep(400);
+                } while (true);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
+            } finally {
+                mHandler.sendEmptyMessage(7);
+            }
+        }
     }
 }
