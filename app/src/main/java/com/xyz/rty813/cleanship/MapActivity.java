@@ -249,8 +249,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 View contentView = LayoutInflater.from(this).inflate(R.layout.menu_more, null);
                 contentView.findViewById(R.id.menu_btn_home).setOnClickListener(this);
                 contentView.findViewById(R.id.menu_btn_help).setOnClickListener(this);
-//                临时测试遥控器功能
-                contentView.findViewById(R.id.menu_btn_rc).setOnClickListener(this);
                 contentView.findViewById(R.id.menu_btn_trace).setOnClickListener(this);
                 contentView.findViewById(R.id.menu_btn_clear).setOnClickListener(this);
                 contentView.findViewById(R.id.menu_btn_order5).setOnClickListener(this);
@@ -259,6 +257,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                 contentView.findViewById(R.id.menu_btn_stop).setOnClickListener(this);
                 contentView.findViewById(R.id.menu_btn_startquery).setOnClickListener(this);
                 contentView.findViewById(R.id.menu_btn_closequery).setOnClickListener(this);
+                contentView.findViewById(R.id.menu_btn_nav3).setOnClickListener(this);
                 popupWindow = new PopupWindow();
                 popupWindow.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
                 popupWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -521,6 +520,9 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.menu_btn_closequery:
                 state = UNREADY;
                 Toast.makeText(this, "停止问询", Toast.LENGTH_SHORT).show();
+                break;
+            case R.id.menu_btn_nav3:
+                new Thread(new WriteSerialThread(this, "$NAV,3#", preState)).start();
                 break;
         }
     }
@@ -1022,9 +1024,6 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
             mData = data;
             mState = state;
             mPreState = activity.state;
-            activity.state = UNREADY;
-            btnCalc.setEnabled(false);
-            btnGostop.setEnabled(false);
             showLoadingView();
         }
 
