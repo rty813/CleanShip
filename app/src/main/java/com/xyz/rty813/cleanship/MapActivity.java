@@ -470,7 +470,7 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                                                 && latitude == markers.get(0).getPosition().latitude
                                                 && longitude == markers.get(0).getPosition().longitude)){
                                             serialPort.writeData(String.format(Locale.getDefault(),
-                                                    "$GNGGA,%.6f,%.6f#",latitude, longitude), 300);
+                                                    "$GNGGA,%.6f,%.6f#",latitude, longitude), 500);
                                         }
                                     }
                                     mHandler.sendMessage(mHandler.obtainMessage(8, NAV));
@@ -491,9 +491,9 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
                     String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
                     new Thread(new WriteSerialThread(this, data, GONE)).start();
                 }
-                else if (state == GONE){
-                    new Thread(new WriteSerialThread(this, "$STOP#", READY)).start();
-                }
+//                else if (state == GONE){
+//                    new Thread(new WriteSerialThread(this, "$STOP#", READY)).start();
+//                }
                 break;
             case R.id.menu_btn_clear:
                 new Thread(new WriteSerialThread(this, "$CLEAR#", READY)).start();
