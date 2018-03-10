@@ -62,7 +62,6 @@ import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.dd.morphingbutton.MorphingButton;
-import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.karumi.dexter.Dexter;
@@ -105,26 +104,27 @@ import app.dinus.com.loadingdrawable.LoadingView;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
 public class MainActivity extends AppCompatActivity implements AMap.OnMapClickListener, AMap.OnMarkerClickListener, View.OnClickListener, GeocodeSearch.OnGeocodeSearchListener, SerialPortTool.onConnectedListener {
-    private MapView mMapView;
-    private AMap aMap;
-    private ArrayList<Marker> markers;
-    private ArrayList<Polyline> polylines;
-    private ArrayList<Polyline> trace;
-    public static SQLiteDBHelper dbHelper;
-    private static SerialPortTool serialPort;
-    private MorphingButton btn_start;
-    private FloatingActionMenu fab_menu;
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
     private static final int NAV = 3;
     private static final int NONE = -1;
-    public static int state = UNREADY;
-    private String pos = null;
-    private float alpha = 1.0f;
     private static final String MY_APPID = "2882303761517676503";
     private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
+    public static SQLiteDBHelper dbHelper;
+    public static int state = UNREADY;
+    private static SerialPortTool serialPort;
+    public MyHandler mHandler = null;
+    private MapView mMapView;
+    private AMap aMap;
+    private ArrayList<Marker> markers;
+    private ArrayList<Polyline> polylines;
+    private ArrayList<Polyline> trace;
+    private MorphingButton btn_start;
+    private FloatingActionMenu fab_menu;
+    private String pos = null;
+    private float alpha = 1.0f;
     private MyReceiver receiver;
     private ArrayList<LatLng> shipPointList;
     private ArrayList<LatLng> aimPointList;
@@ -142,11 +142,14 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
     private ImageView ivPointerGyro;
     private double lastAimAngle;
     private double lastGyroAngle;
-    public MyHandler mHandler = null;
     private int rfVersion = 0;
     private String rfSha256 = "";
     private String rfName = "";
     private ProgressDialog progressDialog;
+
+    public static SerialPortTool getSerialPort() {
+        return serialPort;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -279,265 +282,6 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         new Thread(new CheckFirmwareUpdate()).start();
     }
 
-    private class CheckFirmwareUpdate implements Runnable {
-        @Override
-        public void run() {
-            try {
-                serialPort.writeData("$VERSION#", 10);
-                int lfVersion = Integer.parseInt(serialPort.readData()
-                        .replace("\n", "")
-                        .replace("\r", ""));
-                if (lfVersion < rfVersion){
-                    String url = "http://rty813.xyz/cleanship/bin/" + rfName;
-                    String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/cleanship/";
-                    DownloadRequest request = new DownloadRequest(url, RequestMethod.GET, path, true, true);
-                    SyncDownloadExecutor.INSTANCE.execute(0, request, new SimpleDownloadListener() {
-                        @Override
-                        public void onFinish(int what, String filePath) {
-                            try {
-                                InputStream inputStream = new FileInputStream(filePath);
-                                int size = inputStream.available();
-                                byte[] buffer = new byte[size];
-                                inputStream.read(buffer);
-                                inputStream.close();
-                                // 计算SHA-256 校验
-                                MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                                digest.update(buffer);
-                                BigInteger bigInteger = new BigInteger(1, digest.digest());
-                                Message msg = mHandler.obtainMessage(9);
-                                if (!bigInteger.toString(16).equals(rfSha256)) {
-                                    msg.obj = "校验错误！";
-                                    mHandler.sendMessage(msg);
-                                    return;
-                                }
-                                serialPort.writeData("y", 1000);
-                                serialPort.writeByte(buffer, 0);
-                                final String response = serialPort.readData();
-                                if (response.contains("Success")) {
-                                    msg.obj = "固件更新成功";
-                                } else {
-                                    msg.obj = "固件更新失败";
-                                }
-                                mHandler.sendMessage(msg);
-                            } catch (IOException e){
-                                e.printStackTrace();
-                                mHandler.sendEmptyMessage(3);
-                            } catch (Exception e) {
-                                Message msg = mHandler.obtainMessage(9);
-                                msg.obj = "固件更新失败";
-                                mHandler.sendMessage(msg);
-                                e.printStackTrace();
-                            }
-                        }
-                    });
-                }
-                else{
-                    synchronized (serialPort){
-                        Message msg = mHandler.obtainMessage(9);
-                        msg.obj = "已是最新版";
-                        mHandler.sendMessage(msg);
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                mHandler.sendEmptyMessage(3);
-            } catch (InterruptedException|NumberFormatException e) {
-                e.printStackTrace();
-                Message msg = mHandler.obtainMessage(9);
-                msg.obj = "固件更新失败";
-                mHandler.sendMessage(msg);
-            }
-        }
-    }
-
-    private class GetRFInfo implements Runnable{
-        @Override
-        public void run() {
-            try {
-                HttpURLConnection connection = (HttpURLConnection) new URL("http://139.199.37.92/cleanship/bin.json").openConnection();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                String line;
-                StringBuilder builder = new StringBuilder();
-                while ((line = reader.readLine()) != null) {
-                    builder.append(line);
-                }
-                final JSONObject json = new JSONObject(builder.toString());
-                rfName = json.getString("name");
-                rfVersion = json.getInt("version");
-                rfSha256 = json.getString("sha256");
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            } catch (JSONException e1) {
-                e1.printStackTrace();
-            }
-        }
-    }
-
-    private class QueryThread implements Runnable {
-        @Override
-        public void run() {
-            synchronized (serialPort){
-                int type = 0;
-                while (true) {
-                    try {
-                        if (state == UNREADY){
-                            serialPort.wait();
-                        }
-                        Thread.sleep(100);
-
-                        serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
-
-/**************************************临时测试**********************************************************************
- serialPort.writeData("$YAW#", 10);
- type = 2;
- ***************************************END!!!*************************************************************************/
-
-                        String data = serialPort.readData();
-                        if (data != null && !data.equals("")) {
-                            String[] strings = data.split(";");
-                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                            if (strings.length == 2){
-                                intent.putExtra("rawData", "|" + strings[0] + "|" + strings[1] + "|");
-                            }
-                            else{
-                                intent.putExtra("rawData", data);
-                            }
-                            if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
-                                intent.putExtra("type", type);
-                                intent.putExtra("data", strings[1]);
-                                type = (type + 1) % 6;
-                            }
-                            sendBroadcast(intent);
-                        }
-                        Thread.sleep(100);
-                    } catch (NumberFormatException | InterruptedException e) {
-                        mHandler.sendEmptyMessage(5);
-                        e.printStackTrace();
-                    } catch (IOException e){
-                        e.printStackTrace();
-                        mHandler.sendEmptyMessage(3);
-                    }
-                }
-            }
-        }
-    }
-
-    private class WriteSeiralThread implements Runnable{
-        private final String mData;
-        private final int mState;
-
-        WriteSeiralThread(String data, int state){
-            mData = data;
-            mState = state;
-        }
-
-        @Override
-        public void run() {
-            try {
-                do {
-                    Thread.sleep(200);
-                    serialPort.writeData(mData, 100);
-                    String data = serialPort.readData();
-                    if (data != null && data.contains(mData)){
-                        Message msg = mHandler.obtainMessage();
-                        msg.what = 8;
-                        msg.obj = mState;
-                        mHandler.sendMessage(msg);
-                        break;
-                    }
-                    Thread.sleep(200);
-                } while (true);
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-                mHandler.sendEmptyMessage(3);
-            } finally {
-                mHandler.sendEmptyMessage(7);
-            }
-        }
-    }
-
-    public class MyHandler extends Handler{
-        @Override
-        public void handleMessage(Message msg) {
-            AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
-            animation.setDuration(300);
-            animation.setInterpolator(new AccelerateDecelerateInterpolator());
-            animation.setAnimationListener(new Animation.AnimationListener() {
-                @Override
-                public void onAnimationStart(Animation animation) {
-                }
-                @Override
-                public void onAnimationEnd(Animation animation) {
-                    loadingView.setVisibility(View.GONE);
-                }
-                @Override
-                public void onAnimationRepeat(Animation animation) {
-                }
-            });
-            switch (msg.what){
-                case 1:
-                    WindowManager.LayoutParams lp = getWindow().getAttributes();
-                    lp.alpha = (float) msg.obj;
-                    getWindow().setAttributes(lp);
-                    break;
-                case 2:
-                    ((PopupWindow)msg.obj).showAtLocation(mMapView, Gravity.CENTER, 0, 0);
-                    break;
-                case 3:
-                    if (loadingView.getVisibility() == View.VISIBLE){
-                        loadingView.startAnimation(animation);
-                    }
-                    morph(UNREADY, 200);
-                    Toast.makeText(MainActivity.this, "连接中断！", Toast.LENGTH_SHORT).show();
-                    serialPort.closeDevice();
-                    break;
-                case 4:
-                    if (loadingView.getVisibility() == View.VISIBLE){
-                        loadingView.startAnimation(animation);
-                    }
-                    synchronized (serialPort){
-                        serialPort.notify();
-                        morph(NAV, 300);
-                    }
-                    break;
-                case 5:
-                    //Toast.makeText(MainActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
-                    break;
-                case 6:
-                    if (loadingView.getVisibility() == View.VISIBLE){
-                        loadingView.startAnimation(animation);
-                    }
-                    break;
-                case 7:
-                    btn_start.setEnabled(true);
-                    fab_menu.showMenuButton(true);
-                    break;
-                case 8:
-                    synchronized (serialPort) {
-                        if (loadingView.getVisibility() == View.VISIBLE){
-                            loadingView.startAnimation(animation);
-                        }
-                        morph((Integer) msg.obj, 300);
-                        serialPort.notify();
-                    }
-                    break;
-                case 9:
-                    synchronized (serialPort){
-                        Toast.makeText(MainActivity.this, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
-                        progressDialog.dismiss();
-                        morph(READY, 200);
-                        serialPort.notify();
-                    }
-                    break;
-                case 10:
-                    progressDialog.show();
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
-        }
-    }
-
     private void checkUpdate() {
         System.out.println("check update");
         UpdateWrapper updateWrapper = new UpdateWrapper.Builder(getApplicationContext())
@@ -636,6 +380,7 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         }
         return true;
     }
+
     @SuppressLint("RestrictedApi")
     @Override
     public void onClick(View view) {
@@ -1127,8 +872,263 @@ public class MainActivity extends AppCompatActivity implements AMap.OnMapClickLi
         initSmoothMove();
     }
 
-    public static SerialPortTool getSerialPort() {
-        return serialPort;
+    private class CheckFirmwareUpdate implements Runnable {
+        @Override
+        public void run() {
+            try {
+                serialPort.writeData("$VERSION#", 10);
+                int lfVersion = Integer.parseInt(serialPort.readData()
+                        .replace("\n", "")
+                        .replace("\r", ""));
+                if (lfVersion < rfVersion) {
+                    String url = "http://rty813.xyz/cleanship/bin/" + rfName;
+                    String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/cleanship/";
+                    DownloadRequest request = new DownloadRequest(url, RequestMethod.GET, path, true, true);
+                    SyncDownloadExecutor.INSTANCE.execute(0, request, new SimpleDownloadListener() {
+                        @Override
+                        public void onFinish(int what, String filePath) {
+                            try {
+                                InputStream inputStream = new FileInputStream(filePath);
+                                int size = inputStream.available();
+                                byte[] buffer = new byte[size];
+                                inputStream.read(buffer);
+                                inputStream.close();
+                                // 计算SHA-256 校验
+                                MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                                digest.update(buffer);
+                                BigInteger bigInteger = new BigInteger(1, digest.digest());
+                                Message msg = mHandler.obtainMessage(9);
+                                if (!bigInteger.toString(16).equals(rfSha256)) {
+                                    msg.obj = "校验错误！";
+                                    mHandler.sendMessage(msg);
+                                    return;
+                                }
+                                serialPort.writeData("y", 1000);
+                                serialPort.writeByte(buffer, 0);
+                                final String response = serialPort.readData();
+                                if (response.contains("Success")) {
+                                    msg.obj = "固件更新成功";
+                                } else {
+                                    msg.obj = "固件更新失败";
+                                }
+                                mHandler.sendMessage(msg);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                                mHandler.sendEmptyMessage(3);
+                            } catch (Exception e) {
+                                Message msg = mHandler.obtainMessage(9);
+                                msg.obj = "固件更新失败";
+                                mHandler.sendMessage(msg);
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                } else {
+                    synchronized (serialPort) {
+                        Message msg = mHandler.obtainMessage(9);
+                        msg.obj = "已是最新版";
+                        mHandler.sendMessage(msg);
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
+            } catch (InterruptedException | NumberFormatException e) {
+                e.printStackTrace();
+                Message msg = mHandler.obtainMessage(9);
+                msg.obj = "固件更新失败";
+                mHandler.sendMessage(msg);
+            }
+        }
+    }
+
+    private class GetRFInfo implements Runnable {
+        @Override
+        public void run() {
+            try {
+                HttpURLConnection connection = (HttpURLConnection) new URL("http://139.199.37.92/cleanship/bin.json").openConnection();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String line;
+                StringBuilder builder = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    builder.append(line);
+                }
+                final JSONObject json = new JSONObject(builder.toString());
+                rfName = json.getString("name");
+                rfVersion = json.getInt("version");
+                rfSha256 = json.getString("sha256");
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+            }
+        }
+    }
+
+    private class QueryThread implements Runnable {
+        @Override
+        public void run() {
+            synchronized (serialPort) {
+                int type = 0;
+                while (true) {
+                    try {
+                        if (state == UNREADY) {
+                            serialPort.wait();
+                        }
+                        Thread.sleep(100);
+
+                        serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 100);
+
+/**************************************临时测试**********************************************************************
+ serialPort.writeData("$YAW#", 10);
+ type = 2;
+ ***************************************END!!!*************************************************************************/
+
+                        String data = serialPort.readData();
+                        if (data != null && !data.equals("")) {
+                            String[] strings = data.split(";");
+                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                            if (strings.length == 2) {
+                                intent.putExtra("rawData", "|" + strings[0] + "|" + strings[1] + "|");
+                            } else {
+                                intent.putExtra("rawData", data);
+                            }
+                            if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
+                                intent.putExtra("type", type);
+                                intent.putExtra("data", strings[1]);
+                                type = (type + 1) % 6;
+                            }
+                            sendBroadcast(intent);
+                        }
+                        Thread.sleep(100);
+                    } catch (NumberFormatException | InterruptedException e) {
+                        mHandler.sendEmptyMessage(5);
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        mHandler.sendEmptyMessage(3);
+                    }
+                }
+            }
+        }
+    }
+
+    private class WriteSeiralThread implements Runnable {
+        private final String mData;
+        private final int mState;
+
+        WriteSeiralThread(String data, int state) {
+            mData = data;
+            mState = state;
+        }
+
+        @Override
+        public void run() {
+            try {
+                do {
+                    Thread.sleep(200);
+                    serialPort.writeData(mData, 100);
+                    String data = serialPort.readData();
+                    if (data != null && data.contains(mData)) {
+                        Message msg = mHandler.obtainMessage();
+                        msg.what = 8;
+                        msg.obj = mState;
+                        mHandler.sendMessage(msg);
+                        break;
+                    }
+                    Thread.sleep(400);
+                } while (true);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
+            } finally {
+                mHandler.sendEmptyMessage(7);
+            }
+        }
+    }
+
+    public class MyHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
+            animation.setDuration(300);
+            animation.setInterpolator(new AccelerateDecelerateInterpolator());
+            animation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+                    loadingView.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+                }
+            });
+            switch (msg.what) {
+                case 1:
+                    WindowManager.LayoutParams lp = getWindow().getAttributes();
+                    lp.alpha = (float) msg.obj;
+                    getWindow().setAttributes(lp);
+                    break;
+                case 2:
+                    ((PopupWindow) msg.obj).showAtLocation(mMapView, Gravity.CENTER, 0, 0);
+                    break;
+                case 3:
+                    if (loadingView.getVisibility() == View.VISIBLE) {
+                        loadingView.startAnimation(animation);
+                    }
+                    morph(UNREADY, 200);
+                    Toast.makeText(MainActivity.this, "连接中断！", Toast.LENGTH_SHORT).show();
+                    serialPort.closeDevice();
+                    break;
+                case 4:
+                    if (loadingView.getVisibility() == View.VISIBLE) {
+                        loadingView.startAnimation(animation);
+                    }
+                    synchronized (serialPort) {
+                        serialPort.notify();
+                        morph(NAV, 300);
+                    }
+                    break;
+                case 5:
+                    //Toast.makeText(MainActivity.this, "非法数据", Toast.LENGTH_SHORT).show();
+                    break;
+                case 6:
+                    if (loadingView.getVisibility() == View.VISIBLE) {
+                        loadingView.startAnimation(animation);
+                    }
+                    break;
+                case 7:
+                    btn_start.setEnabled(true);
+                    fab_menu.showMenuButton(true);
+                    break;
+                case 8:
+                    synchronized (serialPort) {
+                        if (loadingView.getVisibility() == View.VISIBLE) {
+                            loadingView.startAnimation(animation);
+                        }
+                        morph((Integer) msg.obj, 300);
+                        serialPort.notify();
+                    }
+                    break;
+                case 9:
+                    synchronized (serialPort) {
+                        Toast.makeText(MainActivity.this, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
+                        progressDialog.dismiss();
+                        morph(READY, 200);
+                        serialPort.notify();
+                    }
+                    break;
+                case 10:
+                    progressDialog.show();
+                    break;
+                default:
+                    super.handleMessage(msg);
+            }
+        }
     }
 }
 

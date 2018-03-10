@@ -26,9 +26,7 @@
             android:name="com.amap.api.v2.apikey"
             android:value="c026cc87761755de77828d295b844238" />
 
-        <activity android:name=".MainActivity">
-
-        </activity>
+        <activity android:name=".MainActivity"></activity>
         <activity android:name=".HistoryActivity" />
         <activity android:name=".SerialPortActivity" />
 
@@ -39,14 +37,21 @@
         <activity android:name=".ControllerActivity" />
         <activity
             android:name=".MapActivity"
-            android:launchMode="singleTop">
-        </activity>
-        <activity android:name=".ConnectActivity"
+            android:launchMode="singleTop" />
+        <activity
+            android:name=".ConnectActivity"
+            android:launchMode="singleTop"></activity>
+        <activity
+            android:name=".NewActivity"
             android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/device_filter" />
         </activity>
     </application>
 
