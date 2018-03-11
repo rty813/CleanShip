@@ -9,13 +9,13 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.AppCompatSeekBar;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -27,7 +27,10 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
@@ -63,15 +66,19 @@ import com.yanzhenjie.permission.Permission;
 import com.yanzhenjie.permission.Rationale;
 import com.yanzhenjie.permission.RequestExecutor;
 import com.yanzhenjie.permission.SettingService;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 
 import app.dinus.com.loadingdrawable.LoadingView;
+import lib.kingja.switchbutton.SwitchMultiButton;
 
 public class NewActivity extends AppCompatActivity implements View.OnClickListener, SerialPortTool.onConnectedListener {
     private static final int READY = 1;
@@ -79,6 +86,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final int GONE = 2;
     private static final int NAV = 3;
     private static final int NONE = -1;
+    private static final int HOMING = 5;
     private static final int PAUSE = 4;
     private static final String MY_APPID = "2882303761517676503";
     private static final String MY_APP_KEY = "5131767662503";
@@ -89,9 +97,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private AMap aMap;
     private MapView mMapView;
     private long mExitTime;
-    private PopupWindow popupWindow;
     private SerialPortTool serialPort;
     private int state;
+    private boolean markEnable = false;
     private MyHandler mHandler;
     private String pos = null;
     private LoadingView loadingView;
@@ -103,12 +111,17 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private ArrayList<Polyline> polylines;
     private ArrayList<Polyline> trace;
     private float alpha = 1.0f;
-    private Drawable picPause;
-    private Drawable picStart;
-    private Drawable picCalc;
-    private Drawable picNav;
-    private Drawable picWorking;
     private Button btnConnect;
+    private LinearLayout ll_finish;
+    private LinearLayout ll_nav;
+    private LinearLayout ll_mark;
+    private LinearLayout ll_method;
+    private SwitchMultiButton sw_nav;
+    private Button btnHome;
+    private Button btnHome2;
+    private Button btnGostop;
+    private AppCompatSeekBar seekBar;
+    private Button btnVel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -196,22 +209,49 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         mMapView.onCreate(savedInstanceState);
 
         btnConnect = findViewById(R.id.btn_connect);
+        btnHome = findViewById(R.id.btn_home);
+        ll_nav = findViewById(R.id.ll_nav);
+        ll_mark = findViewById(R.id.ll_mark);
+        ll_method = findViewById(R.id.ll_method);
+        ll_finish = findViewById(R.id.ll_finish);
+        sw_nav = findViewById(R.id.sw_nav);
+        btnGostop = findViewById(R.id.btn_gostop);
+        btnHome2 = findViewById(R.id.btn_home2);
+        btnVel = findViewById(R.id.btn_vel);
+        seekBar = findViewById(R.id.seekbar);
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
 
-        picStart = getResources().getDrawable(R.drawable.start);
-        picPause = getResources().getDrawable(R.drawable.pause);
-        picCalc = getResources().getDrawable(R.drawable.calc);
-        picNav = getResources().getDrawable(R.drawable.new_nav);
-        picWorking = getResources().getDrawable(R.drawable.working);
+            }
 
-        picStart.setBounds(0, 0, picStart.getMinimumWidth(), picStart.getMinimumHeight());
-        picPause.setBounds(0, 0, picPause.getMinimumWidth(), picPause.getMinimumHeight());
-        picCalc.setBounds(0, 0, picCalc.getMinimumWidth(), picCalc.getMinimumHeight());
-        picNav.setBounds(0, 0, picNav.getMinimumWidth(), picNav.getMinimumHeight());
-        picWorking.setBounds(0, 0, picWorking.getMinimumWidth(), picWorking.getMinimumHeight());
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                btnVel.setVisibility(View.VISIBLE);
+                btnHome2.setVisibility(View.VISIBLE);
+                btnGostop.setVisibility(View.VISIBLE);
+                seekBar.setVisibility(View.GONE);
+            }
+        });
 
         findViewById(R.id.fab_plane).setOnClickListener(this);
         findViewById(R.id.fab_satellite).setOnClickListener(this);
         findViewById(R.id.btn_connect).setOnClickListener(this);
+        findViewById(R.id.btn_go).setOnClickListener(this);
+        findViewById(R.id.btn_enable).setOnClickListener(this);
+        findViewById(R.id.btn_delete).setOnClickListener(this);
+        findViewById(R.id.btn_vel).setOnClickListener(this);
+        findViewById(R.id.btn_gostop).setOnClickListener(this);
+        findViewById(R.id.btn_home).setOnClickListener(this);
+        findViewById(R.id.btn_home2).setOnClickListener(this);
+        findViewById(R.id.btn_cancel).setOnClickListener(this);
+        findViewById(R.id.btn_history).setOnClickListener(this);
+        btnHome.setOnClickListener(this);
     }
 
     private void initAMap() {
@@ -219,8 +259,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
-        aMap.getUiSettings().setCompassEnabled(true);
-        aMap.getUiSettings().setMyLocationButtonEnabled(true);
+        aMap.getUiSettings().setCompassEnabled(false);
+        aMap.getUiSettings().setMyLocationButtonEnabled(false);
         aMap.getUiSettings().setZoomControlsEnabled(false);
         aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
             private int i;
@@ -290,6 +330,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
             @Override
             public void onMapClick(LatLng latLng) {
+                if (!markEnable) {
+                    return;
+                }
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
                 markerOptions.title(String.valueOf(markers.size() + 1));
                 markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
@@ -354,10 +397,94 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     @Override
     public void onClick(View view) {
+        int preState = state;
         switch (view.getId()) {
             case R.id.btn_connect:
                 showLoadingView();
                 initSerialPort();
+                break;
+            case R.id.btn_delete:
+
+                break;
+            case R.id.btn_cancel:
+                if (markers.size() > 0) {
+                    Marker marker = markers.get(markers.size() - 1);
+                    marker.hideInfoWindow();
+                    markers.get(markers.size() - 1).destroy();
+                    markers.remove(markers.size() - 1);
+                    if (polylines.size() > 0) {
+                        polylines.get(polylines.size() - 1).remove();
+                        polylines.remove(polylines.size() - 1);
+                    }
+                }
+                break;
+            case R.id.btn_home:
+            case R.id.btn_home2:
+                if (state != UNREADY) {
+                    new Thread(new WriteSerialThread(this, "$ORDER,2#", preState)).start();
+                }
+                break;
+            case R.id.btn_enable:
+                markEnable = !markEnable;
+                break;
+            case R.id.btn_go:
+                if (state == READY) {
+                    if (markers.size() > 0) {
+                        StringBuilder stringBuilder = new StringBuilder();
+                        for (Marker marker : markers) {
+                            stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
+                        }
+                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
+                        saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
+                        showLoadingView();
+//                            使QueryThread进入Wait
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    serialPort.writeData("$CLEAR#", 1000);
+                                    for (int i = 0; i < markers.size(); i++) {
+                                        double latitude = markers.get(i).getPosition().latitude;
+                                        double longitude = markers.get(i).getPosition().longitude;
+                                        if (!(sw_nav.getSelectedTab() == 1 && i == markers.size() - 1
+                                                && latitude == markers.get(0).getPosition().latitude
+                                                && longitude == markers.get(0).getPosition().longitude)) {
+                                            serialPort.writeData(String.format(Locale.getDefault(),
+                                                    "$GNGGA,%.6f,%.6f#", latitude, longitude), 500);
+                                        }
+                                    }
+                                    mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
+                                } catch (InterruptedException | IOException e) {
+                                    e.printStackTrace();
+                                    mHandler.sendEmptyMessage(3);
+                                } finally {
+                                    mHandler.sendEmptyMessage(7);
+                                }
+                            }
+                        }).start();
+                    } else {
+                        loadRoute(null);
+                    }
+                }
+                break;
+            case R.id.btn_vel:
+                btnGostop.setVisibility(View.GONE);
+                btnHome2.setVisibility(View.GONE);
+                btnVel.setVisibility(View.GONE);
+                seekBar.setVisibility(View.VISIBLE);
+                break;
+            case R.id.btn_history:
+                View contentView = LayoutInflater.from(this).inflate(R.layout.popup_history, null);
+                SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
+                TextView textView = contentView.findViewById(R.id.tv_history);
+                PopupWindow popupHistory = new PopupWindow();
+                popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+                popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+                popupHistory.setOutsideTouchable(true);
+                popupHistory.setFocusable(true);
+                popupHistory.setContentView(contentView);
+                popupHistory.setAnimationStyle(R.style.dismiss_anim);
+                popupHistory.showAsDropDown(findViewById(R.id.ll_method));
                 break;
         }
     }
@@ -387,21 +514,18 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             case UNREADY:
 //                Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
                 break;
-//            case READY:
-//                btnGostop.setText("暂停");
-//                btnGostop.setCompoundDrawables(null, picPause, null, null);
-//                btnGostop.setEnabled(false);
-//                btnCalc.setText("计算");
-//                btnCalc.setCompoundDrawables(null, picCalc, null, null);
-//                break;
-//            case NAV:
-//                btnGostop.setText("暂停");
-//                btnGostop.setCompoundDrawables(null, picPause, null, null);
-//                btnGostop.setEnabled(false);
-//                btnCalc.setText("导航");
-//                btnCalc.setCompoundDrawables(null, picNav, null, null);
-//                break;
-//            case GONE:
+            case READY:
+                btnConnect.setVisibility(View.GONE);
+                ll_mark.setVisibility(View.VISIBLE);
+                ll_method.setVisibility(View.VISIBLE);
+                btnHome.setVisibility(View.VISIBLE);
+                break;
+            case GONE:
+                ll_mark.setVisibility(View.GONE);
+                ll_method.setVisibility(View.INVISIBLE);
+                ll_nav.setVisibility(View.VISIBLE);
+                btnHome.setVisibility(View.GONE);
+                break;
 //                btnGostop.setText("暂停");
 //                btnGostop.setCompoundDrawables(null, picPause, null, null);
 //                btnGostop.setEnabled(true);
