@@ -3,13 +3,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:id="@+id/root_view"
     tools:context="com.xyz.rty813.cleanship.HistoryActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
+        android:layout_marginBottom="10dp"
         android:background="@color/gray"
         android:elevation="6dp"
         android:orientation="vertical">
@@ -17,18 +19,18 @@
         <com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="8"
             android:layout_margin="20dp"
             android:scrollbars="vertical" />
 
         <TextView
             android:id="@+id/tv_history"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:layout_gravity="end"
-            android:layout_marginBottom="15dp"
-            android:layout_marginRight="20dp"
-            android:text="共1条路线" />
+            android:layout_marginEnd="20dp"/>
     </LinearLayout>
 
 </FrameLayout>

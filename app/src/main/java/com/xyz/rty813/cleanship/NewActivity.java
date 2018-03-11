@@ -16,6 +16,8 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatSeekBar;
+import android.support.v7.widget.LinearLayoutManager;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -27,6 +29,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
@@ -66,6 +69,7 @@ import com.yanzhenjie.permission.Permission;
 import com.yanzhenjie.permission.Rationale;
 import com.yanzhenjie.permission.RequestExecutor;
 import com.yanzhenjie.permission.SettingService;
+import com.yanzhenjie.recyclerview.swipe.SwipeItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
 import java.io.IOException;
@@ -73,8 +77,10 @@ import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 
 import app.dinus.com.loadingdrawable.LoadingView;
@@ -122,6 +128,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Button btnGostop;
     private AppCompatSeekBar seekBar;
     private Button btnVel;
+    private Button btnHistory;
+    private Button btnManual;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -217,6 +225,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         sw_nav = findViewById(R.id.sw_nav);
         btnGostop = findViewById(R.id.btn_gostop);
         btnHome2 = findViewById(R.id.btn_home2);
+        btnHistory = findViewById(R.id.btn_history);
+        btnManual = findViewById(R.id.btn_manual);
         btnVel = findViewById(R.id.btn_vel);
         seekBar = findViewById(R.id.seekbar);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -250,7 +260,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.btn_home).setOnClickListener(this);
         findViewById(R.id.btn_home2).setOnClickListener(this);
         findViewById(R.id.btn_cancel).setOnClickListener(this);
-        findViewById(R.id.btn_history).setOnClickListener(this);
+        btnManual.setOnClickListener(this);
+        btnHistory.setOnClickListener(this);
         btnHome.setOnClickListener(this);
     }
 
@@ -398,6 +409,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     @Override
     public void onClick(View view) {
         int preState = state;
+        PopupWindow popupHistory;
         switch (view.getId()) {
             case R.id.btn_connect:
                 showLoadingView();
@@ -474,19 +486,66 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 seekBar.setVisibility(View.VISIBLE);
                 break;
             case R.id.btn_history:
-                View contentView = LayoutInflater.from(this).inflate(R.layout.popup_history, null);
-                SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
-                TextView textView = contentView.findViewById(R.id.tv_history);
-                PopupWindow popupHistory = new PopupWindow();
+                btnManual.setTextColor(Color.BLACK);
+                btnHistory.setTextColor(getResources().getColor(R.color.toolbarBlue));
+                final View contentView = LayoutInflater.from(this).inflate(R.layout.popup_history, null);
+                final SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
+                final TextView textView = contentView.findViewById(R.id.tv_history);
+                popupHistory = new PopupWindow();
                 popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
-                popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
                 popupHistory.setOutsideTouchable(true);
-                popupHistory.setFocusable(true);
                 popupHistory.setContentView(contentView);
                 popupHistory.setAnimationStyle(R.style.dismiss_anim);
+                popupHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                    @Override
+                    public void onDismiss() {
+                        btnHistory.setTextColor(Color.BLACK);
+                        btnManual.setTextColor(getResources().getColor(R.color.toolbarBlue));
+                    }
+                });
+                loadHistory(recyclerView, textView, popupHistory);
+                contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+                final int height = getResources().getDisplayMetrics().heightPixels / 2;
+                if (contentView.getMeasuredHeight() > height){
+                    popupHistory.setHeight(height);
+                }
+                else {
+                    popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+                }
                 popupHistory.showAsDropDown(findViewById(R.id.ll_method));
                 break;
         }
+    }
+
+    private void loadHistory(SwipeMenuRecyclerView recyclerView, TextView textView, final PopupWindow popupHistory) {
+        final ArrayList<Map<String, String>> list = new ArrayList<>();
+        SQLiteDatabase database = dbHelper.getReadableDatabase();
+        Cursor cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null ,null, null, null);
+        if (cursor.getCount() > 0){
+            cursor.moveToLast();
+            do{
+                Map<String, String> map = new HashMap();
+                String time = cursor.getString(cursor.getColumnIndex("TIME"));
+                String id = cursor.getString(cursor.getColumnIndex("ID"));
+                map.put("detail", time);
+                map.put("title", "路线" + String.valueOf(id));
+                map.put("id", id);
+                list.add(map);
+            } while(cursor.moveToPrevious());
+        }
+        database.close();
+        SwipeRecyclerViewAdapter adapter = new SwipeRecyclerViewAdapter(list);
+        adapter.notifyDataSetChanged();
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
+            @Override
+            public void onItemClick(View itemView, int position) {
+                popupHistory.dismiss();
+                loadRoute(list.get(position).get("id"));
+            }
+        });
+        recyclerView.setAdapter(adapter);
+        textView.setText(String.format(Locale.getDefault(), "共%d条记录", cursor.getCount()));
     }
 
     private void initSmoothMove() {
