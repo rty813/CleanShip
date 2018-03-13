@@ -557,7 +557,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 btnHistory.setTextColor(getResources().getColor(R.color.toolbarBlue));
                 final View contentView = LayoutInflater.from(this).inflate(R.layout.popup_history, null);
                 final SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
-                final TextView textView = contentView.findViewById(R.id.tv_history);
                 popupHistory = new PopupWindow();
                 popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
                 popupHistory.setOutsideTouchable(true);
@@ -570,7 +569,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         btnManual.setTextColor(getResources().getColor(R.color.toolbarBlue));
                     }
                 });
-                loadHistory(recyclerView, textView, popupHistory);
+                loadHistory(recyclerView, popupHistory);
                 contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
                 final int height = getResources().getDisplayMetrics().heightPixels / 2;
                 if (contentView.getMeasuredHeight() > height){
@@ -595,7 +594,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
-    private void loadHistory(SwipeMenuRecyclerView recyclerView, TextView textView, final PopupWindow popupHistory) {
+    private void loadHistory(SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
         final ArrayList<Map<String, String>> list = new ArrayList<>();
         SQLiteDatabase database = dbHelper.getReadableDatabase();
         Cursor cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null ,null, null, null);
@@ -679,7 +678,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             }
         });
         recyclerView.setAdapter(adapter);
-        textView.setText(String.format(Locale.getDefault(), "共%d条记录", cursor.getCount()));
     }
 
     private void initSmoothMove() {
