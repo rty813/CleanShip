@@ -9,6 +9,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -29,6 +31,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
@@ -37,12 +40,16 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
+import com.amap.api.maps.AMapUtils;
 import com.amap.api.maps.CameraUpdate;
 import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.MapView;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
 import com.amap.api.maps.model.CameraPosition;
+import com.amap.api.maps.model.Circle;
+import com.amap.api.maps.model.CircleOptions;
 import com.amap.api.maps.model.LatLng;
+import com.amap.api.maps.model.LatLngBounds;
 import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
 import com.amap.api.maps.model.MyLocationStyle;
@@ -70,6 +77,11 @@ import com.yanzhenjie.permission.Rationale;
 import com.yanzhenjie.permission.RequestExecutor;
 import com.yanzhenjie.permission.SettingService;
 import com.yanzhenjie.recyclerview.swipe.SwipeItemClickListener;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenu;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuBridge;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuCreator;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
 import java.io.IOException;
@@ -130,6 +142,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Button btnVel;
     private Button btnHistory;
     private Button btnManual;
+    private Button btnAbort;
+    private Drawable picPause;
+    private Drawable picStart;
+    private Drawable picMarkEnable;
+    private Drawable picMarkDisable;
+    private Button btnEnable;
+    private TextView tvToolbar;
+    private TextView tvCircle;
+    private Circle limitCircle;
+    private static final double ctlRadius = 2000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -228,6 +250,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnHistory = findViewById(R.id.btn_history);
         btnManual = findViewById(R.id.btn_manual);
         btnVel = findViewById(R.id.btn_vel);
+        btnAbort = findViewById(R.id.btn_abort);
+        btnEnable = findViewById(R.id.btn_enable);
         seekBar = findViewById(R.id.seekbar);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -245,9 +269,14 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 btnVel.setVisibility(View.VISIBLE);
                 btnHome2.setVisibility(View.VISIBLE);
                 btnGostop.setVisibility(View.VISIBLE);
+                btnAbort.setVisibility(View.VISIBLE);
                 seekBar.setVisibility(View.GONE);
+                new Thread(new WriteSerialThread(String.format(Locale.getDefault(),
+                        "$ORDER,6,%d#", seekBar.getProgress()), NONE, state)).start();
             }
         });
+        tvToolbar = findViewById(R.id.tv_toolbar);
+        tvCircle = findViewById(R.id.tv_circle);
 
         findViewById(R.id.fab_plane).setOnClickListener(this);
         findViewById(R.id.fab_satellite).setOnClickListener(this);
@@ -256,22 +285,31 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.btn_enable).setOnClickListener(this);
         findViewById(R.id.btn_delete).setOnClickListener(this);
         findViewById(R.id.btn_vel).setOnClickListener(this);
-        findViewById(R.id.btn_gostop).setOnClickListener(this);
-        findViewById(R.id.btn_home).setOnClickListener(this);
         findViewById(R.id.btn_home2).setOnClickListener(this);
         findViewById(R.id.btn_cancel).setOnClickListener(this);
+        btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
         btnHistory.setOnClickListener(this);
         btnHome.setOnClickListener(this);
+        btnGostop.setOnClickListener(this);
+        btnEnable.setOnClickListener(this);
+
+        picStart = getResources().getDrawable(R.drawable.btn_start_selector);
+        picPause = getResources().getDrawable(R.drawable.btn_pause_selector);
+        picMarkEnable = getResources().getDrawable(R.drawable.mark_y);
+        picMarkDisable = getResources().getDrawable(R.drawable.mark_n);
+        picStart.setBounds(0, 0, picStart.getMinimumWidth(), picStart.getMinimumHeight());
+        picPause.setBounds(0, 0, picPause.getMinimumWidth(), picPause.getMinimumHeight());
+        picMarkDisable.setBounds(0, 0, picMarkDisable.getMinimumWidth(), picMarkDisable.getMinimumHeight());
+        picMarkEnable.setBounds(0, 0, picMarkEnable.getMinimumWidth(), picMarkEnable.getMinimumHeight());
     }
 
     private void initAMap() {
-
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
         aMap.getUiSettings().setCompassEnabled(false);
-        aMap.getUiSettings().setMyLocationButtonEnabled(false);
+        aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setZoomControlsEnabled(false);
         aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
             private int i;
@@ -344,6 +382,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 if (!markEnable) {
                     return;
                 }
+                if (AMapUtils.calculateLineDistance(latLng, limitCircle.getCenter()) > ctlRadius){
+                    Toast.makeText(NewActivity.this, "注意！超出遥控范围！", Toast.LENGTH_LONG).show();
+                }
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
                 markerOptions.title(String.valueOf(markers.size() + 1));
                 markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
@@ -357,7 +398,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 if (markers.size() > 1) {
                     LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
                     LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10).color(Color.RED)));
+                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10)
+                            .color(Color.parseColor("#0B76CE"))));
                 } else {
                     GeocodeSearch geocodeSearch = new GeocodeSearch(NewActivity.this);
                     geocodeSearch.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
@@ -385,6 +427,17 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     RegeocodeQuery query = new RegeocodeQuery(new LatLonPoint(latLng.latitude, latLng.longitude), 1000, GeocodeSearch.AMAP);
                     geocodeSearch.getFromLocationAsyn(query);
                 }
+            }
+        });
+        aMap.setOnMyLocationChangeListener(new AMap.OnMyLocationChangeListener() {
+            @Override
+            public void onMyLocationChange(Location location) {
+                if (limitCircle != null){
+                    limitCircle.remove();
+                }
+                limitCircle = aMap.addCircle(new CircleOptions().center(new LatLng(location.getLatitude(), location.getLongitude()))
+                        .radius(ctlRadius).strokeColor(Color.RED).strokeWidth(8).fillColor(Color.argb(20, 1, 1, 1)));
+
             }
         });
     }
@@ -416,7 +469,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 initSerialPort();
                 break;
             case R.id.btn_delete:
-
+                new AlertDialog.Builder(this).setTitle("提示")
+                        .setMessage("是否要清除所有标记？")
+                        .setNegativeButton("否", null)
+                        .setPositiveButton("是", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                resetMap();
+                            }
+                        })
+                        .show();
                 break;
             case R.id.btn_cancel:
                 if (markers.size() > 0) {
@@ -433,11 +495,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.btn_home:
             case R.id.btn_home2:
                 if (state != UNREADY) {
-                    new Thread(new WriteSerialThread(this, "$ORDER,2#", preState)).start();
+                    new Thread(new WriteSerialThread("$ORDER,2#", GONE, state)).start();
                 }
                 break;
             case R.id.btn_enable:
                 markEnable = !markEnable;
+                btnEnable.setCompoundDrawables(null, markEnable? picMarkEnable : picMarkDisable, null, null);
                 break;
             case R.id.btn_go:
                 if (state == READY) {
@@ -465,7 +528,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                                     "$GNGGA,%.6f,%.6f#", latitude, longitude), 500);
                                         }
                                     }
-                                    mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
+                                    String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
+                                    new Thread(new WriteSerialThread(data, GONE, READY)).start();
+//                                    serialPort.writeData(data, 500);
+//                                    mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
                                 } catch (InterruptedException | IOException e) {
                                     e.printStackTrace();
                                     mHandler.sendEmptyMessage(3);
@@ -481,6 +547,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 break;
             case R.id.btn_vel:
                 btnGostop.setVisibility(View.GONE);
+                btnAbort.setVisibility(View.GONE);
                 btnHome2.setVisibility(View.GONE);
                 btnVel.setVisibility(View.GONE);
                 seekBar.setVisibility(View.VISIBLE);
@@ -514,6 +581,17 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 }
                 popupHistory.showAsDropDown(findViewById(R.id.ll_method));
                 break;
+            case R.id.btn_abort:
+                new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                break;
+            case R.id.btn_gostop:
+                if (state == PAUSE){
+                    new Thread(new WriteSerialThread("$GO#", GONE, state)).start();
+                }
+                else if (state == GONE){
+                    new Thread(new WriteSerialThread("$STOP#", PAUSE, state)).start();
+                }
+                break;
         }
     }
 
@@ -526,15 +604,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             do{
                 Map<String, String> map = new HashMap();
                 String time = cursor.getString(cursor.getColumnIndex("TIME"));
+                String name = cursor.getString(cursor.getColumnIndex("NAME"));
                 String id = cursor.getString(cursor.getColumnIndex("ID"));
                 map.put("detail", time);
-                map.put("title", "路线" + String.valueOf(id));
+                map.put("title", name);
                 map.put("id", id);
                 list.add(map);
             } while(cursor.moveToPrevious());
         }
         database.close();
-        SwipeRecyclerViewAdapter adapter = new SwipeRecyclerViewAdapter(list);
+        final SwipeRecyclerViewAdapter adapter = new SwipeRecyclerViewAdapter(list);
         adapter.notifyDataSetChanged();
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
@@ -542,6 +621,61 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             public void onItemClick(View itemView, int position) {
                 popupHistory.dismiss();
                 loadRoute(list.get(position).get("id"));
+            }
+        });
+        recyclerView.setSwipeMenuCreator(new SwipeMenuCreator() {
+            @Override
+            public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
+                DisplayMetrics metrics = NewActivity.this.getResources().getDisplayMetrics();
+                SwipeMenuItem deleteItem = new SwipeMenuItem(NewActivity.this).setWidth((int)(metrics.widthPixels * 0.2))
+                        .setImage(R.drawable.menu_delete).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
+
+                SwipeMenuItem renameItem = new SwipeMenuItem(NewActivity.this).setWidth((int)(metrics.widthPixels * 0.2))
+                        .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
+                swipeRightMenu.addMenuItem(renameItem);
+                swipeRightMenu.addMenuItem(deleteItem);
+            }
+        });
+        recyclerView.setSwipeMenuItemClickListener(new SwipeMenuItemClickListener() {
+            @Override
+            public void onItemClick(SwipeMenuBridge menuBridge) {
+                menuBridge.closeMenu();
+                final int pos = menuBridge.getAdapterPosition();
+                if (menuBridge.getPosition() == 1){
+                    Map<String, String> map = list.get(pos);
+                    String id = map.get("id");
+                    list.remove(pos);
+                    adapter.notifyItemRemoved(pos);
+                    adapter.notifyItemRangeChanged(pos, list.size() - pos);
+                    SQLiteDatabase database = dbHelper.getWritableDatabase();
+                    database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
+                    database.close();
+                }
+                else {
+                    final EditText etName = new EditText(NewActivity.this);
+                    etName.setHint(list.get(pos).get("title"));
+                    new AlertDialog.Builder(NewActivity.this)
+                            .setTitle("重命名路线")
+                            .setView(etName)
+                            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    Map<String, String> map = new HashMap<>();
+                                    map.put("id", list.get(pos).get("id"));
+                                    map.put("title", etName.getText().toString());
+                                    map.put("detail", list.get(pos).get("detail"));
+                                    list.remove(list.get(pos));
+                                    list.add(pos, map);
+                                    adapter.notifyDataSetChanged();
+                                    SQLiteDatabase database = dbHelper.getWritableDatabase();
+                                    ContentValues values = new ContentValues();
+                                    values.put("NAME", etName.getText().toString());
+                                    database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
+                                    database.close();
+                                }
+                            })
+                            .show();
+                }
             }
         });
         recyclerView.setAdapter(adapter);
@@ -558,62 +692,61 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private void morph(int state) {
         if (state != NONE) {
             this.state = state;
-//            btnCalc.setEnabled(true);
-//            btnGostop.setEnabled(true);
-//            btnRoute.setEnabled(true);
-//            btnMore.setEnabled(true);
-        } else {
-            this.state = UNREADY;
-//            btnCalc.setEnabled(false);
-//            btnGostop.setEnabled(false);
-//            btnMore.setEnabled(false);
-//            btnRoute.setEnabled(false);
         }
         switch (state) {
             case UNREADY:
-//                Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
+                btnConnect.setVisibility(View.VISIBLE);
+                ll_mark.setVisibility(View.GONE);
+                ll_method.setVisibility(View.GONE);
+                ll_nav.setVisibility(View.GONE);
+                ll_finish.setVisibility(View.GONE);
+                btnHome.setVisibility(View.GONE);
+                tvToolbar.setText(getResources().getString(R.string.app_name));
+                resetMap();
                 break;
             case READY:
                 btnConnect.setVisibility(View.GONE);
+                ll_nav.setVisibility(View.GONE);
+                ll_finish.setVisibility(View.GONE);
                 ll_mark.setVisibility(View.VISIBLE);
                 ll_method.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.VISIBLE);
+                tvToolbar.setText(getResources().getString(R.string.app_name));
                 break;
             case GONE:
+                btnGostop.setText("暂停");
+                btnGostop.setCompoundDrawables(null, picPause, null, null);
                 ll_mark.setVisibility(View.GONE);
                 ll_method.setVisibility(View.INVISIBLE);
                 ll_nav.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.GONE);
+                tvToolbar.setText(sw_nav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 break;
-//                btnGostop.setText("暂停");
-//                btnGostop.setCompoundDrawables(null, picPause, null, null);
-//                btnGostop.setEnabled(true);
-//                btnCalc.setText("正在导航");
-//                btnCalc.setCompoundDrawables(null, picWorking, null, null);
-//                break;
-//            case PAUSE:
-//                btnGostop.setText("开始");
-//                btnGostop.setCompoundDrawables(null, picStart, null, null);
-//                btnGostop.setEnabled(true);
-//                btnCalc.setText("正在导航");
-//                btnCalc.setCompoundDrawables(null, picWorking, null, null);
-//                break;
+            case PAUSE:
+                btnGostop.setText("开始");
+                btnGostop.setCompoundDrawables(null, picStart, null, null);
+                break;
         }
     }
 
     private void showLoadingView() {
-        state = UNREADY;
-        findViewById(R.id.loadingview).setVisibility(View.VISIBLE);
-        AlphaAnimation animation = new AlphaAnimation(0.0f, 1.0f);
-        animation.setDuration(300);
-        animation.setInterpolator(new AccelerateDecelerateInterpolator());
-        findViewById(R.id.loadingview).startAnimation(animation);
+        if (loadingView.getVisibility() == View.GONE) {
+            state = UNREADY;
+            findViewById(R.id.loadingview).setVisibility(View.VISIBLE);
+            AlphaAnimation animation = new AlphaAnimation(0.0f, 1.0f);
+            animation.setDuration(300);
+            animation.setInterpolator(new AccelerateDecelerateInterpolator());
+            findViewById(R.id.loadingview).startAnimation(animation);
+        }
+
     }
 
     @Override
     public void onConnected() {
-        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+//        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
         new Thread(new QueryThread()).start();
+        new Thread(new QueryStateTread()).start();
     }
 
     private void checkUpdate() {
@@ -640,7 +773,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     @Override
                     public void onAction(List<String> permissions) {
                         MyLocationStyle myLocationStyle = new MyLocationStyle();//初始化定位蓝点样式类myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
-                        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE);
+                        myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE)
+                                .strokeColor(Color.parseColor("#00000000"))
+                                .radiusFillColor(Color.parseColor("#00000000"));
+
                         aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
                         aMap.setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
                         checkUpdate();
@@ -703,7 +839,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         ContentValues cv = new ContentValues();
         cv.put("TIME", time);
         cv.put("ROUTE", route);
-        cv.put("ADDRESS", address);
+        cv.put("NAME", address);
         database.insert(SQLiteDBHelper.TABLE_NAME, null, cv);
         database.close();
     }
@@ -749,7 +885,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     private void resetMap() {
-        aMap.clear();
+        aMap.clear(true);
         shipPointList.removeAll(shipPointList);
         shipPointList.add(new LatLng(0, 0));
         aimPointList.removeAll(aimPointList);
@@ -757,17 +893,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         polylines.removeAll(polylines);
         trace.removeAll(trace);
         initSmoothMove();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode == RESULT_OK) {
-            if (requestCode == 200) {
-                if (data.getStringExtra("id") != null) {
-                    loadRoute(data.getStringExtra("id"));
-                }
-            }
-        }
     }
 
     static class MyHandler extends Handler {
@@ -866,6 +991,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                 break;
                             }
                         }
+                        Thread.sleep(1000);
                         data = builder.toString();
                         if (!data.startsWith("$") || !data.endsWith("#")) {
                             err = false;
@@ -904,7 +1030,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                 mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
                             }
                         }
-                        Thread.sleep(1000);
                     } catch (NumberFormatException | InterruptedException e) {
                         mHandler.sendMessage(mHandler.obtainMessage(5, data));
                         e.printStackTrace();
@@ -917,16 +1042,83 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
+    private class QueryStateTread implements Runnable {
+
+        @Override
+        public void run() {
+            int retry_times = 0;
+            try {
+                do {
+                    serialPort.writeData("$QUERY,7#", 10);
+                    String data;
+                    StringBuilder builder = new StringBuilder();
+                    while (!(data = serialPort.readData()).equals("")) {
+                        builder.append(data);
+                        if (data.endsWith("#")) {
+                            break;
+                        }
+                    }
+                    Thread.sleep(1000);
+                    data = builder.toString();
+                    if (!data.startsWith("$") || !data.endsWith("#")) {
+                        Thread.sleep(1000);
+                        continue;
+                    } else {
+                        data = data.replaceAll("#", "");
+                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
+                    }
+                    if (!data.equals("")) {
+                        String[] strings = data.split(";");
+                        if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
+                            int state = Integer.parseInt(strings[1]);
+                            if (state == 0){
+                                mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+                            }
+                            else {
+                                sw_nav.setSelectedTab(state > 0 ? 1 : 0);
+                                if (state > 0){
+                                    tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
+                                }
+                                mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
+                            }
+                            break;
+                        }
+                    }
+                    retry_times++;
+                    if (retry_times == 2) {
+                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+                    }
+                    if (retry_times == 5) {
+                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
+                        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+                        break;
+                    }
+                } while (true);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
+            } finally {
+                mHandler.sendEmptyMessage(7);
+            }
+        }
+    }
+
     private class WriteSerialThread implements Runnable {
         private final String mData;
         private final int mState;
         private final int mPreState;
 
-        WriteSerialThread(NewActivity activity, String data, int state) {
+//        WriteSerialThread(NewActivity activity, String data, int state) {
+//            mData = data;
+//            mState = state;
+//            mPreState = activity.state;
+//            showLoadingView();
+//        }
+
+        WriteSerialThread(String data, int state, int preState){
             mData = data;
             mState = state;
-            mPreState = activity.state;
-            showLoadingView();
+            mPreState = preState;
         }
 
         @Override
@@ -943,6 +1135,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             break;
                         }
                     }
+                    Thread.sleep(1000);
                     data = builder.toString();
                     Log.i("writeSerialPort", data);
                     if (data.contains(mData)) {
@@ -958,7 +1151,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         mHandler.sendMessage(mHandler.obtainMessage(8, mPreState));
                         break;
                     }
-                    Thread.sleep(1000);
                 } while (true);
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
@@ -966,6 +1158,23 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             } finally {
                 mHandler.sendEmptyMessage(7);
             }
+        }
+    }
+    public ArrayList<LatLng> getShipPointList() {
+        return shipPointList;
+    }
+    public void move(){
+        if (shipPointList.size() == 2){
+            LatLngBounds bounds = new LatLngBounds(shipPointList.get(1), shipPointList.get(shipPointList.size() - 1));
+            aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
+        }
+        else{
+            List<LatLng> subList = shipPointList.subList(shipPointList.size() - 2, shipPointList.size());
+            smoothMoveMarker.setPoints(subList);
+            smoothMoveMarker.setTotalDuration(1);
+            smoothMoveMarker.startSmoothMove();
+            trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
+                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.parseColor("#FFE418"))));
         }
     }
 }

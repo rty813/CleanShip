@@ -6,31 +6,60 @@
     android:id="@+id/root_view"
     tools:context="com.xyz.rty813.cleanship.HistoryActivity">
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="200dp"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
-        android:layout_marginBottom="10dp"
         android:background="@color/gray"
-        android:elevation="6dp"
-        android:orientation="vertical">
-
+        android:elevation="6dp">
         <com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="8"
-            android:layout_margin="20dp"
-            android:scrollbars="vertical" />
+            android:layout_height="wrap_content"
+            android:scrollbars="vertical"
+            android:layout_alignParentTop="true"
+            android:layout_margin="20dp"/>
 
         <TextView
             android:id="@+id/tv_history"
             android:layout_width="wrap_content"
-            android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_height="wrap_content"
             android:layout_gravity="end"
-            android:layout_marginEnd="20dp"/>
-    </LinearLayout>
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="10dp"
+            android:text="asdfasdf"/>
+    </RelativeLayout>
+
+    <!--<LinearLayout-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="200dp"-->
+    <!--android:layout_marginLeft="10dp"-->
+    <!--android:layout_marginRight="10dp"-->
+    <!--android:layout_marginBottom="10dp"-->
+    <!--android:background="@color/gray"-->
+    <!--android:elevation="6dp"-->
+    <!--android:orientation="vertical">-->
+
+    <!--<com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView-->
+    <!--android:id="@+id/recyclerView"-->
+    <!--android:layout_width="match_parent"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:layout_marginTop="20dp"-->
+    <!--android:layout_marginLeft="20dp"-->
+    <!--android:layout_marginRight="20dp"-->
+    <!--android:layout_marginBottom="20dp"-->
+    <!--android:scrollbars="vertical" />-->
+
+    <!--<TextView-->
+    <!--android:id="@+id/tv_history"-->
+    <!--android:layout_width="wrap_content"-->
+    <!--android:layout_height="wrap_content"-->
+    <!--android:layout_gravity="end"-->
+    <!--android:text="asdfasdf"-->
+    <!--android:layout_marginEnd="20dp"/>-->
+    <!--</LinearLayout>-->
 
 </FrameLayout>

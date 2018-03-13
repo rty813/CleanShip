@@ -144,7 +144,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:background="#00000000"
-                    android:drawableTop="@drawable/fab_add"
+                    android:drawableTop="@drawable/btn_mark_selector"
                     android:text="标点" />
 
                 <Button
@@ -153,7 +153,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:background="#00000000"
-                    android:drawableTop="@drawable/new_cancel"
+                    android:drawableTop="@drawable/btn_cancel_selector"
                     android:text="撤销" />
 
                 <Button
@@ -162,25 +162,36 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:background="#00000000"
-                    android:drawableTop="@drawable/new_delete"
+                    android:drawableTop="@drawable/btn_delete_selector"
                     android:text="全部删除" />
             </LinearLayout>
 
-            <lib.kingja.switchbutton.SwitchMultiButton
-                android:id="@+id/sw_nav"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="15dp"
-                android:paddingBottom="5dp"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
-                android:paddingTop="5dp"
-                app:selectedColor="#ffffff"
-                app:strokeRadius="15dp"
-                app:strokeWidth="2dp"
-                app:switchTabs="@array/switch_tabs"
-                app:textSize="13sp" />
+                android:layout_marginTop="15dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:text="选择模式："/>
+                <lib.kingja.switchbutton.SwitchMultiButton
+                    android:id="@+id/sw_nav"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:paddingBottom="5dp"
+                    android:paddingLeft="15dp"
+                    android:paddingRight="15dp"
+                    android:paddingTop="5dp"
+                    app:selectedColor="#ffffff"
+                    app:strokeRadius="15dp"
+                    app:strokeWidth="2dp"
+                    app:switchTabs="@array/switch_tabs"
+                    app:textSize="13sp" />
+            </LinearLayout>
+
 
             <Button
                 android:id="@+id/btn_go"
@@ -195,53 +206,78 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/ll_nav"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal|bottom"
             android:layout_margin="10dp"
             android:background="@color/popup"
+            android:orientation="vertical"
             android:elevation="6dp"
-            android:orientation="horizontal"
-            android:paddingBottom="30dp"
-            android:paddingTop="30dp"
-            android:visibility="gone">
+            android:visibility="gone"
+            android:id="@+id/ll_nav">
 
-            <Button
-                android:id="@+id/btn_vel"
-                android:layout_width="0dp"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="#00000000"
-                android:drawableTop="@drawable/new_cancel"
-                android:text="速度" />
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="20dp"
+                android:id="@+id/tv_circle"
+                android:text="第0圈"/>
 
-            <Button
-                android:id="@+id/btn_gostop"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="#00000000"
-                android:drawableTop="@drawable/new_cancel"
-                android:text="暂停" />
-
-            <Button
-                android:id="@+id/btn_home2"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="#00000000"
-                android:drawableTop="@drawable/new_cancel"
-                android:text="一键返航" />
-
-            <android.support.v7.widget.AppCompatSeekBar
-                android:id="@+id/seekbar"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
-                android:layout_marginLeft="20dp"
-                android:layout_marginRight="20dp"
-                android:visibility="gone" />
+                android:orientation="horizontal"
+                android:layout_marginBottom="20dp">
+
+                <Button
+                    android:id="@+id/btn_vel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_vel_selector"
+                    android:text="速度" />
+
+                <Button
+                    android:id="@+id/btn_gostop"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_pause_selector"
+                    android:text="暂停" />
+
+                <Button
+                    android:id="@+id/btn_abort"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_abort_selector"
+                    android:text="终止" />
+
+                <Button
+                    android:id="@+id/btn_home2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_home_selector"
+                    android:text="一键返航" />
+
+                <android.support.v7.widget.AppCompatSeekBar
+                    android:id="@+id/seekbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginLeft="20dp"
+                    android:layout_marginRight="20dp"
+                    android:min="1200"
+                    android:max="2000"
+                    android:visibility="gone" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
@@ -257,7 +293,6 @@
             android:visibility="gone">
 
         </LinearLayout>
-
 
         <app.dinus.com.loadingdrawable.LoadingView
             android:id="@+id/loadingview"

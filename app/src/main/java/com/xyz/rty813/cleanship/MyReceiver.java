@@ -12,8 +12,8 @@ public class MyReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        MapActivity activity = (MapActivity) context;
-        activity.setRawData(intent.getStringExtra("rawData"));
+        NewActivity activity = (NewActivity) context;
+//        activity.setRawData(intent.getStringExtra("rawData"));
         String data = intent.getStringExtra("data");
         if (data == null){
 //            Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
@@ -33,28 +33,28 @@ public class MyReceiver extends BroadcastReceiver {
                             || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
                         return;
                     }
-                    activity.setCurrLatlng(datas[0], datas[1]);
+//                    activity.setCurrLatlng(datas[0], datas[1]);
                     activity.move();
                     break;
-                case 1:
-                    lat = Double.parseDouble(datas[0]);
-                    lng = Double.parseDouble(datas[1]);
-                    activity.setAimPoint(new LatLng(lat, lng));
-                    break;
-                case 2:
-                    double gyroAngle = Double.parseDouble(data);
-                    activity.setGyroAngle(gyroAngle);
-                    break;
-                case 3:
-                    double aimAngle = Double.parseDouble(data);
-                    activity.setAimAngle(aimAngle);
-                    break;
-                case 4:
-                    activity.setCurrVel(data);
-                    break;
-                case 5:
-                    activity.setGpsNum(data);
-                    break;
+//                case 1:
+//                    lat = Double.parseDouble(datas[0]);
+//                    lng = Double.parseDouble(datas[1]);
+//                    activity.setAimPoint(new LatLng(lat, lng));
+//                    break;
+//                case 2:
+//                    double gyroAngle = Double.parseDouble(data);
+//                    activity.setGyroAngle(gyroAngle);
+//                    break;
+//                case 3:
+//                    double aimAngle = Double.parseDouble(data);
+//                    activity.setAimAngle(aimAngle);
+//                    break;
+//                case 4:
+//                    activity.setCurrVel(data);
+//                    break;
+//                case 5:
+//                    activity.setGpsNum(data);
+//                    break;
                 default:
 //                    Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
                     break;

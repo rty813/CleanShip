@@ -972,7 +972,9 @@ public class MapActivity extends AppCompatActivity implements View.OnClickListen
             mData = data;
             mState = state;
             mPreState = activity.state;
-            showLoadingView();
+            if (state != NONE) {
+                showLoadingView();
+            }
         }
 
         @Override

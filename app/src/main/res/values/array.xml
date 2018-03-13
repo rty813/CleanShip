@@ -2,6 +2,6 @@
 <resources>
     <array name="switch_tabs">
         <item>连线模式</item>
-        <item>智能模式</item>
+        <item>循环模式</item>
     </array>
 </resources>
