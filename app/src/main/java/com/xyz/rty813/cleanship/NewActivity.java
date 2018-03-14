@@ -32,7 +32,6 @@ import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
@@ -105,12 +104,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final int NAV = 3;
     private static final int NONE = -1;
     private static final int HOMING = 5;
+    private static final int FINISH = 6;
     private static final int PAUSE = 4;
     private static final String MY_APPID = "2882303761517676503";
     private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
     private static final int BAUD_RATE = 115200;
-
+    private static final double ctlRadius = 2000;
     public static SQLiteDBHelper dbHelper;
     private AMap aMap;
     private MapView mMapView;
@@ -134,6 +134,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private LinearLayout ll_nav;
     private LinearLayout ll_mark;
     private LinearLayout ll_method;
+    private LinearLayout ll_home;
     private SwitchMultiButton sw_nav;
     private Button btnHome;
     private Button btnHome2;
@@ -151,7 +152,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private TextView tvToolbar;
     private TextView tvCircle;
     private Circle limitCircle;
-    private static final double ctlRadius = 2000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -244,6 +244,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         ll_mark = findViewById(R.id.ll_mark);
         ll_method = findViewById(R.id.ll_method);
         ll_finish = findViewById(R.id.ll_finish);
+        ll_home = findViewById(R.id.ll_home);
         sw_nav = findViewById(R.id.sw_nav);
         btnGostop = findViewById(R.id.btn_gostop);
         btnHome2 = findViewById(R.id.btn_home2);
@@ -495,7 +496,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.btn_home:
             case R.id.btn_home2:
                 if (state != UNREADY) {
-                    new Thread(new WriteSerialThread("$ORDER,2#", GONE, state)).start();
+                    new Thread(new WriteSerialThread("$ORDER,2#", HOMING, state)).start();
                 }
                 break;
             case R.id.btn_enable:
@@ -590,6 +591,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 else if (state == GONE){
                     new Thread(new WriteSerialThread("$STOP#", PAUSE, state)).start();
                 }
+                break;
+            case R.id.btn_stop_home:
+                new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
                 break;
         }
     }
@@ -699,6 +703,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 ll_method.setVisibility(View.GONE);
                 ll_nav.setVisibility(View.GONE);
                 ll_finish.setVisibility(View.GONE);
+                ll_home.setVisibility(View.GONE);
                 btnHome.setVisibility(View.GONE);
                 tvToolbar.setText(getResources().getString(R.string.app_name));
                 resetMap();
@@ -709,6 +714,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 ll_finish.setVisibility(View.GONE);
                 ll_mark.setVisibility(View.VISIBLE);
                 ll_method.setVisibility(View.VISIBLE);
+                ll_home.setVisibility(View.GONE);
                 btnHome.setVisibility(View.VISIBLE);
                 tvToolbar.setText(getResources().getString(R.string.app_name));
                 break;
@@ -719,11 +725,23 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 ll_method.setVisibility(View.INVISIBLE);
                 ll_nav.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.GONE);
+                ll_home.setVisibility(View.GONE);
                 tvToolbar.setText(sw_nav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
+                tvCircle.setVisibility(sw_nav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
                 break;
             case PAUSE:
                 btnGostop.setText("开始");
                 btnGostop.setCompoundDrawables(null, picStart, null, null);
+                break;
+            case HOMING:
+                btnConnect.setVisibility(View.GONE);
+                ll_nav.setVisibility(View.GONE);
+                ll_finish.setVisibility(View.GONE);
+                ll_mark.setVisibility(View.GONE);
+                ll_method.setVisibility(View.GONE);
+                btnHome.setVisibility(View.GONE);
+                ll_home.setVisibility(View.GONE);
+                tvToolbar.setText(getResources().getString(R.string.app_name));
                 break;
         }
     }
@@ -893,6 +911,52 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         initSmoothMove();
     }
 
+    public ArrayList<LatLng> getShipPointList() {
+        return shipPointList;
+    }
+
+    public void move() {
+        if (shipPointList.size() == 2) {
+            LatLngBounds bounds = new LatLngBounds(shipPointList.get(1), shipPointList.get(shipPointList.size() - 1));
+            aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
+        } else {
+            List<LatLng> subList = shipPointList.subList(shipPointList.size() - 2, shipPointList.size());
+            smoothMoveMarker.setPoints(subList);
+            smoothMoveMarker.setTotalDuration(1);
+            smoothMoveMarker.startSmoothMove();
+            trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
+                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.parseColor("#FFE418"))));
+        }
+    }
+
+    public void handleState(int state) {
+        switch (state) {
+            case 0:
+                mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+                break;
+            case -1:
+                sw_nav.setSelectedTab(0);
+                mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
+                break;
+            case -2:
+                sw_nav.setSelectedTab(1);
+                mHandler.sendMessage(mHandler.obtainMessage(8, PAUSE));
+                break;
+            case -3:
+                sw_nav.setSelectedTab(0);
+                mHandler.sendMessage(mHandler.obtainMessage(8, PAUSE));
+                break;
+            case -4:
+                sw_nav.setSelectedTab(0);
+                mHandler.sendMessage(mHandler.obtainMessage(8, FINISH));
+                break;
+        }
+        if (state > 0) {
+            sw_nav.setSelectedTab(1);
+            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
+        }
+    }
+
     static class MyHandler extends Handler {
         WeakReference<NewActivity> mActivity;
 
@@ -980,7 +1044,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             serialPort.wait();
                         }
                         if (!err) {
-                            serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type), 10);
+                            serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type == 5 ? 7 : 0), 10);
                         }
                         StringBuilder builder = new StringBuilder();
                         while (!(data = serialPort.readData()).equals("")) {
@@ -1068,17 +1132,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     if (!data.equals("")) {
                         String[] strings = data.split(";");
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
-                            int state = Integer.parseInt(strings[1]);
-                            if (state == 0){
-                                mHandler.sendMessage(mHandler.obtainMessage(8, READY));
-                            }
-                            else {
-                                sw_nav.setSelectedTab(state > 0 ? 1 : 0);
-                                if (state > 0){
-                                    tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
-                                }
-                                mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
-                            }
+                            handleState(Integer.parseInt(strings[1]));
                             break;
                         }
                     }
@@ -1156,23 +1210,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             } finally {
                 mHandler.sendEmptyMessage(7);
             }
-        }
-    }
-    public ArrayList<LatLng> getShipPointList() {
-        return shipPointList;
-    }
-    public void move(){
-        if (shipPointList.size() == 2){
-            LatLngBounds bounds = new LatLngBounds(shipPointList.get(1), shipPointList.get(shipPointList.size() - 1));
-            aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
-        }
-        else{
-            List<LatLng> subList = shipPointList.subList(shipPointList.size() - 2, shipPointList.size());
-            smoothMoveMarker.setPoints(subList);
-            smoothMoveMarker.setTotalDuration(1);
-            smoothMoveMarker.startSmoothMove();
-            trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
-                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.parseColor("#FFE418"))));
         }
     }
 }

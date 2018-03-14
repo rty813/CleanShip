@@ -3,7 +3,6 @@ package com.xyz.rty813.cleanship;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.widget.Toast;
 
 import com.amap.api.maps.model.LatLng;
 
@@ -55,6 +54,9 @@ public class MyReceiver extends BroadcastReceiver {
 //                case 5:
 //                    activity.setGpsNum(data);
 //                    break;
+                case 7:
+                    activity.handleState(Integer.parseInt(data));
+                    break;
                 default:
 //                    Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
                     break;
