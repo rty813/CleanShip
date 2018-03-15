@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
@@ -152,6 +153,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private TextView tvToolbar;
     private TextView tvCircle;
     private Circle limitCircle;
+    private long routeID = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -246,6 +248,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         ll_finish = findViewById(R.id.ll_finish);
         ll_home = findViewById(R.id.ll_home);
         sw_nav = findViewById(R.id.sw_nav);
+        tvToolbar = findViewById(R.id.tv_toolbar);
+        tvCircle = findViewById(R.id.tv_circle);
         btnGostop = findViewById(R.id.btn_gostop);
         btnHome2 = findViewById(R.id.btn_home2);
         btnHistory = findViewById(R.id.btn_history);
@@ -254,6 +258,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnAbort = findViewById(R.id.btn_abort);
         btnEnable = findViewById(R.id.btn_enable);
         seekBar = findViewById(R.id.seekbar);
+        final SharedPreferences sharedPreferences = this.getSharedPreferences("cleanship", MODE_PRIVATE);
+        seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
@@ -272,12 +278,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 btnGostop.setVisibility(View.VISIBLE);
                 btnAbort.setVisibility(View.VISIBLE);
                 seekBar.setVisibility(View.GONE);
+                sharedPreferences.edit().putInt("seekbar", seekBar.getProgress()).apply();
                 new Thread(new WriteSerialThread(String.format(Locale.getDefault(),
-                        "$ORDER,6,%d#", seekBar.getProgress()), NONE, state)).start();
+                        "$ORDER,6,%d#", 1200 + seekBar.getProgress()), NONE, state)).start();
             }
         });
-        tvToolbar = findViewById(R.id.tv_toolbar);
-        tvCircle = findViewById(R.id.tv_circle);
 
         findViewById(R.id.fab_plane).setOnClickListener(this);
         findViewById(R.id.fab_satellite).setOnClickListener(this);
@@ -288,6 +293,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.btn_vel).setOnClickListener(this);
         findViewById(R.id.btn_home2).setOnClickListener(this);
         findViewById(R.id.btn_cancel).setOnClickListener(this);
+        findViewById(R.id.btn_reload).setOnClickListener(this);
+        findViewById(R.id.btn_finish).setOnClickListener(this);
+        findViewById(R.id.btn_stop_home).setOnClickListener(this);
         btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
         btnHistory.setOnClickListener(this);
@@ -322,7 +330,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 } else {
                     marker.showInfoWindow();
                 }
-                if ((markers.size() > 1) && (marker.getTitle().equals("1")) && (!markers.get(markers.size() - 1).getTitle().equals("1"))) {
+                if ((markEnable) && (markers.size() > 1) && (marker.getTitle().equals("1")) && (!markers.get(markers.size() - 1).getTitle().equals("1"))) {
                     marker.hideInfoWindow();
                     LatLng latLng = markers.get(markers.size() - 1).getPosition();
                     MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
@@ -332,7 +340,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     markerOptions.draggable(true);
                     markers.add(aMap.addMarker(markerOptions));
 
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(10).color(Color.RED)));
+                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(10).color(Color.parseColor("#0B76CE"))));
                     Toast.makeText(NewActivity.this, "完成闭合回路！", Toast.LENGTH_SHORT).show();
                 }
                 return true;
@@ -355,7 +363,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 LatLng latLng = marker.getPosition();
                 marker.setSnippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
                 if (markers.size() > 1) {
-                    PolylineOptions options = new PolylineOptions().width(10).color(Color.RED);
+                    PolylineOptions options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE"));
                     if (index == 0) {
                         options.add(latLng, markers.get(1).getPosition());
                         polylines.get(0).setOptions(options);
@@ -365,7 +373,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     } else {
                         options.add(markers.get(index - 1).getPosition(), latLng);
                         polylines.get(index - 1).setOptions(options);
-                        options = new PolylineOptions().width(10).color(Color.RED).add(latLng, markers.get(index + 1).getPosition());
+                        options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE")).add(latLng, markers.get(index + 1).getPosition());
                         polylines.get(index).setOptions(options);
                     }
                 }
@@ -462,7 +470,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     @Override
     public void onClick(View view) {
-        int preState = state;
         PopupWindow popupHistory;
         switch (view.getId()) {
             case R.id.btn_connect:
@@ -595,6 +602,20 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.btn_stop_home:
                 new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
                 break;
+            case R.id.btn_finish:
+                new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                break;
+            case R.id.btn_reload:
+                new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                resetMap();
+                loadRoute(null);
+                break;
+            case R.id.fab_plane:
+                aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+                break;
+            case R.id.fab_satellite:
+                aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
+                break;
         }
     }
 
@@ -623,6 +644,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             @Override
             public void onItemClick(View itemView, int position) {
                 popupHistory.dismiss();
+                routeID = Long.parseLong(list.get(position).get("id"));
                 loadRoute(list.get(position).get("id"));
             }
         });
@@ -632,11 +654,14 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 DisplayMetrics metrics = NewActivity.this.getResources().getDisplayMetrics();
                 SwipeMenuItem deleteItem = new SwipeMenuItem(NewActivity.this).setWidth((int)(metrics.widthPixels * 0.2))
                         .setImage(R.drawable.menu_delete).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
-
                 SwipeMenuItem renameItem = new SwipeMenuItem(NewActivity.this).setWidth((int)(metrics.widthPixels * 0.2))
                         .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
                 swipeRightMenu.addMenuItem(renameItem);
                 swipeRightMenu.addMenuItem(deleteItem);
+
+                SwipeMenuItem topItem = new SwipeMenuItem(NewActivity.this).setWidth((int) (metrics.widthPixels * 0.2))
+                        .setImage(R.drawable.menu_top).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
+                swipeLeftMenu.addMenuItem(topItem);
             }
         });
         recyclerView.setSwipeMenuItemClickListener(new SwipeMenuItemClickListener() {
@@ -644,40 +669,44 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             public void onItemClick(SwipeMenuBridge menuBridge) {
                 menuBridge.closeMenu();
                 final int pos = menuBridge.getAdapterPosition();
-                if (menuBridge.getPosition() == 1){
-                    Map<String, String> map = list.get(pos);
-                    String id = map.get("id");
-                    list.remove(pos);
-                    adapter.notifyItemRemoved(pos);
-                    adapter.notifyItemRangeChanged(pos, list.size() - pos);
-                    SQLiteDatabase database = dbHelper.getWritableDatabase();
-                    database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
-                    database.close();
-                }
-                else {
-                    final EditText etName = new EditText(NewActivity.this);
-                    etName.setHint(list.get(pos).get("title"));
-                    new AlertDialog.Builder(NewActivity.this)
-                            .setTitle("重命名路线")
-                            .setView(etName)
-                            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    Map<String, String> map = new HashMap<>();
-                                    map.put("id", list.get(pos).get("id"));
-                                    map.put("title", etName.getText().toString());
-                                    map.put("detail", list.get(pos).get("detail"));
-                                    list.remove(list.get(pos));
-                                    list.add(pos, map);
-                                    adapter.notifyDataSetChanged();
-                                    SQLiteDatabase database = dbHelper.getWritableDatabase();
-                                    ContentValues values = new ContentValues();
-                                    values.put("NAME", etName.getText().toString());
-                                    database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
-                                    database.close();
-                                }
-                            })
-                            .show();
+                System.out.println(menuBridge.getDirection());
+                if (menuBridge.getDirection() > 0) {
+                    Toast.makeText(NewActivity.this, "呵呵呵", Toast.LENGTH_SHORT).show();
+                } else {
+                    if (menuBridge.getPosition() == 1) {
+                        Map<String, String> map = list.get(pos);
+                        String id = map.get("id");
+                        list.remove(pos);
+                        adapter.notifyItemRemoved(pos);
+                        adapter.notifyItemRangeChanged(pos, list.size() - pos);
+                        SQLiteDatabase database = dbHelper.getWritableDatabase();
+                        database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
+                        database.close();
+                    } else {
+                        final EditText etName = new EditText(NewActivity.this);
+                        etName.setHint(list.get(pos).get("title"));
+                        new AlertDialog.Builder(NewActivity.this)
+                                .setTitle("重命名路线")
+                                .setView(etName)
+                                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        Map<String, String> map = new HashMap<>();
+                                        map.put("id", list.get(pos).get("id"));
+                                        map.put("title", etName.getText().toString());
+                                        map.put("detail", list.get(pos).get("detail"));
+                                        list.remove(list.get(pos));
+                                        list.add(pos, map);
+                                        adapter.notifyDataSetChanged();
+                                        SQLiteDatabase database = dbHelper.getWritableDatabase();
+                                        ContentValues values = new ContentValues();
+                                        values.put("NAME", etName.getText().toString());
+                                        database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
+                                        database.close();
+                                    }
+                                })
+                                .show();
+                    }
                 }
             }
         });
@@ -694,13 +723,15 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private void morph(int state) {
         if (state != NONE) {
             this.state = state;
+            this.markEnable = false;
+            btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
         }
         switch (state) {
             case UNREADY:
                 Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
                 btnConnect.setVisibility(View.VISIBLE);
                 ll_mark.setVisibility(View.GONE);
-                ll_method.setVisibility(View.GONE);
+                ll_method.setVisibility(View.INVISIBLE);
                 ll_nav.setVisibility(View.GONE);
                 ll_finish.setVisibility(View.GONE);
                 ll_home.setVisibility(View.GONE);
@@ -726,6 +757,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 ll_nav.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.GONE);
                 ll_home.setVisibility(View.GONE);
+                btnConnect.setVisibility(View.GONE);
                 tvToolbar.setText(sw_nav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(sw_nav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
                 break;
@@ -738,9 +770,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 ll_nav.setVisibility(View.GONE);
                 ll_finish.setVisibility(View.GONE);
                 ll_mark.setVisibility(View.GONE);
-                ll_method.setVisibility(View.GONE);
+                ll_method.setVisibility(View.INVISIBLE);
                 btnHome.setVisibility(View.GONE);
-                ll_home.setVisibility(View.GONE);
+                btnConnect.setVisibility(View.GONE);
+                ll_home.setVisibility(View.VISIBLE);
                 tvToolbar.setText(getResources().getString(R.string.app_name));
                 break;
         }
@@ -755,7 +788,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             animation.setInterpolator(new AccelerateDecelerateInterpolator());
             findViewById(R.id.loadingview).startAnimation(animation);
         }
-
     }
 
     @Override
@@ -856,7 +888,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         cv.put("TIME", time);
         cv.put("ROUTE", route);
         cv.put("NAME", address);
-        database.insert(SQLiteDBHelper.TABLE_NAME, null, cv);
+        SharedPreferences.Editor editor = getSharedPreferences("cleanship", MODE_PRIVATE).edit();
+        if (database.insert(SQLiteDBHelper.TABLE_NAME, null, cv) == -1) {
+            editor.putLong("route", routeID);
+        } else {
+            editor.putLong("route", -1);
+        }
+        editor.apply();
         database.close();
     }
 
@@ -935,6 +973,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 mHandler.sendMessage(mHandler.obtainMessage(8, READY));
                 break;
             case -1:
+                long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+                loadRoute(id == -1 ? null : String.valueOf(id));
                 sw_nav.setSelectedTab(0);
                 mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
                 break;
@@ -954,6 +994,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         if (state > 0) {
             sw_nav.setSelectedTab(1);
             tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
+            mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
         }
     }
 
@@ -1053,11 +1094,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                 break;
                             }
                         }
-                        Thread.sleep(1000);
+                        Thread.sleep(300);
                         data = builder.toString();
                         if (!data.startsWith("$") || !data.endsWith("#")) {
                             err = false;
-                            Thread.sleep(1000);
+                            Thread.sleep(300);
                             continue;
                         } else {
                             data = data.replaceAll("#", "");
@@ -1111,6 +1152,18 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             int retry_times = 0;
             try {
                 do {
+                    retry_times++;
+                    if (retry_times == 3) {
+                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+//                        临时测试！！！！
+                        handleState(0);
+                        break;
+                    }
+                    if (retry_times == 6) {
+                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
+                        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+                        break;
+                    }
                     serialPort.writeData("$QUERY,7#", 10);
                     String data;
                     StringBuilder builder = new StringBuilder();
@@ -1136,15 +1189,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             break;
                         }
                     }
-                    retry_times++;
-                    if (retry_times == 2) {
-                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-                    }
-                    if (retry_times == 5) {
-                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-                        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
-                        break;
-                    }
                 } while (true);
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
@@ -1160,17 +1204,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         private final int mState;
         private final int mPreState;
 
-//        WriteSerialThread(NewActivity activity, String data, int state) {
-//            mData = data;
-//            mState = state;
-//            mPreState = activity.state;
-//            showLoadingView();
-//        }
-
         WriteSerialThread(String data, int state, int preState){
             mData = data;
             mState = state;
             mPreState = preState;
+            showLoadingView();
         }
 
         @Override
@@ -1191,7 +1229,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     data = builder.toString();
                     Log.i("writeSerialPort", data);
                     if (data.contains(mData)) {
-                        mHandler.sendMessage(mHandler.obtainMessage(8, mState));
+                        if (mState == NONE) {
+                            state = mPreState;
+                        } else {
+                            mHandler.sendMessage(mHandler.obtainMessage(8, mState));
+                        }
                         break;
                     }
                     retry_times++;
