@@ -280,7 +280,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 seekBar.setVisibility(View.GONE);
                 sharedPreferences.edit().putInt("seekbar", seekBar.getProgress()).apply();
                 new Thread(new WriteSerialThread(String.format(Locale.getDefault(),
-                        "$ORDER,6,%d#", 1200 + seekBar.getProgress()), NONE, state)).start();
+                        "$ORDER,6,%d#", 1200 + seekBar.getProgress()), GONE, state)).start();
             }
         });
 
@@ -720,61 +720,54 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromResource(R.drawable.ship));
     }
 
+    private void hideAll() {
+        ll_mark.setVisibility(View.GONE);
+        ll_method.setVisibility(View.INVISIBLE);
+        ll_nav.setVisibility(View.GONE);
+        btnHome.setVisibility(View.GONE);
+        ll_home.setVisibility(View.GONE);
+        btnConnect.setVisibility(View.GONE);
+        ll_finish.setVisibility(View.GONE);
+    }
+
     private void morph(int state) {
         if (state != NONE) {
             this.state = state;
             this.markEnable = false;
             btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
+            tvToolbar.setText(getResources().getString(R.string.app_name));
+            hideAll();
         }
         switch (state) {
             case UNREADY:
                 Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
                 btnConnect.setVisibility(View.VISIBLE);
-                ll_mark.setVisibility(View.GONE);
-                ll_method.setVisibility(View.INVISIBLE);
-                ll_nav.setVisibility(View.GONE);
-                ll_finish.setVisibility(View.GONE);
-                ll_home.setVisibility(View.GONE);
-                btnHome.setVisibility(View.GONE);
-                tvToolbar.setText(getResources().getString(R.string.app_name));
                 resetMap();
                 break;
             case READY:
-                btnConnect.setVisibility(View.GONE);
-                ll_nav.setVisibility(View.GONE);
-                ll_finish.setVisibility(View.GONE);
                 ll_mark.setVisibility(View.VISIBLE);
                 ll_method.setVisibility(View.VISIBLE);
-                ll_home.setVisibility(View.GONE);
                 btnHome.setVisibility(View.VISIBLE);
-                tvToolbar.setText(getResources().getString(R.string.app_name));
                 break;
             case GONE:
                 btnGostop.setText("暂停");
                 btnGostop.setCompoundDrawables(null, picPause, null, null);
-                ll_mark.setVisibility(View.GONE);
-                ll_method.setVisibility(View.INVISIBLE);
                 ll_nav.setVisibility(View.VISIBLE);
-                btnHome.setVisibility(View.GONE);
-                ll_home.setVisibility(View.GONE);
-                btnConnect.setVisibility(View.GONE);
                 tvToolbar.setText(sw_nav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(sw_nav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
                 break;
             case PAUSE:
                 btnGostop.setText("开始");
                 btnGostop.setCompoundDrawables(null, picStart, null, null);
+                ll_nav.setVisibility(View.VISIBLE);
+                tvToolbar.setText(sw_nav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
+                tvCircle.setVisibility(sw_nav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
                 break;
             case HOMING:
-                btnConnect.setVisibility(View.GONE);
-                ll_nav.setVisibility(View.GONE);
-                ll_finish.setVisibility(View.GONE);
-                ll_mark.setVisibility(View.GONE);
-                ll_method.setVisibility(View.INVISIBLE);
-                btnHome.setVisibility(View.GONE);
-                btnConnect.setVisibility(View.GONE);
                 ll_home.setVisibility(View.VISIBLE);
-                tvToolbar.setText(getResources().getString(R.string.app_name));
+                break;
+            case FINISH:
+                ll_finish.setVisibility(View.VISIBLE);
                 break;
         }
     }
@@ -957,6 +950,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         if (shipPointList.size() == 2) {
             LatLngBounds bounds = new LatLngBounds(shipPointList.get(1), shipPointList.get(shipPointList.size() - 1));
             aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
+            CameraUpdate mCameraUpdate = CameraUpdateFactory.zoomTo(15);
+            aMap.moveCamera(mCameraUpdate);
         } else {
             List<LatLng> subList = shipPointList.subList(shipPointList.size() - 2, shipPointList.size());
             smoothMoveMarker.setPoints(subList);
@@ -968,33 +963,39 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     public void handleState(int state) {
+        long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+        int tempState = UNREADY;
         switch (state) {
             case 0:
-                mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+                tempState = READY;
                 break;
             case -1:
-                long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
                 loadRoute(id == -1 ? null : String.valueOf(id));
                 sw_nav.setSelectedTab(0);
-                mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
+                tempState = GONE;
                 break;
             case -2:
                 sw_nav.setSelectedTab(1);
-                mHandler.sendMessage(mHandler.obtainMessage(8, PAUSE));
+                tempState = PAUSE;
                 break;
             case -3:
                 sw_nav.setSelectedTab(0);
-                mHandler.sendMessage(mHandler.obtainMessage(8, PAUSE));
+                tempState = PAUSE;
                 break;
             case -4:
                 sw_nav.setSelectedTab(0);
-                mHandler.sendMessage(mHandler.obtainMessage(8, FINISH));
+                tempState = FINISH;
                 break;
         }
         if (state > 0) {
+            loadRoute(id == -1 ? null : String.valueOf(id));
             sw_nav.setSelectedTab(1);
             tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
-            mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
+            tempState = GONE;
+        }
+        if (tempState != this.state) {
+            this.state = UNREADY;
+            mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
         }
     }
 
@@ -1076,7 +1077,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         public void run() {
             synchronized (serialPort) {
                 int type = 0;
-                boolean err = false;
                 long retry_times = 0;
                 while (true) {
                     String data = null;
@@ -1084,9 +1084,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         if (state == UNREADY) {
                             serialPort.wait();
                         }
-                        if (!err) {
-                            serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type == 5 ? 7 : 0), 10);
-                        }
+                        serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type == 5 ? 7 : 0), 10);
                         StringBuilder builder = new StringBuilder();
                         while (!(data = serialPort.readData()).equals("")) {
                             builder.append(data);
@@ -1097,7 +1095,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         Thread.sleep(300);
                         data = builder.toString();
                         if (!data.startsWith("$") || !data.endsWith("#")) {
-                            err = false;
                             Thread.sleep(300);
                             continue;
                         } else {
@@ -1110,24 +1107,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             String[] strings = data.split(";");
                             Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
                             if (strings.length == 2) {
-                                intent.putExtra("rawData", String.format(Locale.getDefault(),
-                                        "|%d|%s|%s", type, strings[0], strings[1]));
-                            } else {
-                                intent.putExtra("rawData", data);
-                            }
-                            if (strings.length == 2 && Integer.parseInt(strings[0]) < 6) {
                                 intent.putExtra("type", Integer.parseInt(strings[0]));
                                 intent.putExtra("data", strings[1]);
-                            }
-                            if (strings.length == 2 && Integer.parseInt(strings[0]) == type) {
                                 type = (type + 1) % 6;
-                                err = false;
-                            } else if (strings.length == 2) {
-                                err = true;
                             }
                             sendBroadcast(intent);
                         } else {
-                            err = false;
                             retry_times++;
                             if (retry_times % 5 == 0) {
                                 mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
