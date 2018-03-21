@@ -56,7 +56,7 @@
                 android:background="@color/gray"
                 android:elevation="6dp"
                 android:orientation="horizontal"
-                android:visibility="invisible">
+                android:visibility="visible">
 
                 <Button
                     android:id="@+id/btn_manual"

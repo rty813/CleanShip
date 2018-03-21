@@ -98,6 +98,9 @@ import java.util.regex.Matcher;
 import app.dinus.com.loadingdrawable.LoadingView;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
+/**
+ * @author doufu
+ */
 public class NewActivity extends AppCompatActivity implements View.OnClickListener, SerialPortTool.onConnectedListener {
     private static final int READY = 1;
     private static final int UNREADY = 0;
@@ -111,7 +114,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
     private static final int BAUD_RATE = 115200;
-    private static final double ctlRadius = 2000;
+    private static final double CTL_RADIUS = 2000;
     public static SQLiteDBHelper dbHelper;
     private AMap aMap;
     private MapView mMapView;
@@ -131,12 +134,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private ArrayList<Polyline> trace;
     private float alpha = 1.0f;
     private Button btnConnect;
-    private LinearLayout ll_finish;
-    private LinearLayout ll_nav;
-    private LinearLayout ll_mark;
-    private LinearLayout ll_method;
-    private LinearLayout ll_home;
-    private SwitchMultiButton sw_nav;
+    private LinearLayout llFinish;
+    private LinearLayout llNav;
+    private LinearLayout llMark;
+    private LinearLayout llMethod;
+    private LinearLayout llHome;
+    private SwitchMultiButton swNav;
     private Button btnHome;
     private Button btnHome2;
     private Button btnGostop;
@@ -154,6 +157,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private TextView tvCircle;
     private Circle limitCircle;
     private long routeID = -1;
+    private int preState = Integer.MAX_VALUE;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -174,7 +178,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         MiStatInterface.recordPageStart(NewActivity.this, "主界面");
         mMapView.onResume();
         receiver = new MyReceiver();
-        registerReceiver(receiver, new IntentFilter(MyReceiver.ACTION_DATA_RECEIVED));
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(MyReceiver.ACTION_DATA_RECEIVED);
+        filter.addAction(Intent.ACTION_BATTERY_CHANGED);
+        registerReceiver(receiver, filter);
         super.onResume();
     }
 
@@ -242,12 +249,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
         btnConnect = findViewById(R.id.btn_connect);
         btnHome = findViewById(R.id.btn_home);
-        ll_nav = findViewById(R.id.ll_nav);
-        ll_mark = findViewById(R.id.ll_mark);
-        ll_method = findViewById(R.id.ll_method);
-        ll_finish = findViewById(R.id.ll_finish);
-        ll_home = findViewById(R.id.ll_home);
-        sw_nav = findViewById(R.id.sw_nav);
+        llNav = findViewById(R.id.ll_nav);
+        llMark = findViewById(R.id.ll_mark);
+        llMethod = findViewById(R.id.ll_method);
+        llFinish = findViewById(R.id.ll_finish);
+        llHome = findViewById(R.id.ll_home);
+        swNav = findViewById(R.id.sw_nav);
         tvToolbar = findViewById(R.id.tv_toolbar);
         tvCircle = findViewById(R.id.tv_circle);
         btnGostop = findViewById(R.id.btn_gostop);
@@ -330,7 +337,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 } else {
                     marker.showInfoWindow();
                 }
-                if ((markEnable) && (markers.size() > 1) && (marker.getTitle().equals("1")) && (!markers.get(markers.size() - 1).getTitle().equals("1"))) {
+                if ((markEnable) && (markers.size() > 1) && ("1".equals(marker.getTitle())) && (!"1".equals(markers.get(markers.size() - 1).getTitle()))) {
                     marker.hideInfoWindow();
                     LatLng latLng = markers.get(markers.size() - 1).getPosition();
                     MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
@@ -391,25 +398,26 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 if (!markEnable) {
                     return;
                 }
-                if (AMapUtils.calculateLineDistance(latLng, limitCircle.getCenter()) > ctlRadius){
+                if (AMapUtils.calculateLineDistance(latLng, limitCircle.getCenter()) > CTL_RADIUS) {
                     Toast.makeText(NewActivity.this, "注意！超出遥控范围！", Toast.LENGTH_LONG).show();
                 }
+
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
                 markerOptions.title(String.valueOf(markers.size() + 1));
                 markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
-                markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
                 markerOptions.anchor(0.5f, 0.5f);
                 markerOptions.setFlat(true);
                 markerOptions.draggable(true);
 
                 System.out.println(latLng.toString());
-                markers.add(aMap.addMarker(markerOptions));
-                if (markers.size() > 1) {
-                    LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
+                if (markers.size() > 0) {
+                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+                    LatLng latLng1 = latLng;
                     LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
                     polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10)
                             .color(Color.parseColor("#0B76CE"))));
                 } else {
+                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.store)));
                     GeocodeSearch geocodeSearch = new GeocodeSearch(NewActivity.this);
                     geocodeSearch.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
                         @Override
@@ -436,6 +444,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     RegeocodeQuery query = new RegeocodeQuery(new LatLonPoint(latLng.latitude, latLng.longitude), 1000, GeocodeSearch.AMAP);
                     geocodeSearch.getFromLocationAsyn(query);
                 }
+                markers.add(aMap.addMarker(markerOptions));
             }
         });
         aMap.setOnMyLocationChangeListener(new AMap.OnMyLocationChangeListener() {
@@ -445,7 +454,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     limitCircle.remove();
                 }
                 limitCircle = aMap.addCircle(new CircleOptions().center(new LatLng(location.getLatitude(), location.getLongitude()))
-                        .radius(ctlRadius).strokeColor(Color.RED).strokeWidth(8).fillColor(Color.argb(20, 1, 1, 1)));
+                        .radius(CTL_RADIUS).strokeColor(Color.RED).strokeWidth(8).fillColor(Color.argb(20, 1, 1, 1)));
 
             }
         });
@@ -529,14 +538,14 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                     for (int i = 0; i < markers.size(); i++) {
                                         double latitude = markers.get(i).getPosition().latitude;
                                         double longitude = markers.get(i).getPosition().longitude;
-                                        if (!(sw_nav.getSelectedTab() == 1 && i == markers.size() - 1
+                                        if (!(swNav.getSelectedTab() == 1 && i == markers.size() - 1
                                                 && latitude == markers.get(0).getPosition().latitude
                                                 && longitude == markers.get(0).getPosition().longitude)) {
                                             serialPort.writeData(String.format(Locale.getDefault(),
                                                     "$GNGGA,%.6f,%.6f#", latitude, longitude), 500);
                                         }
                                     }
-                                    String data = sw_nav.getSelectedTab() == 0? "$NAV,1#": "$NAV,2#";
+                                    String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
                                     new Thread(new WriteSerialThread(data, GONE, READY)).start();
 //                                    serialPort.writeData(data, 500);
 //                                    mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
@@ -582,8 +591,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 final int height = getResources().getDisplayMetrics().heightPixels / 2;
                 if (contentView.getMeasuredHeight() > height){
                     popupHistory.setHeight(height);
-                }
-                else {
+                } else {
                     popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
                 }
                 popupHistory.showAsDropDown(findViewById(R.id.ll_method));
@@ -594,8 +602,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.btn_gostop:
                 if (state == PAUSE){
                     new Thread(new WriteSerialThread("$GO#", GONE, state)).start();
-                }
-                else if (state == GONE){
+                } else if (state == GONE){
                     new Thread(new WriteSerialThread("$STOP#", PAUSE, state)).start();
                 }
                 break;
@@ -616,10 +623,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             case R.id.fab_satellite:
                 aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
                 break;
+            default:
+                break;
         }
     }
 
-    private void loadHistory(SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
+    private void loadHistory(final SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
         final ArrayList<Map<String, String>> list = new ArrayList<>();
         SQLiteDatabase database = dbHelper.getReadableDatabase();
         Cursor cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null ,null, null, null);
@@ -627,14 +636,25 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             cursor.moveToLast();
             do{
                 Map<String, String> map = new HashMap();
-                String time = cursor.getString(cursor.getColumnIndex("TIME"));
-                String name = cursor.getString(cursor.getColumnIndex("NAME"));
-                String id = cursor.getString(cursor.getColumnIndex("ID"));
-                map.put("detail", time);
-                map.put("title", name);
-                map.put("id", id);
-                list.add(map);
+                map.put("detail", cursor.getString(cursor.getColumnIndex("TIME")));
+                map.put("title", cursor.getString(cursor.getColumnIndex("NAME")));
+                map.put("id", cursor.getString(cursor.getColumnIndex("ID")));
+                map.put("top", cursor.getString(cursor.getColumnIndex("TOP")));
+                if (!Boolean.parseBoolean(map.get("top"))) {
+                    list.add(map);
+                }
             } while(cursor.moveToPrevious());
+            cursor.moveToFirst();
+            do {
+                Map<String, String> map = new HashMap();
+                map.put("detail", cursor.getString(cursor.getColumnIndex("TIME")));
+                map.put("title", cursor.getString(cursor.getColumnIndex("NAME")));
+                map.put("id", cursor.getString(cursor.getColumnIndex("ID")));
+                map.put("top", cursor.getString(cursor.getColumnIndex("TOP")));
+                if (Boolean.parseBoolean(map.get("top"))) {
+                    list.add(0, map);
+                }
+            } while (cursor.moveToNext());
         }
         database.close();
         final SwipeRecyclerViewAdapter adapter = new SwipeRecyclerViewAdapter(list);
@@ -671,7 +691,19 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 final int pos = menuBridge.getAdapterPosition();
                 System.out.println(menuBridge.getDirection());
                 if (menuBridge.getDirection() > 0) {
-                    Toast.makeText(NewActivity.this, "呵呵呵", Toast.LENGTH_SHORT).show();
+                    Map<String, String> map = new HashMap<>();
+                    map.put("id", list.get(pos).get("id"));
+                    map.put("title", list.get(pos).get("title"));
+                    map.put("detail", list.get(pos).get("detail"));
+                    map.put("top", String.valueOf(!Boolean.parseBoolean(list.get(pos).get("top"))));
+                    list.remove(pos);
+                    list.add(pos, map);
+                    adapter.notifyItemChanged(pos);
+                    SQLiteDatabase database = dbHelper.getWritableDatabase();
+                    ContentValues values = new ContentValues();
+                    values.put("TOP", map.get("top"));
+                    database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
+                    database.close();
                 } else {
                     if (menuBridge.getPosition() == 1) {
                         Map<String, String> map = list.get(pos);
@@ -695,6 +727,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                         map.put("id", list.get(pos).get("id"));
                                         map.put("title", etName.getText().toString());
                                         map.put("detail", list.get(pos).get("detail"));
+                                        map.put("top", list.get(pos).get("top"));
                                         list.remove(list.get(pos));
                                         list.add(pos, map);
                                         adapter.notifyDataSetChanged();
@@ -721,13 +754,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     private void hideAll() {
-        ll_mark.setVisibility(View.GONE);
-        ll_method.setVisibility(View.INVISIBLE);
-        ll_nav.setVisibility(View.GONE);
+        llMark.setVisibility(View.GONE);
+        llMethod.setVisibility(View.INVISIBLE);
+        llNav.setVisibility(View.GONE);
         btnHome.setVisibility(View.GONE);
-        ll_home.setVisibility(View.GONE);
+        llHome.setVisibility(View.GONE);
         btnConnect.setVisibility(View.GONE);
-        ll_finish.setVisibility(View.GONE);
+        llFinish.setVisibility(View.GONE);
     }
 
     private void morph(int state) {
@@ -742,32 +775,35 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             case UNREADY:
                 Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
                 btnConnect.setVisibility(View.VISIBLE);
+                preState = Integer.MAX_VALUE;
                 resetMap();
                 break;
             case READY:
-                ll_mark.setVisibility(View.VISIBLE);
-                ll_method.setVisibility(View.VISIBLE);
+                llMark.setVisibility(View.VISIBLE);
+                llMethod.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.VISIBLE);
                 break;
             case GONE:
                 btnGostop.setText("暂停");
                 btnGostop.setCompoundDrawables(null, picPause, null, null);
-                ll_nav.setVisibility(View.VISIBLE);
-                tvToolbar.setText(sw_nav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
-                tvCircle.setVisibility(sw_nav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+                llNav.setVisibility(View.VISIBLE);
+                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
+                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
                 break;
             case PAUSE:
                 btnGostop.setText("开始");
                 btnGostop.setCompoundDrawables(null, picStart, null, null);
-                ll_nav.setVisibility(View.VISIBLE);
-                tvToolbar.setText(sw_nav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
-                tvCircle.setVisibility(sw_nav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+                llNav.setVisibility(View.VISIBLE);
+                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
+                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
                 break;
             case HOMING:
-                ll_home.setVisibility(View.VISIBLE);
+                llHome.setVisibility(View.VISIBLE);
                 break;
             case FINISH:
-                ll_finish.setVisibility(View.VISIBLE);
+                llFinish.setVisibility(View.VISIBLE);
+                break;
+            default:
                 break;
         }
     }
@@ -813,19 +849,21 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 .onGranted(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
-                        MyLocationStyle myLocationStyle = new MyLocationStyle();//初始化定位蓝点样式类myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE);//连续定位、且将视角移动到地图中心点，定位点依照设备方向旋转，并且会跟随设备移动。（1秒1次定位）如果不设置myLocationType，默认也会执行此种模式。
+                        MyLocationStyle myLocationStyle = new MyLocationStyle();
                         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE)
                                 .strokeColor(Color.parseColor("#00000000"))
                                 .radiusFillColor(Color.parseColor("#00000000"));
-
-                        aMap.setMyLocationStyle(myLocationStyle);//设置定位蓝点的Style
-                        aMap.setMyLocationEnabled(true);// 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
+                        //设置定位蓝点的Style
+                        aMap.setMyLocationStyle(myLocationStyle);
+                        // 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
+                        aMap.setMyLocationEnabled(true);
                         checkUpdate();
                     }
                 })
                 .onDenied(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
+                        System.out.println(AndPermission.hasAlwaysDeniedPermission(NewActivity.this, permissions));
                         final SettingService settingService = AndPermission.permissionSetting(NewActivity.this);
                         new AlertDialog.Builder(NewActivity.this)
                                 .setMessage("请赋予权限")
@@ -915,16 +953,18 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
                 markerOptions.title(String.valueOf(markers.size() + 1));
                 markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
-                markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
                 markerOptions.anchor(0.5f, 0.5f);
                 markerOptions.draggable(true);
                 markerOptions.setFlat(true);
-                markers.add(aMap.addMarker(markerOptions));
-                if (markers.size() > 1) {
-                    LatLng latLng1 = markers.get(markers.size() - 2).getPosition();
+                if (markers.size() > 0) {
+                    LatLng latLng1 = latLng;
                     LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10).color(Color.RED)));
+                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10).color(Color.parseColor("#0B76CE"))));
+                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+                } else {
+                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.store)));
                 }
+                markers.add(aMap.addMarker(markerOptions));
             }
         }
         cursor.close();
@@ -963,39 +1003,44 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     public void handleState(int state) {
-        long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
-        int tempState = UNREADY;
-        switch (state) {
-            case 0:
-                tempState = READY;
-                break;
-            case -1:
+        if (state != preState) {
+            long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+            int tempState = UNREADY;
+            switch (state) {
+                case 0:
+                    tempState = READY;
+                    break;
+                case -1:
+                    loadRoute(id == -1 ? null : String.valueOf(id));
+                    swNav.setSelectedTab(0);
+                    tempState = GONE;
+                    break;
+                case -2:
+                    swNav.setSelectedTab(1);
+                    tempState = PAUSE;
+                    break;
+                case -3:
+                    swNav.setSelectedTab(0);
+                    tempState = PAUSE;
+                    break;
+                case -4:
+                    swNav.setSelectedTab(0);
+                    tempState = FINISH;
+                    break;
+                default:
+                    break;
+            }
+            if (state > 0) {
                 loadRoute(id == -1 ? null : String.valueOf(id));
-                sw_nav.setSelectedTab(0);
+                swNav.setSelectedTab(1);
+                tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
                 tempState = GONE;
-                break;
-            case -2:
-                sw_nav.setSelectedTab(1);
-                tempState = PAUSE;
-                break;
-            case -3:
-                sw_nav.setSelectedTab(0);
-                tempState = PAUSE;
-                break;
-            case -4:
-                sw_nav.setSelectedTab(0);
-                tempState = FINISH;
-                break;
-        }
-        if (state > 0) {
-            loadRoute(id == -1 ? null : String.valueOf(id));
-            sw_nav.setSelectedTab(1);
-            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
-            tempState = GONE;
-        }
-        if (tempState != this.state) {
-            this.state = UNREADY;
-            mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
+            }
+            if (tempState != this.state) {
+                this.state = UNREADY;
+                mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
+            }
+            preState = state;
         }
     }
 
@@ -1086,7 +1131,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         }
                         serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type == 5 ? 7 : 0), 10);
                         StringBuilder builder = new StringBuilder();
-                        while (!(data = serialPort.readData()).equals("")) {
+                        while (!"".equals(data = serialPort.readData())) {
                             builder.append(data);
                             if (data.endsWith("#")) {
                                 break;
@@ -1102,7 +1147,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                         }
 
-                        if (!data.equals("")) {
+                        if (!"".equals(data)) {
                             retry_times = 0;
                             String[] strings = data.split(";");
                             Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
@@ -1152,7 +1197,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     serialPort.writeData("$QUERY,7#", 10);
                     String data;
                     StringBuilder builder = new StringBuilder();
-                    while (!(data = serialPort.readData()).equals("")) {
+                    while (!"".equals(data = serialPort.readData())) {
                         builder.append(data);
                         if (data.endsWith("#")) {
                             break;
@@ -1167,7 +1212,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         data = data.replaceAll("#", "");
                         data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                     }
-                    if (!data.equals("")) {
+                    if (!"".equals(data)) {
                         String[] strings = data.split(";");
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
                             handleState(Integer.parseInt(strings[1]));
@@ -1204,7 +1249,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     serialPort.writeData(mData, 10);
                     String data;
                     StringBuilder builder = new StringBuilder();
-                    while (!(data = serialPort.readData()).equals("")) {
+                    while (!"".equals(data = serialPort.readData())) {
                         builder.append(data);
                         if (data.endsWith("#")) {
                             break;
