@@ -303,6 +303,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.btn_reload).setOnClickListener(this);
         findViewById(R.id.btn_finish).setOnClickListener(this);
         findViewById(R.id.btn_stop_home).setOnClickListener(this);
+        findViewById(R.id.btn_ctl).setOnClickListener(this);
         btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
         btnHistory.setOnClickListener(this);
@@ -455,7 +456,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 }
                 limitCircle = aMap.addCircle(new CircleOptions().center(new LatLng(location.getLatitude(), location.getLongitude()))
                         .radius(CTL_RADIUS).strokeColor(Color.RED).strokeWidth(8).fillColor(Color.argb(20, 1, 1, 1)));
-
             }
         });
     }
@@ -622,6 +622,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 break;
             case R.id.fab_satellite:
                 aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
+                break;
+            case R.id.btn_ctl:
+                new Thread(new WriteSerialThread("$ORDER,7#", NONE, state)).start();
                 break;
             default:
                 break;

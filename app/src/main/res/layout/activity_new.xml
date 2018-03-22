@@ -44,6 +44,12 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"></com.amap.api.maps.MapView>
 
+        <Button
+            android:id="@+id/btn_ctl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:text="剥夺控制权" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -270,11 +276,11 @@
                 <android.support.v7.widget.AppCompatSeekBar
                     android:id="@+id/seekbar"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_gravity="center_vertical"
                     android:layout_margin="20dp"
                     android:max="800"
-                    android:visibility="gone" />
+                    android:visibility="visible" />
             </LinearLayout>
         </LinearLayout>
 
