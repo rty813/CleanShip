@@ -152,12 +152,32 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Drawable picStart;
     private Drawable picMarkEnable;
     private Drawable picMarkDisable;
+    private Button btnCtl;
     private Button btnEnable;
     private TextView tvToolbar;
     private TextView tvCircle;
     private Circle limitCircle;
     private long routeID = -1;
     private int preState = Integer.MAX_VALUE;
+    private View.OnClickListener clickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            switch (view.getId()) {
+                case R.id.btn_connect:
+                    showLoadingView();
+                    initSerialPort();
+                    break;
+                case R.id.fab_plane:
+                    aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+                    break;
+                case R.id.fab_satellite:
+                    aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -264,6 +284,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnVel = findViewById(R.id.btn_vel);
         btnAbort = findViewById(R.id.btn_abort);
         btnEnable = findViewById(R.id.btn_enable);
+        btnCtl = findViewById(R.id.btn_ctl);
         seekBar = findViewById(R.id.seekbar);
         final SharedPreferences sharedPreferences = this.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
@@ -291,9 +312,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             }
         });
 
-        findViewById(R.id.fab_plane).setOnClickListener(this);
-        findViewById(R.id.fab_satellite).setOnClickListener(this);
-        findViewById(R.id.btn_connect).setOnClickListener(this);
         findViewById(R.id.btn_go).setOnClickListener(this);
         findViewById(R.id.btn_enable).setOnClickListener(this);
         findViewById(R.id.btn_delete).setOnClickListener(this);
@@ -303,13 +321,17 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.btn_reload).setOnClickListener(this);
         findViewById(R.id.btn_finish).setOnClickListener(this);
         findViewById(R.id.btn_stop_home).setOnClickListener(this);
-        findViewById(R.id.btn_ctl).setOnClickListener(this);
+        btnCtl.setOnClickListener(this);
         btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
         btnHistory.setOnClickListener(this);
         btnHome.setOnClickListener(this);
         btnGostop.setOnClickListener(this);
         btnEnable.setOnClickListener(this);
+
+        btnConnect.setOnClickListener(clickListener);
+        findViewById(R.id.fab_plane).setOnClickListener(clickListener);
+        findViewById(R.id.fab_satellite).setOnClickListener(clickListener);
 
         picStart = getResources().getDrawable(R.drawable.btn_start_selector);
         picPause = getResources().getDrawable(R.drawable.btn_pause_selector);
@@ -479,155 +501,147 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     @Override
     public void onClick(View view) {
-        PopupWindow popupHistory;
-        switch (view.getId()) {
-            case R.id.btn_connect:
-                showLoadingView();
-                initSerialPort();
-                break;
-            case R.id.btn_delete:
-                new AlertDialog.Builder(this).setTitle("提示")
-                        .setMessage("是否要清除所有标记？")
-                        .setNegativeButton("否", null)
-                        .setPositiveButton("是", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                resetMap();
-                            }
-                        })
-                        .show();
-                break;
-            case R.id.btn_cancel:
-                if (markers.size() > 0) {
-                    Marker marker = markers.get(markers.size() - 1);
-                    marker.hideInfoWindow();
-                    markers.get(markers.size() - 1).destroy();
-                    markers.remove(markers.size() - 1);
-                    if (polylines.size() > 0) {
-                        polylines.get(polylines.size() - 1).remove();
-                        polylines.remove(polylines.size() - 1);
-                    }
-                }
-                break;
-            case R.id.btn_home:
-            case R.id.btn_home2:
-                if (state != UNREADY) {
-                    new Thread(new WriteSerialThread("$ORDER,2#", HOMING, state)).start();
-                }
-                break;
-            case R.id.btn_enable:
-                markEnable = !markEnable;
-                btnEnable.setCompoundDrawables(null, markEnable? picMarkEnable : picMarkDisable, null, null);
-                break;
-            case R.id.btn_go:
-                if (state == READY) {
+        if (state != UNREADY) {
+            PopupWindow popupHistory;
+            switch (view.getId()) {
+                case R.id.btn_delete:
+                    new AlertDialog.Builder(this).setTitle("提示")
+                            .setMessage("是否要清除所有标记？")
+                            .setNegativeButton("否", null)
+                            .setPositiveButton("是", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    resetMap();
+                                }
+                            })
+                            .show();
+                    break;
+                case R.id.btn_cancel:
                     if (markers.size() > 0) {
-                        StringBuilder stringBuilder = new StringBuilder();
-                        for (Marker marker : markers) {
-                            stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
+                        Marker marker = markers.get(markers.size() - 1);
+                        marker.hideInfoWindow();
+                        markers.get(markers.size() - 1).destroy();
+                        markers.remove(markers.size() - 1);
+                        if (polylines.size() > 0) {
+                            polylines.get(polylines.size() - 1).remove();
+                            polylines.remove(polylines.size() - 1);
                         }
-                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
-                        saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
-                        showLoadingView();
+                    }
+                    break;
+                case R.id.btn_home:
+                case R.id.btn_home2:
+                    if (state != UNREADY) {
+                        new Thread(new WriteSerialThread("$ORDER,2#", HOMING, state)).start();
+                    }
+                    break;
+                case R.id.btn_enable:
+                    markEnable = !markEnable;
+                    btnEnable.setCompoundDrawables(null, markEnable ? picMarkEnable : picMarkDisable, null, null);
+                    break;
+                case R.id.btn_go:
+                    if (state == READY) {
+                        if (markers.size() > 0) {
+                            StringBuilder stringBuilder = new StringBuilder();
+                            for (Marker marker : markers) {
+                                stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
+                            }
+                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
+                            saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
+                            showLoadingView();
 //                            使QueryThread进入Wait
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                try {
-                                    serialPort.writeData("$CLEAR#", 1000);
-                                    for (int i = 0; i < markers.size(); i++) {
-                                        double latitude = markers.get(i).getPosition().latitude;
-                                        double longitude = markers.get(i).getPosition().longitude;
-                                        if (!(swNav.getSelectedTab() == 1 && i == markers.size() - 1
-                                                && latitude == markers.get(0).getPosition().latitude
-                                                && longitude == markers.get(0).getPosition().longitude)) {
-                                            serialPort.writeData(String.format(Locale.getDefault(),
-                                                    "$GNGGA,%.6f,%.6f#", latitude, longitude), 500);
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        serialPort.writeData("$CLEAR#", 1000);
+                                        for (int i = 0; i < markers.size(); i++) {
+                                            double latitude = markers.get(i).getPosition().latitude;
+                                            double longitude = markers.get(i).getPosition().longitude;
+                                            if (!(swNav.getSelectedTab() == 1 && i == markers.size() - 1
+                                                    && latitude == markers.get(0).getPosition().latitude
+                                                    && longitude == markers.get(0).getPosition().longitude)) {
+                                                serialPort.writeData(String.format(Locale.getDefault(),
+                                                        "$GNGGA,%.6f,%.6f#", latitude, longitude), 500);
+                                            }
                                         }
-                                    }
-                                    String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
-                                    new Thread(new WriteSerialThread(data, GONE, READY)).start();
+                                        String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
+                                        new Thread(new WriteSerialThread(data, GONE, READY)).start();
 //                                    serialPort.writeData(data, 500);
 //                                    mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
-                                } catch (InterruptedException | IOException e) {
-                                    e.printStackTrace();
-                                    mHandler.sendEmptyMessage(3);
-                                } finally {
-                                    mHandler.sendEmptyMessage(7);
+                                    } catch (InterruptedException | IOException e) {
+                                        e.printStackTrace();
+                                        mHandler.sendEmptyMessage(3);
+                                    } finally {
+                                        mHandler.sendEmptyMessage(7);
+                                    }
                                 }
-                            }
-                        }).start();
+                            }).start();
+                        } else {
+                            loadRoute(null);
+                        }
+                    }
+                    break;
+                case R.id.btn_vel:
+                    btnGostop.setVisibility(View.GONE);
+                    btnAbort.setVisibility(View.GONE);
+                    btnHome2.setVisibility(View.GONE);
+                    btnVel.setVisibility(View.GONE);
+                    seekBar.setVisibility(View.VISIBLE);
+                    break;
+                case R.id.btn_history:
+                    btnManual.setTextColor(Color.BLACK);
+                    btnHistory.setTextColor(getResources().getColor(R.color.toolbarBlue));
+                    final View contentView = LayoutInflater.from(this).inflate(R.layout.popup_history, null);
+                    final SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
+                    popupHistory = new PopupWindow();
+                    popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+                    popupHistory.setOutsideTouchable(true);
+                    popupHistory.setContentView(contentView);
+                    popupHistory.setAnimationStyle(R.style.dismiss_anim);
+                    popupHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                        @Override
+                        public void onDismiss() {
+                            btnHistory.setTextColor(Color.BLACK);
+                            btnManual.setTextColor(getResources().getColor(R.color.toolbarBlue));
+                        }
+                    });
+                    loadHistory(recyclerView, popupHistory);
+                    contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+                    final int height = getResources().getDisplayMetrics().heightPixels / 2;
+                    if (contentView.getMeasuredHeight() > height) {
+                        popupHistory.setHeight(height);
                     } else {
-                        loadRoute(null);
+                        popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
                     }
-                }
-                break;
-            case R.id.btn_vel:
-                btnGostop.setVisibility(View.GONE);
-                btnAbort.setVisibility(View.GONE);
-                btnHome2.setVisibility(View.GONE);
-                btnVel.setVisibility(View.GONE);
-                seekBar.setVisibility(View.VISIBLE);
-                break;
-            case R.id.btn_history:
-                btnManual.setTextColor(Color.BLACK);
-                btnHistory.setTextColor(getResources().getColor(R.color.toolbarBlue));
-                final View contentView = LayoutInflater.from(this).inflate(R.layout.popup_history, null);
-                final SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
-                popupHistory = new PopupWindow();
-                popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
-                popupHistory.setOutsideTouchable(true);
-                popupHistory.setContentView(contentView);
-                popupHistory.setAnimationStyle(R.style.dismiss_anim);
-                popupHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
-                    @Override
-                    public void onDismiss() {
-                        btnHistory.setTextColor(Color.BLACK);
-                        btnManual.setTextColor(getResources().getColor(R.color.toolbarBlue));
+                    popupHistory.showAsDropDown(findViewById(R.id.ll_method));
+                    break;
+                case R.id.btn_abort:
+                    new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                    break;
+                case R.id.btn_gostop:
+                    if (state == PAUSE) {
+                        new Thread(new WriteSerialThread("$GO#", GONE, state)).start();
+                    } else if (state == GONE) {
+                        new Thread(new WriteSerialThread("$STOP#", PAUSE, state)).start();
                     }
-                });
-                loadHistory(recyclerView, popupHistory);
-                contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-                final int height = getResources().getDisplayMetrics().heightPixels / 2;
-                if (contentView.getMeasuredHeight() > height){
-                    popupHistory.setHeight(height);
-                } else {
-                    popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
-                }
-                popupHistory.showAsDropDown(findViewById(R.id.ll_method));
-                break;
-            case R.id.btn_abort:
-                new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
-                break;
-            case R.id.btn_gostop:
-                if (state == PAUSE){
-                    new Thread(new WriteSerialThread("$GO#", GONE, state)).start();
-                } else if (state == GONE){
-                    new Thread(new WriteSerialThread("$STOP#", PAUSE, state)).start();
-                }
-                break;
-            case R.id.btn_stop_home:
-                new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
-                break;
-            case R.id.btn_finish:
-                new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
-                break;
-            case R.id.btn_reload:
-                new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
-                resetMap();
-                loadRoute(null);
-                break;
-            case R.id.fab_plane:
-                aMap.setMapType(AMap.MAP_TYPE_NORMAL);
-                break;
-            case R.id.fab_satellite:
-                aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
-                break;
-            case R.id.btn_ctl:
-                new Thread(new WriteSerialThread("$ORDER,7#", NONE, state)).start();
-                break;
-            default:
-                break;
+                    break;
+                case R.id.btn_stop_home:
+                    new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                    break;
+                case R.id.btn_finish:
+                    new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                    break;
+                case R.id.btn_reload:
+                    new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                    resetMap();
+                    loadRoute(null);
+                    break;
+                case R.id.btn_ctl:
+                    new Thread(new WriteSerialThread("$ORDER,7#", NONE, state)).start();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -764,6 +778,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llHome.setVisibility(View.GONE);
         btnConnect.setVisibility(View.GONE);
         llFinish.setVisibility(View.GONE);
+        btnCtl.setVisibility(View.GONE);
     }
 
     private void morph(int state) {
@@ -785,6 +800,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llMark.setVisibility(View.VISIBLE);
                 llMethod.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.VISIBLE);
+                btnCtl.setVisibility(View.VISIBLE);
                 break;
             case GONE:
                 btnGostop.setText("暂停");
@@ -792,6 +808,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+                btnCtl.setVisibility(View.VISIBLE);
                 break;
             case PAUSE:
                 btnGostop.setText("开始");
@@ -799,12 +816,15 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+                btnCtl.setVisibility(View.VISIBLE);
                 break;
             case HOMING:
                 llHome.setVisibility(View.VISIBLE);
+                btnCtl.setVisibility(View.VISIBLE);
                 break;
             case FINISH:
                 llFinish.setVisibility(View.VISIBLE);
+                btnCtl.setVisibility(View.VISIBLE);
                 break;
             default:
                 break;
@@ -1009,26 +1029,30 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         if (state != preState) {
             long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
             int tempState = UNREADY;
+            swNav.setSelectedTab(0);
             switch (state) {
                 case 0:
                     tempState = READY;
                     break;
                 case -1:
                     loadRoute(id == -1 ? null : String.valueOf(id));
-                    swNav.setSelectedTab(0);
                     tempState = GONE;
                     break;
                 case -2:
+                    loadRoute(id == -1 ? null : String.valueOf(id));
                     swNav.setSelectedTab(1);
                     tempState = PAUSE;
                     break;
                 case -3:
-                    swNav.setSelectedTab(0);
+                    loadRoute(id == -1 ? null : String.valueOf(id));
                     tempState = PAUSE;
                     break;
                 case -4:
-                    swNav.setSelectedTab(0);
+                    loadRoute(id == -1 ? null : String.valueOf(id));
                     tempState = FINISH;
+                    break;
+                case -5:
+                    tempState = HOMING;
                     break;
                 default:
                     break;
@@ -1264,6 +1288,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     if (data.contains(mData)) {
                         if (mState == NONE) {
                             state = mPreState;
+                            mHandler.sendEmptyMessage(6);
                         } else {
                             mHandler.sendMessage(mHandler.obtainMessage(8, mState));
                         }
