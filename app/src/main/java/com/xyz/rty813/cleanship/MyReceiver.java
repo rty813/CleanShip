@@ -74,6 +74,8 @@ public class MyReceiver extends BroadcastReceiver {
                     case 7:
                         activity.handleState(Integer.parseInt(data));
                         break;
+                    case 8:
+
                     default:
 //                    Toast.makeText(context, "非法数据", Toast.LENGTH_SHORT).show();
                         break;

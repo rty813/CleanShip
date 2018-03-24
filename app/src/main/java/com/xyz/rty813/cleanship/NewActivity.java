@@ -70,6 +70,7 @@ import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
+import com.xyz.rty813.cleanship.util.WriteSerialThreadFactory;
 import com.yanzhenjie.permission.Action;
 import com.yanzhenjie.permission.AndPermission;
 import com.yanzhenjie.permission.Permission;
@@ -93,6 +94,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
 import app.dinus.com.loadingdrawable.LoadingView;
@@ -159,6 +164,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Circle limitCircle;
     private long routeID = -1;
     private int preState = Integer.MAX_VALUE;
+    private ExecutorService writeSerialThreadPool;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
@@ -260,6 +266,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         serialPort = new SerialPortTool(this);
         serialPort.registerReceiver(this);
         serialPort.setListener(this);
+        writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
+                TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
     }
 
     private void initView(Bundle savedInstanceState) {
@@ -307,8 +315,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 btnAbort.setVisibility(View.VISIBLE);
                 seekBar.setVisibility(View.GONE);
                 sharedPreferences.edit().putInt("seekbar", seekBar.getProgress()).apply();
-                new Thread(new WriteSerialThread(String.format(Locale.getDefault(),
-                        "$ORDER,6,%d#", 1200 + seekBar.getProgress()), GONE, state)).start();
+                writeSerialThreadPool.execute(new WriteSerialThread(String.format(Locale.getDefault(),
+                        "$ORDER,6,%d#", 1200 + seekBar.getProgress()), GONE, state));
             }
         });
 
@@ -531,7 +539,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 case R.id.btn_home:
                 case R.id.btn_home2:
                     if (state != UNREADY) {
-                        new Thread(new WriteSerialThread("$ORDER,2#", HOMING, state)).start();
+                        writeSerialThreadPool.execute(new WriteSerialThread("$ORDER,2#", HOMING, state));
                     }
                     break;
                 case R.id.btn_enable:
@@ -565,7 +573,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                             }
                                         }
                                         String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
-                                        new Thread(new WriteSerialThread(data, GONE, READY)).start();
+                                        writeSerialThreadPool.execute(new WriteSerialThread(data, GONE, READY));
 //                                    serialPort.writeData(data, 500);
 //                                    mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
                                     } catch (InterruptedException | IOException e) {
@@ -616,28 +624,29 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     popupHistory.showAsDropDown(findViewById(R.id.ll_method));
                     break;
                 case R.id.btn_abort:
-                    new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                    writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
                     break;
                 case R.id.btn_gostop:
                     if (state == PAUSE) {
-                        new Thread(new WriteSerialThread("$GO#", GONE, state)).start();
+                        writeSerialThreadPool.execute(new WriteSerialThread("$GO#", GONE, state));
                     } else if (state == GONE) {
-                        new Thread(new WriteSerialThread("$STOP#", PAUSE, state)).start();
+                        writeSerialThreadPool.execute(new WriteSerialThread("$STOP#", PAUSE, state));
                     }
                     break;
                 case R.id.btn_stop_home:
-                    new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                    writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
                     break;
                 case R.id.btn_finish:
-                    new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                    writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
                     break;
                 case R.id.btn_reload:
-                    new Thread(new WriteSerialThread("$CLEAR#", READY, state)).start();
+                    writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
                     resetMap();
-                    loadRoute(null);
+                    long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+                    loadRoute(id == -1 ? null : String.valueOf(id));
                     break;
                 case R.id.btn_ctl:
-                    new Thread(new WriteSerialThread("$ORDER,7#", NONE, state)).start();
+                    writeSerialThreadPool.execute(new WriteSerialThread("$ORDER,7#", NONE, state));
                     break;
                 default:
                     break;
@@ -825,6 +834,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             case FINISH:
                 llFinish.setVisibility(View.VISIBLE);
                 btnCtl.setVisibility(View.VISIBLE);
+                writeSerialThreadPool.execute(new QueryTimeDisThread());
                 break;
             default:
                 break;
@@ -1035,20 +1045,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     tempState = READY;
                     break;
                 case -1:
-                    loadRoute(id == -1 ? null : String.valueOf(id));
                     tempState = GONE;
                     break;
                 case -2:
-                    loadRoute(id == -1 ? null : String.valueOf(id));
                     swNav.setSelectedTab(1);
                     tempState = PAUSE;
                     break;
                 case -3:
-                    loadRoute(id == -1 ? null : String.valueOf(id));
                     tempState = PAUSE;
                     break;
                 case -4:
-                    loadRoute(id == -1 ? null : String.valueOf(id));
                     tempState = FINISH;
                     break;
                 case -5:
@@ -1064,6 +1070,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 tempState = GONE;
             }
             if (tempState != this.state) {
+                if (state != -5 && state != 0) {
+                    loadRoute(id == -1 ? null : String.valueOf(id));
+                }
                 this.state = UNREADY;
                 mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
             }
@@ -1138,6 +1147,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 case 9:
                     Toast.makeText(activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
                     break;
+                case 10:
+                    activity.handleState((Integer) msg.obj);
+                    break;
+                case 11:
+                    Toast.makeText(activity, String.format(Locale.getDefault(),
+                            "%d %d", msg.arg1, msg.arg2), Toast.LENGTH_SHORT).show();
+                    break;
                 default:
                     super.handleMessage(msg);
             }
@@ -1149,7 +1165,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         public void run() {
             synchronized (serialPort) {
                 int type = 0;
-                long retry_times = 0;
+                long retryTimes = 0;
                 while (true) {
                     String data = null;
                     try {
@@ -1167,7 +1183,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         Thread.sleep(300);
                         data = builder.toString();
                         if (!data.startsWith("$") || !data.endsWith("#")) {
-                            Thread.sleep(300);
                             continue;
                         } else {
                             data = data.replaceAll("#", "");
@@ -1175,7 +1190,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         }
 
                         if (!"".equals(data)) {
-                            retry_times = 0;
+                            retryTimes = 0;
                             String[] strings = data.split(";");
                             Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
                             if (strings.length == 2) {
@@ -1185,8 +1200,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             }
                             sendBroadcast(intent);
                         } else {
-                            retry_times++;
-                            if (retry_times % 5 == 0) {
+                            retryTimes++;
+                            if (retryTimes % 5 == 0) {
                                 mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
                             }
                         }
@@ -1206,19 +1221,17 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
         @Override
         public void run() {
-            int retry_times = 0;
+            int retryTimes = 0;
             try {
                 do {
-                    retry_times++;
-                    if (retry_times == 3) {
+                    retryTimes++;
+                    if (retryTimes == 3) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-//                        临时测试！！！！
-                        handleState(0);
-                        break;
                     }
-                    if (retry_times == 6) {
+                    if (retryTimes == 6) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
                         mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+//                        mHandler.sendMessage(mHandler.obtainMessage(10, 0));
                         break;
                     }
                     serialPort.writeData("$QUERY,7#", 10);
@@ -1230,10 +1243,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             break;
                         }
                     }
-                    Thread.sleep(1000);
+                    Thread.sleep(300);
                     data = builder.toString();
                     if (!data.startsWith("$") || !data.endsWith("#")) {
-                        Thread.sleep(1000);
                         continue;
                     } else {
                         data = data.replaceAll("#", "");
@@ -1242,14 +1254,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     if (!"".equals(data)) {
                         String[] strings = data.split(";");
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
-                            handleState(Integer.parseInt(strings[1]));
+                            mHandler.sendMessage(mHandler.obtainMessage(10, Integer.parseInt(strings[1])));
                             break;
                         }
                     }
                 } while (true);
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
                 mHandler.sendEmptyMessage(3);
+            } catch (NumberFormatException | InterruptedException e) {
+                e.printStackTrace();
             } finally {
                 mHandler.sendEmptyMessage(7);
             }
@@ -1270,7 +1284,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
         @Override
         public void run() {
-            int retry_times = 0;
+            int retryTimes = 0;
             try {
                 do {
                     serialPort.writeData(mData, 10);
@@ -1294,11 +1308,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         }
                         break;
                     }
-                    retry_times++;
-                    if (retry_times == 2) {
+                    retryTimes++;
+                    if (retryTimes == 2) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
                     }
-                    if (retry_times == 4) {
+                    if (retryTimes == 4) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
                         mHandler.sendMessage(mHandler.obtainMessage(8, mPreState));
                         break;
@@ -1307,6 +1321,65 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
                 mHandler.sendEmptyMessage(3);
+            } finally {
+                mHandler.sendEmptyMessage(7);
+            }
+        }
+    }
+
+    private class QueryTimeDisThread implements Runnable {
+        QueryTimeDisThread() {
+            showLoadingView();
+        }
+
+        @Override
+        public void run() {
+            int retryTimes = 0;
+            try {
+                do {
+                    retryTimes++;
+                    if (retryTimes == 3) {
+                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+                    }
+                    if (retryTimes == 6) {
+                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
+                        mHandler.sendMessage(mHandler.obtainMessage(8, FINISH));
+                        break;
+                    }
+                    serialPort.writeData("$QUERY,8#", 10);
+                    String data;
+                    StringBuilder builder = new StringBuilder();
+                    while (!"".equals(data = serialPort.readData())) {
+                        builder.append(data);
+                        if (data.endsWith("#")) {
+                            break;
+                        }
+                    }
+                    Thread.sleep(300);
+                    data = builder.toString();
+                    if (!data.startsWith("$") || !data.endsWith("#")) {
+                        continue;
+                    } else {
+                        data = data.replaceAll("#", "");
+                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
+                    }
+                    if (!"".equals(data)) {
+                        String[] strings = data.split(";");
+                        if (strings.length == 2 && Integer.parseInt(strings[0]) == 8) {
+                            strings = strings[1].split(",");
+                            int time = Integer.parseInt(strings[0]);
+                            int dis = Integer.parseInt(strings[1]);
+                            mHandler.sendEmptyMessage(6);
+                            mHandler.sendMessage(mHandler.obtainMessage(11, time, dis));
+                            break;
+                        }
+                    }
+                } while (true);
+            } catch (IOException e) {
+                e.printStackTrace();
+                mHandler.sendEmptyMessage(3);
+            } catch (NumberFormatException | InterruptedException e) {
+                e.printStackTrace();
             } finally {
                 mHandler.sendEmptyMessage(7);
             }
