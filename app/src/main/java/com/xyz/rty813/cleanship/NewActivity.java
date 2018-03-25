@@ -159,6 +159,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Drawable picMarkDisable;
     private Button btnCtl;
     private Button btnEnable;
+    private TextView tvFinish;
     private TextView tvToolbar;
     private TextView tvCircle;
     private Circle limitCircle;
@@ -285,6 +286,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         swNav = findViewById(R.id.sw_nav);
         tvToolbar = findViewById(R.id.tv_toolbar);
         tvCircle = findViewById(R.id.tv_circle);
+        tvFinish = findViewById(R.id.tv_finish);
         btnGostop = findViewById(R.id.btn_gostop);
         btnHome2 = findViewById(R.id.btn_home2);
         btnHistory = findViewById(R.id.btn_history);
@@ -832,8 +834,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 btnCtl.setVisibility(View.VISIBLE);
                 break;
             case FINISH:
-                llFinish.setVisibility(View.VISIBLE);
-                btnCtl.setVisibility(View.VISIBLE);
                 writeSerialThreadPool.execute(new QueryTimeDisThread());
                 break;
             default:
@@ -854,7 +854,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     @Override
     public void onConnected() {
-//        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
         new Thread(new QueryThread()).start();
         new Thread(new QueryStateTread()).start();
     }
@@ -1151,8 +1150,17 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     activity.handleState((Integer) msg.obj);
                     break;
                 case 11:
-                    Toast.makeText(activity, String.format(Locale.getDefault(),
-                            "%d %d", msg.arg1, msg.arg2), Toast.LENGTH_SHORT).show();
+                    if (activity.loadingView.getVisibility() == View.VISIBLE) {
+                        activity.loadingView.startAnimation(animation);
+                    }
+                    activity.tvFinish.setText(String.format(Locale.getDefault(),
+                            "此次航行用时%d小时%d分，大约行走%dKM", msg.arg1 / 60, msg.arg1 % 60, msg.arg2 / 1000));
+                    activity.llFinish.setVisibility(View.VISIBLE);
+                    activity.btnCtl.setVisibility(View.VISIBLE);
+                    synchronized (activity.serialPort) {
+                        activity.state = FINISH;
+                        activity.serialPort.notify();
+                    }
                     break;
                 default:
                     super.handleMessage(msg);
@@ -1329,6 +1337,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     private class QueryTimeDisThread implements Runnable {
         QueryTimeDisThread() {
+            loadingView.setVisibility(View.GONE);
             showLoadingView();
         }
 
@@ -1367,9 +1376,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         String[] strings = data.split(";");
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == 8) {
                             strings = strings[1].split(",");
-                            int time = Integer.parseInt(strings[0]);
+                            int time = (int) (Integer.parseInt(strings[0]) * 0.4 / 60);
                             int dis = Integer.parseInt(strings[1]);
-                            mHandler.sendEmptyMessage(6);
                             mHandler.sendMessage(mHandler.obtainMessage(11, time, dis));
                             break;
                         }
