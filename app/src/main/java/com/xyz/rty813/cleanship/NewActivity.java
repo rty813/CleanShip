@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatSeekBar;
@@ -37,7 +38,6 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.AMapUtils;
@@ -66,6 +66,7 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.kcode.lib.UpdateWrapper;
 import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
+import com.onurkaganaldemir.ktoastlib.KToast;
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
@@ -157,7 +158,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Drawable picStart;
     private Drawable picMarkEnable;
     private Drawable picMarkDisable;
-    private Button btnCtl;
+    private FloatingActionButton btnCtl;
     private Button btnEnable;
     private TextView tvFinish;
     private TextView tvToolbar;
@@ -245,7 +246,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
             if ((System.currentTimeMillis() - mExitTime) > 2000) {
-                Toast.makeText(NewActivity.this, "再按一次退出", Toast.LENGTH_SHORT).show();
+                KToast.infoToast(NewActivity.this, "再按一次退出", Gravity.BOTTOM, KToast.LENGTH_SHORT);
                 mExitTime = System.currentTimeMillis();
             } else {
                 finish();
@@ -381,7 +382,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     markers.add(aMap.addMarker(markerOptions));
 
                     polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(10).color(Color.parseColor("#0B76CE"))));
-                    Toast.makeText(NewActivity.this, "完成闭合回路！", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(NewActivity.this, "完成闭合回路！", Toast.LENGTH_SHORT).show();
                 }
                 return true;
             }
@@ -432,7 +433,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     return;
                 }
                 if (AMapUtils.calculateLineDistance(latLng, limitCircle.getCenter()) > CTL_RADIUS) {
-                    Toast.makeText(NewActivity.this, "注意！超出遥控范围！", Toast.LENGTH_LONG).show();
+//                    Toast.makeText(NewActivity.this, "注意！超出遥控范围！", Toast.LENGTH_LONG).show();
+                    KToast.warningToast(NewActivity.this, "超出遥控范围", Gravity.BOTTOM, KToast.LENGTH_SHORT);
                 }
 
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
@@ -450,7 +452,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10)
                             .color(Color.parseColor("#0B76CE"))));
                 } else {
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.store)));
+                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
                     GeocodeSearch geocodeSearch = new GeocodeSearch(NewActivity.this);
                     geocodeSearch.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
                         @Override
@@ -496,15 +498,15 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         System.out.println("init serial port");
         List<UsbSerialDriver> list = serialPort.searchSerialPort();
         if (list.isEmpty()) {
-            mHandler.sendEmptyMessage(3);
-            mHandler.sendMessage(mHandler.obtainMessage(9, "未连接设备"));
+            mHandler.sendEmptyMessage(6);
+            KToast.errorToast(NewActivity.this, "未连接设备", Gravity.CENTER, KToast.LENGTH_AUTO);
         } else {
             try {
                 serialPort.initDevice(list.get(0), BAUD_RATE);
             } catch (IOException e) {
                 e.printStackTrace();
-                mHandler.sendEmptyMessage(3);
-                mHandler.sendMessage(mHandler.obtainMessage(9, "连接失败"));
+                mHandler.sendEmptyMessage(6);
+                KToast.errorToast(NewActivity.this, "连接失败", Gravity.CENTER, KToast.LENGTH_AUTO);
             }
         }
     }
@@ -802,7 +804,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
         switch (state) {
             case UNREADY:
-                Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
+//                Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
+                KToast.errorToast(NewActivity.this, "连接中断，请重新连接", Gravity.CENTER, KToast.LENGTH_SHORT);
                 btnConnect.setVisibility(View.VISIBLE);
                 preState = Integer.MAX_VALUE;
                 resetMap();
@@ -994,7 +997,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10).color(Color.parseColor("#0B76CE"))));
                     markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
                 } else {
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.store)));
+                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
                 }
                 markers.add(aMap.addMarker(markerOptions));
             }
@@ -1144,7 +1147,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     break;
                 case 9:
-                    Toast.makeText(activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
+                    KToast.infoToast(activity, (String) msg.obj, Gravity.BOTTOM, KToast.LENGTH_AUTO);
                     break;
                 case 10:
                     activity.handleState((Integer) msg.obj);
@@ -1154,7 +1157,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         activity.loadingView.startAnimation(animation);
                     }
                     activity.tvFinish.setText(String.format(Locale.getDefault(),
-                            "此次航行用时%d小时%d分，大约行走%dKM", msg.arg1 / 60, msg.arg1 % 60, msg.arg2 / 1000));
+                            "此次航行用时%d小时%d分，大约行走%d米", msg.arg1 / 60, msg.arg1 % 60, msg.arg2));
                     activity.llFinish.setVisibility(View.VISIBLE);
                     activity.btnCtl.setVisibility(View.VISIBLE);
                     synchronized (activity.serialPort) {

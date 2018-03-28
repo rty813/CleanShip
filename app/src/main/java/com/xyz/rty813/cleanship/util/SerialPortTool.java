@@ -8,45 +8,49 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
-import android.os.Message;
-import android.os.Parcel;
-import android.os.Parcelable;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
-import com.xyz.rty813.cleanship.ConnectActivity;
-import com.xyz.rty813.cleanship.MainActivity;
-import com.xyz.rty813.cleanship.MapActivity;
-import com.xyz.rty813.cleanship.MyReceiver;
 
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Created by doufu on 2017/12/1.
  */
 
 public class SerialPortTool{
+    private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private PendingIntent mPermissionIntent;
     private UsbManager mUsbManager;
 //    private ConnectActivity mContext;
 //    private MapActivity mContext;
     private Context mContext;
     private UsbSerialPort mPort;
-    private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
     private UsbSerialDriver mDriver;
     private int mBaudRate;
-
-    public interface onConnectedListener{
-        void onConnected();
-    }
-
     private onConnectedListener mListener;
+    private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (ACTION_USB_PERMISSION.equals(action)) {
+                synchronized (this) {
+                    UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                        try {
+                            openDevice(device);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        Log.d("Err", "permission denied for device " + device);
+                    }
+                }
+            }
+        }
+    };
 
     public SerialPortTool(Context context) {
 //        mContext = (ConnectActivity) context;
@@ -154,23 +158,7 @@ public class SerialPortTool{
     }
 
 
-    private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (ACTION_USB_PERMISSION.equals(action)){
-                synchronized (this) {
-                    UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)){
-                        try {
-                            openDevice(device);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }else{
-                        Log.d("Err", "permission denied for device " + device);
-                    }
-                }
-            }
-        }
-    };
+    public interface onConnectedListener {
+        void onConnected();
+    }
 }

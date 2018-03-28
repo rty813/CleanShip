@@ -44,13 +44,13 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <Button
+        <android.support.design.widget.FloatingActionButton
             android:id="@+id/btn_ctl"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="40dp"
-            android:text="剥夺控制权"
-            android:visibility="gone" />
+            android:layout_gravity="center_vertical"
+            android:layout_margin="10dp"
+            android:src="@drawable/app_ctl" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -89,7 +89,7 @@
                 android:layout_gravity="end"
                 android:layout_marginLeft="5dp"
                 app:menu_colorNormal="@color/velGray"
-                app:menu_colorPressed="@color/gray"
+                app:menu_colorPressed="#6b6b6b"
                 app:menu_fab_size="mini"
                 app:menu_icon="@drawable/normal_map"
                 app:menu_openDirection="down"
@@ -101,7 +101,7 @@
                     android:layout_height="wrap_content"
                     android:src="@drawable/normal_map"
                     app:fab_colorNormal="@color/velGray"
-                    app:fab_colorPressed="@color/gray"
+                    app:fab_colorPressed="#6b6b6b"
                     app:fab_size="mini" />
 
                 <com.github.clans.fab.FloatingActionButton
@@ -110,7 +110,7 @@
                     android:layout_height="wrap_content"
                     android:src="@drawable/satellite_map"
                     app:fab_colorNormal="@color/velGray"
-                    app:fab_colorPressed="@color/gray"
+                    app:fab_colorPressed="#6b6b6b"
                     app:fab_size="mini" />
             </com.github.clans.fab.FloatingActionMenu>
         </LinearLayout>
