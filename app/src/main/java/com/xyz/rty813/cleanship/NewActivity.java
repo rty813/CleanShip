@@ -12,6 +12,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -884,6 +886,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 .onGranted(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
+                        ConnectivityManager manager = (ConnectivityManager) NewActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
+                        NetworkInfo networkInfo = manager.getActiveNetworkInfo();
+                        if (networkInfo == null || !networkInfo.isAvailable()) {
+                            // 无网络
+                            KToast.errorToast(NewActivity.this, "请检查网络连接！", Gravity.CENTER, KToast.LENGTH_LONG);
+                        }
+
                         MyLocationStyle myLocationStyle = new MyLocationStyle();
                         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE)
                                 .strokeColor(Color.parseColor("#00000000"))
@@ -892,6 +901,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         aMap.setMyLocationStyle(myLocationStyle);
                         // 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
                         aMap.setMyLocationEnabled(true);
+                        CameraUpdate cameraUpdate = CameraUpdateFactory.zoomTo(14);
+                        aMap.moveCamera(cameraUpdate);
                         checkUpdate();
                     }
                 })

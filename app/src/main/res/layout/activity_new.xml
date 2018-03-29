@@ -49,7 +49,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
-            android:layout_margin="10dp"
+            android:layout_marginLeft="5dp"
             android:src="@drawable/app_ctl" />
         <LinearLayout
             android:layout_width="match_parent"
@@ -59,11 +59,11 @@
             <LinearLayout
                 android:id="@+id/ll_method"
                 android:layout_width="match_parent"
-                android:layout_height="30sp"
+                android:layout_height="25dp"
                 android:background="@color/gray"
                 android:elevation="6dp"
                 android:orientation="horizontal"
-                android:visibility="gone">
+                android:visibility="invisible">
 
                 <Button
                     android:id="@+id/btn_manual"
@@ -86,8 +86,6 @@
             <com.github.clans.fab.FloatingActionMenu
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:layout_marginLeft="5dp"
                 app:menu_colorNormal="@color/velGray"
                 app:menu_colorPressed="#6b6b6b"
                 app:menu_fab_size="mini"
