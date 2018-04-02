@@ -50,7 +50,9 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_marginLeft="5dp"
-            android:src="@drawable/app_ctl" />
+            android:background="@color/toolbarBlue"
+            android:src="@drawable/app_ctl"
+            android:visibility="visible" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -40,6 +40,7 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.AMapUtils;
@@ -68,7 +69,6 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.kcode.lib.UpdateWrapper;
 import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
-import com.onurkaganaldemir.ktoastlib.KToast;
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
@@ -104,6 +104,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
 import app.dinus.com.loadingdrawable.LoadingView;
+import es.dmoral.toasty.Toasty;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
 /**
@@ -248,7 +249,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
             if ((System.currentTimeMillis() - mExitTime) > 2000) {
-                KToast.infoToast(NewActivity.this, "再按一次退出", Gravity.BOTTOM, KToast.LENGTH_SHORT);
+                Toasty.info(this, "再按一次退出", Toast.LENGTH_SHORT).show();
                 mExitTime = System.currentTimeMillis();
             } else {
                 finish();
@@ -435,8 +436,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     return;
                 }
                 if (AMapUtils.calculateLineDistance(latLng, limitCircle.getCenter()) > CTL_RADIUS) {
-//                    Toast.makeText(NewActivity.this, "注意！超出遥控范围！", Toast.LENGTH_LONG).show();
-                    KToast.warningToast(NewActivity.this, "超出遥控范围", Gravity.BOTTOM, KToast.LENGTH_SHORT);
+                    Toasty.warning(NewActivity.this, "超出遥控范围", Toast.LENGTH_SHORT).show();
                 }
 
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
@@ -501,14 +501,14 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         List<UsbSerialDriver> list = serialPort.searchSerialPort();
         if (list.isEmpty()) {
             mHandler.sendEmptyMessage(6);
-            KToast.errorToast(NewActivity.this, "未连接设备", Gravity.CENTER, KToast.LENGTH_AUTO);
+            Toasty.error(this, "未连接设备", Toast.LENGTH_SHORT).show();
         } else {
             try {
                 serialPort.initDevice(list.get(0), BAUD_RATE);
             } catch (IOException e) {
                 e.printStackTrace();
                 mHandler.sendEmptyMessage(6);
-                KToast.errorToast(NewActivity.this, "连接失败", Gravity.CENTER, KToast.LENGTH_AUTO);
+                Toasty.error(this, "连接失败", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -555,6 +555,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 case R.id.btn_go:
                     if (state == READY) {
                         if (markers.size() > 0) {
+                            for (Polyline line : trace) {
+                                line.remove();
+                            }
+                            trace.removeAll(trace);
                             StringBuilder stringBuilder = new StringBuilder();
                             for (Marker marker : markers) {
                                 stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
@@ -783,6 +787,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         shipPointList.add(new LatLng(0, 0));
         smoothMoveMarker = new SmoothMoveMarker(aMap);
         smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromResource(R.drawable.ship));
+//        smoothMoveMarker.getMarker().setInfoWindowEnable(false);
     }
 
     private void hideAll() {
@@ -806,8 +811,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
         switch (state) {
             case UNREADY:
-//                Toast.makeText(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
-                KToast.errorToast(NewActivity.this, "连接中断，请重新连接", Gravity.CENTER, KToast.LENGTH_SHORT);
+                Toasty.error(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
                 btnConnect.setVisibility(View.VISIBLE);
                 preState = Integer.MAX_VALUE;
                 resetMap();
@@ -890,7 +894,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         NetworkInfo networkInfo = manager.getActiveNetworkInfo();
                         if (networkInfo == null || !networkInfo.isAvailable()) {
                             // 无网络
-                            KToast.errorToast(NewActivity.this, "请检查网络连接！", Gravity.CENTER, KToast.LENGTH_LONG);
+                            Toasty.error(NewActivity.this, "请检查网络连接！", Toast.LENGTH_LONG).show();
                         }
 
                         MyLocationStyle myLocationStyle = new MyLocationStyle();
@@ -1043,6 +1047,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             smoothMoveMarker.setPoints(subList);
             smoothMoveMarker.setTotalDuration(1);
             smoothMoveMarker.startSmoothMove();
+            smoothMoveMarker.getMarker().setInfoWindowEnable(false);
             trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
                     shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.parseColor("#FFE418"))));
         }
@@ -1077,17 +1082,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     break;
             }
             if (state > 0) {
-                loadRoute(id == -1 ? null : String.valueOf(id));
-                swNav.setSelectedTab(1);
                 tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
+                swNav.setSelectedTab(1);
                 tempState = GONE;
             }
             if (tempState != this.state) {
                 if (state != -5 && state != 0) {
                     loadRoute(id == -1 ? null : String.valueOf(id));
                 }
-                this.state = UNREADY;
                 mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
+
             }
             preState = state;
         }
@@ -1158,7 +1162,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     break;
                 case 9:
-                    KToast.infoToast(activity, (String) msg.obj, Gravity.BOTTOM, KToast.LENGTH_AUTO);
+                    Toasty.info(activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
                     break;
                 case 10:
                     activity.handleState((Integer) msg.obj);

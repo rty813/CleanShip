@@ -26,21 +26,10 @@
             android:name="com.amap.api.v2.apikey"
             android:value="c026cc87761755de77828d295b844238" />
 
-        <activity android:name=".MainActivity"></activity>
-        <activity android:name=".HistoryActivity" />
-        <activity android:name=".SerialPortActivity" />
-
         <receiver
             android:name=".MyReceiver"
             android:enabled="true" />
 
-        <activity android:name=".ControllerActivity" />
-        <activity
-            android:name=".MapActivity"
-            android:launchMode="singleTop" />
-        <activity
-            android:name=".ConnectActivity"
-            android:launchMode="singleTop"></activity>
         <activity
             android:name=".NewActivity"
             android:launchMode="singleTop">
