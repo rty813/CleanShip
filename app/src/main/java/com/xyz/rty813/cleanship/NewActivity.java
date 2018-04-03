@@ -1,10 +1,12 @@
 package com.xyz.rty813.cleanship;
 
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -16,6 +18,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Message;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
@@ -28,6 +31,7 @@ import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -72,6 +76,8 @@ import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
+import com.xyz.rty813.cleanship.ble.BluetoothLeService;
+import com.xyz.rty813.cleanship.ble.CoreService;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
 import com.xyz.rty813.cleanship.util.SerialPortTool;
 import com.xyz.rty813.cleanship.util.WriteSerialThreadFactory;
@@ -126,16 +132,17 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final int BAUD_RATE = 115200;
     private static final double CTL_RADIUS = 2000;
     public static SQLiteDBHelper dbHelper;
+    public MyHandler mHandler;
     private AMap aMap;
     private MapView mMapView;
     private long mExitTime;
     private SerialPortTool serialPort;
     private int state;
     private boolean markEnable = false;
-    private MyHandler mHandler;
     private String pos = null;
     private LoadingView loadingView;
-    private MyReceiver receiver;
+    private MyReceiver myReceiver;
+    private BleStateReceiver bleStateReceiver;
     private ArrayList<LatLng> shipPointList;
     private ArrayList<LatLng> aimPointList;
     private SmoothMoveMarker smoothMoveMarker;
@@ -171,13 +178,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private long routeID = -1;
     private int preState = Integer.MAX_VALUE;
     private ExecutorService writeSerialThreadPool;
+    private CoreService coreService;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
             switch (view.getId()) {
                 case R.id.btn_connect:
-                    showLoadingView();
-                    initSerialPort();
+                    if (loadingView.getVisibility() == View.GONE) {
+                        showLoadingView();
+                        initBleSerial();
+                    }
                     break;
                 case R.id.fab_plane:
                     ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
@@ -192,6 +202,22 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             }
         }
     };
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            coreService = ((CoreService.MyBinder) iBinder).getService();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            Log.e("err", "disconnected");
+        }
+    };
+
+    private void initBleSerial() {
+        showLoadingView();
+        coreService.connect();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -211,11 +237,18 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     protected void onResume() {
         MiStatInterface.recordPageStart(NewActivity.this, "主界面");
         mMapView.onResume();
-        receiver = new MyReceiver();
+        myReceiver = new MyReceiver();
         IntentFilter filter = new IntentFilter();
         filter.addAction(MyReceiver.ACTION_DATA_RECEIVED);
         filter.addAction(Intent.ACTION_BATTERY_CHANGED);
-        registerReceiver(receiver, filter);
+        registerReceiver(myReceiver, filter);
+        bleStateReceiver = new BleStateReceiver();
+        filter = new IntentFilter();
+        filter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
+        filter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
+        filter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
+        filter.addAction(BluetoothLeService.NPU_ACTION_GATT_DISCONNECTED);
+        registerReceiver(bleStateReceiver, filter);
         super.onResume();
     }
 
@@ -223,7 +256,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     protected void onPause() {
         MiStatInterface.recordPageEnd();
         mMapView.onPause();
-        unregisterReceiver(receiver);
+        unregisterReceiver(myReceiver);
+        unregisterReceiver(bleStateReceiver);
         super.onPause();
     }
 
@@ -358,6 +392,18 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         picPause.setBounds(0, 0, picPause.getMinimumWidth(), picPause.getMinimumHeight());
         picMarkDisable.setBounds(0, 0, picMarkDisable.getMinimumWidth(), picMarkDisable.getMinimumHeight());
         picMarkEnable.setBounds(0, 0, picMarkEnable.getMinimumWidth(), picMarkEnable.getMinimumHeight());
+
+        View.OnTouchListener onTouchListener = new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                return true;
+            }
+        };
+        llFinish.setOnTouchListener(onTouchListener);
+        llHome.setOnTouchListener(onTouchListener);
+        llMark.setOnTouchListener(onTouchListener);
+        llMethod.setOnTouchListener(onTouchListener);
+        llNav.setOnTouchListener(onTouchListener);
     }
 
     private void initAMap() {
@@ -893,6 +939,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 .onGranted(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
+                        bindService(new Intent(NewActivity.this, CoreService.class), serviceConnection, BIND_AUTO_CREATE);
                         ConnectivityManager manager = (ConnectivityManager) NewActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
                         NetworkInfo networkInfo = manager.getActiveNetworkInfo();
                         if (networkInfo == null || !networkInfo.isAvailable()) {
