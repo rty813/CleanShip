@@ -70,7 +70,6 @@ import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.github.clans.fab.FloatingActionMenu;
-import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.kcode.lib.UpdateWrapper;
 import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
@@ -543,23 +542,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         .radius(CTL_RADIUS).strokeColor(Color.RED).strokeWidth(8).fillColor(Color.argb(20, 1, 1, 1)));
             }
         });
-    }
-
-    private void initSerialPort() {
-        System.out.println("init serial port");
-        List<UsbSerialDriver> list = serialPort.searchSerialPort();
-        if (list.isEmpty()) {
-            mHandler.sendEmptyMessage(6);
-            Toasty.error(this, "未连接设备", Toast.LENGTH_SHORT).show();
-        } else {
-            try {
-                serialPort.initDevice(list.get(0), BAUD_RATE);
-            } catch (IOException e) {
-                e.printStackTrace();
-                mHandler.sendEmptyMessage(6);
-                Toasty.error(this, "连接失败", Toast.LENGTH_SHORT).show();
-            }
-        }
     }
 
     @Override
