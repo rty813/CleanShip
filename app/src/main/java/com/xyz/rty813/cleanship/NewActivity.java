@@ -1090,6 +1090,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 if (state != -5 && state != 0) {
                     loadRoute(id == -1 ? null : String.valueOf(id));
                 }
+                this.state = UNREADY;
                 mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
 
             }
