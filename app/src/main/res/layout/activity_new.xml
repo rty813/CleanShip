@@ -86,6 +86,7 @@
             </LinearLayout>
 
             <com.github.clans.fab.FloatingActionMenu
+                android:id="@+id/fam"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:menu_colorNormal="@color/velGray"

@@ -65,6 +65,7 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
+import com.github.clans.fab.FloatingActionMenu;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.kcode.lib.UpdateWrapper;
 import com.kcode.lib.bean.VersionModel;
@@ -179,9 +180,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     initSerialPort();
                     break;
                 case R.id.fab_plane:
+                    ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
                     aMap.setMapType(AMap.MAP_TYPE_NORMAL);
                     break;
                 case R.id.fab_satellite:
+                    ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
                     aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
                     break;
                 default:
