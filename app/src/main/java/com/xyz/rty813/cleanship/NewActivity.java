@@ -116,7 +116,7 @@ import lib.kingja.switchbutton.SwitchMultiButton;
 /**
  * @author doufu
  */
-public class NewActivity extends AppCompatActivity implements View.OnClickListener, SerialPortTool.onConnectedListener {
+public class NewActivity extends AppCompatActivity implements View.OnClickListener{
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
@@ -135,7 +135,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private AMap aMap;
     private MapView mMapView;
     private long mExitTime;
-    private SerialPortTool serialPort;
     private int state;
     private boolean markEnable = false;
     private String pos = null;
@@ -264,8 +263,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     protected void onDestroy() {
         state = UNREADY;
         mMapView.onDestroy();
-        serialPort.closeDevice();
-        serialPort.unregisterReceiver(this);
+        unbindService(serviceConnection);
         super.onDestroy();
     }
 
@@ -304,9 +302,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         aimPointList = new ArrayList<>();
         initSmoothMove();
         state = UNREADY;
-        serialPort = new SerialPortTool(this);
-        serialPort.registerReceiver(this);
-        serialPort.setListener(this);
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
     }
@@ -1222,18 +1217,18 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private class QueryThread implements Runnable {
         @Override
         public void run() {
-            synchronized (serialPort) {
+            synchronized (coreService) {
                 int type = 0;
                 long retryTimes = 0;
                 while (true) {
                     String data = null;
                     try {
                         if (state == UNREADY) {
-                            serialPort.wait();
+                            coreService.wait();
                         }
-                        serialPort.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type == 5 ? 7 : 0), 10);
+                        coreService.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type == 5 ? 7 : 0), 10);
                         StringBuilder builder = new StringBuilder();
-                        while (!"".equals(data = serialPort.readData())) {
+                        while (!"".equals(data = coreService.readData())) {
                             builder.append(data);
                             if (data.endsWith("#")) {
                                 break;
@@ -1293,10 +1288,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 //                        mHandler.sendMessage(mHandler.obtainMessage(10, 0));
                         break;
                     }
-                    serialPort.writeData("$QUERY,7#", 10);
+                    coreService.writeData("$QUERY,7#", 10);
                     String data;
                     StringBuilder builder = new StringBuilder();
-                    while (!"".equals(data = serialPort.readData())) {
+                    while (!"".equals(data = coreService.readData())) {
                         builder.append(data);
                         if (data.endsWith("#")) {
                             break;
@@ -1346,10 +1341,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             int retryTimes = 0;
             try {
                 do {
-                    serialPort.writeData(mData, 10);
+                    coreService.writeData(mData, 10);
                     String data;
                     StringBuilder builder = new StringBuilder();
-                    while (!"".equals(data = serialPort.readData())) {
+                    while (!"".equals(data = coreService.readData())) {
                         builder.append(data);
                         if (data.endsWith("#")) {
                             break;

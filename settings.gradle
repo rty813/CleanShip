@@ -1,1 +1,1 @@
-include ':app', ':usbSerialForAndroid', ':LoadingView', ':libk-switchbutton'
+include ':app', ':LoadingView', ':libk-switchbutton'

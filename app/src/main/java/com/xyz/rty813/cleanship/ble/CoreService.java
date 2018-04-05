@@ -66,10 +66,20 @@ public class CoreService extends Service {
         return binder;
     }
 
-    public void writeValue(String data) {
+    public synchronized void writeData(String data, long delay) {
         if (isConnected) {
             bluetoothLeService.WriteValue(data);
+            try {
+                Thread.sleep(delay);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
+    }
+
+    public synchronized String readData()
+    {
+        return "hehe";
     }
 
     public void connect() {
