@@ -1,8 +1,10 @@
 package com.xyz.rty813.cleanship.ble;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Binder;
 import android.os.IBinder;
@@ -49,7 +51,6 @@ public class CoreService extends Service {
         super.onDestroy();
         System.out.println("CoreService被摧毁啦！onDestory");
         Toast.makeText(CoreService.this, "蓝牙连接已断开，核心服务停止！", Toast.LENGTH_SHORT).show();
-//        unregisterReceiver(stateReceiver);
         if (bluetoothLeService != null) {
             bluetoothLeService.close();
             bluetoothLeService = null;
@@ -75,11 +76,6 @@ public class CoreService extends Service {
                 e.printStackTrace();
             }
         }
-    }
-
-    public synchronized String readData()
-    {
-        return "hehe";
     }
 
     public void connect() {

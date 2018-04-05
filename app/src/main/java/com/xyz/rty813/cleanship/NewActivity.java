@@ -75,10 +75,10 @@ import com.kcode.lib.bean.VersionModel;
 import com.kcode.lib.net.CheckUpdateTask;
 import com.xiaomi.mistatistic.sdk.MiStatInterface;
 import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
+import com.xyz.rty813.cleanship.ble.BleStateReceiver;
 import com.xyz.rty813.cleanship.ble.BluetoothLeService;
 import com.xyz.rty813.cleanship.ble.CoreService;
 import com.xyz.rty813.cleanship.util.SQLiteDBHelper;
-import com.xyz.rty813.cleanship.util.SerialPortTool;
 import com.xyz.rty813.cleanship.util.WriteSerialThreadFactory;
 import com.yanzhenjie.permission.Action;
 import com.yanzhenjie.permission.AndPermission;
@@ -94,7 +94,6 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
-import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -120,7 +119,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
-    private static final int NAV = 3;
     private static final int NONE = -1;
     private static final int HOMING = 5;
     private static final int FINISH = 6;
@@ -128,7 +126,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final String MY_APPID = "2882303761517676503";
     private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
-    private static final int BAUD_RATE = 115200;
     private static final double CTL_RADIUS = 2000;
     public static SQLiteDBHelper dbHelper;
     public MyHandler mHandler;
@@ -147,7 +144,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private ArrayList<Marker> markers;
     private ArrayList<Polyline> polylines;
     private ArrayList<Polyline> trace;
-    private float alpha = 1.0f;
     private Button btnConnect;
     private LinearLayout llFinish;
     private LinearLayout llNav;
@@ -177,6 +173,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private int preState = Integer.MAX_VALUE;
     private ExecutorService writeSerialThreadPool;
     private CoreService coreService;
+    private StringBuilder newData = null;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
@@ -300,6 +297,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         polylines = new ArrayList<>();
         trace = new ArrayList<>();
         aimPointList = new ArrayList<>();
+        newData = new StringBuilder();
         initSmoothMove();
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
@@ -596,28 +594,21 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    try {
-                                        serialPort.writeData("$CLEAR#", 1000);
-                                        for (int i = 0; i < markers.size(); i++) {
-                                            double latitude = markers.get(i).getPosition().latitude;
-                                            double longitude = markers.get(i).getPosition().longitude;
-                                            if (!(swNav.getSelectedTab() == 1 && i == markers.size() - 1
-                                                    && latitude == markers.get(0).getPosition().latitude
-                                                    && longitude == markers.get(0).getPosition().longitude)) {
-                                                serialPort.writeData(String.format(Locale.getDefault(),
-                                                        "$GNGGA,%.6f,%.6f#", latitude, longitude), 500);
-                                            }
+                                    coreService.writeData("$CLEAR#", 1000);
+                                    for (int i = 0; i < markers.size(); i++) {
+                                        double latitude = markers.get(i).getPosition().latitude;
+                                        double longitude = markers.get(i).getPosition().longitude;
+                                        if (!(swNav.getSelectedTab() == 1 && i == markers.size() - 1
+                                                && latitude == markers.get(0).getPosition().latitude
+                                                && longitude == markers.get(0).getPosition().longitude)) {
+                                            coreService.writeData(String.format(Locale.getDefault(),
+                                                    "$GNGGA,%.6f,%.6f#", latitude, longitude), 500);
                                         }
-                                        String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
-                                        writeSerialThreadPool.execute(new WriteSerialThread(data, GONE, READY));
+                                    }
+                                    String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
+                                    writeSerialThreadPool.execute(new WriteSerialThread(data, GONE, READY));
 //                                    serialPort.writeData(data, 500);
 //                                    mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
-                                    } catch (InterruptedException | IOException e) {
-                                        e.printStackTrace();
-                                        mHandler.sendEmptyMessage(3);
-                                    } finally {
-                                        mHandler.sendEmptyMessage(7);
-                                    }
                                 }
                             }).start();
                         } else {
@@ -887,10 +878,34 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
-    @Override
     public void onConnected() {
         new Thread(new QueryThread()).start();
         new Thread(new QueryStateTread()).start();
+    }
+
+    public void onReceived(String data) {
+        newData.append(data);
+    }
+
+    @Nullable
+    private String readData() {
+        try{
+            int timeGap = 0;
+            String result = newData.toString();
+            String oldResult = result;
+            while(timeGap < 200 && !result.endsWith("#"))
+            {
+                timeGap = result.equals(oldResult) ? timeGap + 1 : 0;
+                Thread.sleep(10);
+                oldResult = result;
+                result = newData.toString();
+            }
+            newData = new StringBuilder();
+            return result;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private void checkUpdate() {
@@ -1125,7 +1140,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
-    static class MyHandler extends Handler {
+    public static class MyHandler extends Handler {
         WeakReference<NewActivity> mActivity;
 
         MyHandler(NewActivity activity) {
@@ -1184,9 +1199,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     if (activity.loadingView.getVisibility() == View.VISIBLE) {
                         activity.loadingView.startAnimation(animation);
                     }
-                    synchronized (activity.serialPort) {
+                    synchronized (activity.coreService) {
                         activity.morph((Integer) msg.obj);
-                        activity.serialPort.notify();
+                        activity.coreService.notify();
                     }
                     break;
                 case 9:
@@ -1203,9 +1218,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             "此次航行用时%d小时%d分，大约行走%d米", msg.arg1 / 60, msg.arg1 % 60, msg.arg2));
                     activity.llFinish.setVisibility(View.VISIBLE);
                     activity.btnCtl.setVisibility(View.VISIBLE);
-                    synchronized (activity.serialPort) {
+                    synchronized (activity.coreService) {
                         activity.state = FINISH;
-                        activity.serialPort.notify();
+                        activity.coreService.notify();
                     }
                     break;
                 default:
@@ -1227,15 +1242,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             coreService.wait();
                         }
                         coreService.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type == 5 ? 7 : 0), 10);
-                        StringBuilder builder = new StringBuilder();
-                        while (!"".equals(data = coreService.readData())) {
-                            builder.append(data);
-                            if (data.endsWith("#")) {
-                                break;
-                            }
-                        }
+                        data = readData();
                         Thread.sleep(300);
-                        data = builder.toString();
                         if (!data.startsWith("$") || !data.endsWith("#")) {
                             continue;
                         } else {
@@ -1262,9 +1270,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     } catch (NumberFormatException | InterruptedException e) {
                         mHandler.sendMessage(mHandler.obtainMessage(5, data));
                         e.printStackTrace();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        mHandler.sendEmptyMessage(3);
                     }
                 }
             }
@@ -1289,16 +1294,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         break;
                     }
                     coreService.writeData("$QUERY,7#", 10);
-                    String data;
-                    StringBuilder builder = new StringBuilder();
-                    while (!"".equals(data = coreService.readData())) {
-                        builder.append(data);
-                        if (data.endsWith("#")) {
-                            break;
-                        }
-                    }
                     Thread.sleep(300);
-                    data = builder.toString();
+                    String data = readData();
                     if (!data.startsWith("$") || !data.endsWith("#")) {
                         continue;
                     } else {
@@ -1313,9 +1310,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         }
                     }
                 } while (true);
-            } catch (IOException e) {
-                e.printStackTrace();
-                mHandler.sendEmptyMessage(3);
             } catch (NumberFormatException | InterruptedException e) {
                 e.printStackTrace();
             } finally {
@@ -1342,16 +1336,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             try {
                 do {
                     coreService.writeData(mData, 10);
-                    String data;
-                    StringBuilder builder = new StringBuilder();
-                    while (!"".equals(data = coreService.readData())) {
-                        builder.append(data);
-                        if (data.endsWith("#")) {
-                            break;
-                        }
-                    }
                     Thread.sleep(1000);
-                    data = builder.toString();
+                    String data = readData();
                     Log.i("writeSerialPort", data);
                     if (data.contains(mData)) {
                         if (mState == NONE) {
@@ -1372,7 +1358,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         break;
                     }
                 } while (true);
-            } catch (IOException | InterruptedException e) {
+            } catch (InterruptedException e) {
                 e.printStackTrace();
                 mHandler.sendEmptyMessage(3);
             } finally {
@@ -1401,17 +1387,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         mHandler.sendMessage(mHandler.obtainMessage(8, FINISH));
                         break;
                     }
-                    serialPort.writeData("$QUERY,8#", 10);
-                    String data;
-                    StringBuilder builder = new StringBuilder();
-                    while (!"".equals(data = serialPort.readData())) {
-                        builder.append(data);
-                        if (data.endsWith("#")) {
-                            break;
-                        }
-                    }
+                    coreService.writeData("$QUERY,8#", 10);
                     Thread.sleep(300);
-                    data = builder.toString();
+                    String data = readData();
                     if (!data.startsWith("$") || !data.endsWith("#")) {
                         continue;
                     } else {
@@ -1429,13 +1407,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         }
                     }
                 } while (true);
-            } catch (IOException e) {
-                e.printStackTrace();
-                mHandler.sendEmptyMessage(3);
             } catch (NumberFormatException | InterruptedException e) {
                 e.printStackTrace();
-            } finally {
-                mHandler.sendEmptyMessage(7);
             }
         }
     }

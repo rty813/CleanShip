@@ -48,7 +48,7 @@
         </activity>
 
         <receiver
-            android:name=".BleStateReceiver"
+            android:name=".ble.BleStateReceiver"
             android:enabled="true"
             android:exported="false" />
 

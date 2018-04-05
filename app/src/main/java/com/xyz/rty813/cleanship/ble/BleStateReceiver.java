@@ -1,4 +1,4 @@
-package com.xyz.rty813.cleanship;
+package com.xyz.rty813.cleanship.ble;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.xyz.rty813.cleanship.ble.BluetoothLeService;
+import com.xyz.rty813.cleanship.NewActivity;
 
 import es.dmoral.toasty.Toasty;
 
@@ -29,6 +29,7 @@ public class BleStateReceiver extends BroadcastReceiver {
                 break;
             case BluetoothLeService.ACTION_DATA_AVAILABLE:
                 String data = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
+                activity.onReceived(data);
                 break;
             default:
                 break;
