@@ -803,8 +803,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         shipPointList = new ArrayList<>();
         shipPointList.add(new LatLng(0, 0));
         smoothMoveMarker = new SmoothMoveMarker(aMap);
-        smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromResource(R.drawable.ship));
-//        smoothMoveMarker.getMarker().setInfoWindowEnable(false);
+        smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(this, R.layout.ship, null)));
     }
 
     private void hideAll() {
@@ -860,6 +859,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 btnCtl.setVisibility(View.VISIBLE);
                 break;
             case FINISH:
+                llFinish.setVisibility(View.VISIBLE);
+                btnCtl.setVisibility(View.VISIBLE);
                 writeSerialThreadPool.execute(new QueryTimeDisThread());
                 break;
             default:
@@ -879,6 +880,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     public void onConnected() {
+        coreService.isConnected = true;
         new Thread(new QueryThread()).start();
         new Thread(new QueryStateTread()).start();
     }
@@ -1090,6 +1092,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             smoothMoveMarker.setTotalDuration(1);
             smoothMoveMarker.startSmoothMove();
             smoothMoveMarker.getMarker().setInfoWindowEnable(false);
+            smoothMoveMarker.getMarker().setFlat(true);
+            smoothMoveMarker.getMarker().setAnchor(0.5f, 0.5f);
             trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
                     shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.parseColor("#FFE418"))));
         }
@@ -1216,8 +1220,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     activity.tvFinish.setText(String.format(Locale.getDefault(),
                             "此次航行用时%d小时%d分，大约行走%d米", msg.arg1 / 60, msg.arg1 % 60, msg.arg2));
-                    activity.llFinish.setVisibility(View.VISIBLE);
-                    activity.btnCtl.setVisibility(View.VISIBLE);
                     synchronized (activity.coreService) {
                         activity.state = FINISH;
                         activity.coreService.notify();
@@ -1384,7 +1386,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     if (retryTimes == 6) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-                        mHandler.sendMessage(mHandler.obtainMessage(8, FINISH));
+                        mHandler.sendMessage(mHandler.obtainMessage(11, 0, 0));
                         break;
                     }
                     coreService.writeData("$QUERY,8#", 10);
@@ -1400,7 +1402,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         String[] strings = data.split(";");
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == 8) {
                             strings = strings[1].split(",");
-                            int time = (int) (Integer.parseInt(strings[0]) * 0.4 / 60);
+                            int time = (int) Math.round(Integer.parseInt(strings[0]) * 0.4 / 60);
                             int dis = Integer.parseInt(strings[1]);
                             mHandler.sendMessage(mHandler.obtainMessage(11, time, dis));
                             break;

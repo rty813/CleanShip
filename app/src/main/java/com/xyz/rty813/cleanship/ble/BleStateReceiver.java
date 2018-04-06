@@ -20,7 +20,7 @@ public class BleStateReceiver extends BroadcastReceiver {
                 activity.onConnected();
                 break;
             case BluetoothLeService.NPU_ACTION_GATT_DISCONNECTED:
-                activity.mHandler.sendEmptyMessage(6);
+                activity.mHandler.sendEmptyMessage(3);
                 Toasty.error(context, "连接失败", Toast.LENGTH_SHORT).show();
                 Log.e("BleStateReceiver", "onReceive: NPU_DISCONNECTED");
                 break;
