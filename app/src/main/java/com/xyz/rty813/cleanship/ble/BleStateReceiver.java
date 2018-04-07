@@ -1,5 +1,6 @@
 package com.xyz.rty813.cleanship.ble;
 
+import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -22,7 +23,6 @@ public class BleStateReceiver extends BroadcastReceiver {
                 break;
             case BluetoothLeService.NPU_ACTION_GATT_DISCONNECTED:
                 activity.mHandler.sendEmptyMessage(3);
-                Toasty.error(context, "连接失败", Toast.LENGTH_SHORT).show();
                 Log.e("BleStateReceiver", "onReceive: NPU_DISCONNECTED");
                 break;
             case BluetoothLeService.ACTION_GATT_DISCONNECTED:
@@ -31,6 +31,13 @@ public class BleStateReceiver extends BroadcastReceiver {
             case BluetoothLeService.ACTION_DATA_AVAILABLE:
                 String data = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
                 activity.onReceived(data);
+                break;
+            case NewActivity.ACTION_STATE_CHANGED:
+                int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,BluetoothAdapter.STATE_OFF);
+                Log.i("BLE_STATE", String.valueOf(state));
+                if (state == BluetoothAdapter.STATE_ON) {
+                    activity.initBleSerial();
+                }
                 break;
             default:
                 break;

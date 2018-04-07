@@ -127,6 +127,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
     private static final double CTL_RADIUS = 2000;
+    public static final String ACTION_STATE_CHANGED = "android.bluetooth.adapter.action.STATE_CHANGED";
     public static SQLiteDBHelper dbHelper;
     public MyHandler mHandler;
     private AMap aMap;
@@ -174,6 +175,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private int preState = Integer.MAX_VALUE;
     private ExecutorService writeSerialThreadPool;
     private CoreService coreService;
+    private BluetoothAdapter mBluetoothAdapter;
     private StringBuilder newData = null;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
@@ -181,7 +183,30 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             switch (view.getId()) {
                 case R.id.btn_connect:
                     if (!loadingView.isShowing()) {
-                        initBleSerial();
+//                        startActivity(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE));
+                        if (mBluetoothAdapter.isEnabled()) {
+                            showLoadingView("正在连接");
+                            initBleSerial();
+                        }
+                        else {
+                            new AlertDialog.Builder(NewActivity.this)
+                                    .setTitle("提示")
+                                    .setMessage("本应用需要打开蓝牙")
+                                    .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialogInterface, int i) {
+                                            showLoadingView("正在连接");
+                                            mBluetoothAdapter.enable();
+                                        }
+                                    })
+                                    .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialogInterface, int i) {
+                                            Toasty.error(NewActivity.this, "本应用需要打开蓝牙", Toast.LENGTH_SHORT).show();
+                                        }
+                                    })
+                                    .show();
+                        }
                     }
                     break;
                 case R.id.fab_plane:
@@ -209,8 +234,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
     };
 
-    private void initBleSerial() {
-        showLoadingView("正在连接");
+    public void initBleSerial() {
         coreService.connect();
     }
 
@@ -243,6 +267,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         filter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
         filter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
         filter.addAction(BluetoothLeService.NPU_ACTION_GATT_DISCONNECTED);
+        filter.addAction(ACTION_STATE_CHANGED);
         registerReceiver(bleStateReceiver, filter);
         super.onResume();
     }
@@ -835,6 +860,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 Toasty.error(this, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
                 btnConnect.setVisibility(View.VISIBLE);
                 preState = Integer.MAX_VALUE;
+                coreService.close();
                 resetMap();
                 break;
             case READY:
@@ -931,22 +957,19 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     private void requestPermission() {
         if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "当前系统不支持BLE！",Toast.LENGTH_SHORT).show();
             finish();
         }
-        BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        final BluetoothAdapter mBluetoothAdapter = bluetoothManager.getAdapter();
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
-            Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
+            Toasty.error(this, "当前系统不支持BLE！", Toast.LENGTH_SHORT).show();
             finish();
-            return;
         }
         AndPermission.with(this)
                 .permission(Permission.ACCESS_COARSE_LOCATION, Permission.WRITE_EXTERNAL_STORAGE)
                 .onGranted(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
-                        //开启蓝牙
                         bindService(new Intent(NewActivity.this, CoreService.class), serviceConnection, BIND_AUTO_CREATE);
                         ConnectivityManager manager = (ConnectivityManager) NewActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
                         NetworkInfo networkInfo = manager.getActiveNetworkInfo();
@@ -1279,11 +1302,19 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     private class QueryStateTread implements Runnable {
 
+        QueryStateTread() {
+            loadingView.setMessage("正在获取船状态");
+        }
+
         @Override
         public void run() {
             int retryTimes = 0;
             try {
                 do {
+                    if (!coreService.isConnected) {
+                        mHandler.sendEmptyMessage(6);
+                        break;
+                    }
                     retryTimes++;
                     if (retryTimes == 3) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));

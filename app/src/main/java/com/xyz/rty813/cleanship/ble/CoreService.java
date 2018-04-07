@@ -84,6 +84,13 @@ public class CoreService extends Service {
         }
     }
 
+    public void close() {
+        if (isConnected) {
+            isConnected = false;
+            bluetoothLeService.close();
+        }
+    }
+
     public class MyBinder extends Binder {
         public CoreService getService() {
             return CoreService.this;
