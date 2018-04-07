@@ -17,6 +17,7 @@ public class BleStateReceiver extends BroadcastReceiver {
         NewActivity activity = (NewActivity) context;
         switch (intent.getAction()) {
             case BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED:
+                Log.e("BleStateReceiver", "onReceive: ONCONNECTED!!!!!!!!");
                 activity.onConnected();
                 break;
             case BluetoothLeService.NPU_ACTION_GATT_DISCONNECTED:

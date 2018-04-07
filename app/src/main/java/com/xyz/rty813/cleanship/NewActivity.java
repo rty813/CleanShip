@@ -1,5 +1,8 @@
 package com.xyz.rty813.cleanship;
 
+import android.app.ProgressDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
@@ -8,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
@@ -35,9 +39,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.Animation;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -108,7 +109,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
-import app.dinus.com.loadingdrawable.LoadingView;
 import es.dmoral.toasty.Toasty;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
@@ -135,7 +135,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private int state;
     private boolean markEnable = false;
     private String pos = null;
-    private LoadingView loadingView;
+    private ProgressDialog loadingView;
     private MyReceiver myReceiver;
     private BleStateReceiver bleStateReceiver;
     private ArrayList<LatLng> shipPointList;
@@ -153,7 +153,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private SwitchMultiButton swNav;
     private Button btnHome;
     private Button btnHome2;
-    private Button btnGostop;
+    private Button btnGoStop;
     private AppCompatSeekBar seekBar;
     private Button btnVel;
     private Button btnHistory;
@@ -167,6 +167,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Button btnEnable;
     private TextView tvFinish;
     private TextView tvToolbar;
+    private TextView tvDate;
     private TextView tvCircle;
     private Circle limitCircle;
     private long routeID = -1;
@@ -179,8 +180,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         public void onClick(View view) {
             switch (view.getId()) {
                 case R.id.btn_connect:
-                    if (loadingView.getVisibility() == View.GONE) {
-                        showLoadingView();
+                    if (!loadingView.isShowing()) {
                         initBleSerial();
                     }
                     break;
@@ -210,7 +210,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     };
 
     private void initBleSerial() {
-        showLoadingView();
+        showLoadingView("正在连接");
         coreService.connect();
     }
 
@@ -298,6 +298,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         trace = new ArrayList<>();
         aimPointList = new ArrayList<>();
         newData = new StringBuilder();
+        loadingView = new ProgressDialog(this);
+        loadingView.setMessage("发送中");
+        loadingView.setTitle("提示");
+        loadingView.setCanceledOnTouchOutside(false);
+        loadingView.setCancelable(false);
         initSmoothMove();
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
@@ -305,7 +310,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     private void initView(Bundle savedInstanceState) {
-        loadingView = findViewById(R.id.loadingview);
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
 
@@ -320,7 +324,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         tvToolbar = findViewById(R.id.tv_toolbar);
         tvCircle = findViewById(R.id.tv_circle);
         tvFinish = findViewById(R.id.tv_finish);
-        btnGostop = findViewById(R.id.btn_gostop);
+        tvDate = findViewById(R.id.tv_date);
+        btnGoStop = findViewById(R.id.btn_gostop);
         btnHome2 = findViewById(R.id.btn_home2);
         btnHistory = findViewById(R.id.btn_history);
         btnManual = findViewById(R.id.btn_manual);
@@ -346,7 +351,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             public void onStopTrackingTouch(SeekBar seekBar) {
                 btnVel.setVisibility(View.VISIBLE);
                 btnHome2.setVisibility(View.VISIBLE);
-                btnGostop.setVisibility(View.VISIBLE);
+                btnGoStop.setVisibility(View.VISIBLE);
                 btnAbort.setVisibility(View.VISIBLE);
                 seekBar.setVisibility(View.GONE);
                 sharedPreferences.edit().putInt("seekbar", seekBar.getProgress()).apply();
@@ -369,7 +374,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnManual.setOnClickListener(this);
         btnHistory.setOnClickListener(this);
         btnHome.setOnClickListener(this);
-        btnGostop.setOnClickListener(this);
+        btnGoStop.setOnClickListener(this);
         btnEnable.setOnClickListener(this);
 
         btnConnect.setOnClickListener(clickListener);
@@ -589,7 +594,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             }
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
                             saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
-                            showLoadingView();
+                            showLoadingView("正在发送");
 //                            使QueryThread进入Wait
                             new Thread(new Runnable() {
                                 @Override
@@ -617,7 +622,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     break;
                 case R.id.btn_vel:
-                    btnGostop.setVisibility(View.GONE);
+                    btnGoStop.setVisibility(View.GONE);
                     btnAbort.setVisibility(View.GONE);
                     btnHome2.setVisibility(View.GONE);
                     btnVel.setVisibility(View.GONE);
@@ -839,16 +844,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 btnCtl.setVisibility(View.VISIBLE);
                 break;
             case GONE:
-                btnGostop.setText("暂停");
-                btnGostop.setCompoundDrawables(null, picPause, null, null);
+                btnGoStop.setText("暂停");
+                btnGoStop.setCompoundDrawables(null, picPause, null, null);
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
                 btnCtl.setVisibility(View.VISIBLE);
                 break;
             case PAUSE:
-                btnGostop.setText("开始");
-                btnGostop.setCompoundDrawables(null, picStart, null, null);
+                btnGoStop.setText("开始");
+                btnGoStop.setCompoundDrawables(null, picStart, null, null);
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
@@ -868,14 +873,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
-    private void showLoadingView() {
-        if (loadingView.getVisibility() == View.GONE) {
+    private void showLoadingView(String msg) {
+        if (!loadingView.isShowing()) {
             state = UNREADY;
-            findViewById(R.id.loadingview).setVisibility(View.VISIBLE);
-            AlphaAnimation animation = new AlphaAnimation(0.0f, 1.0f);
-            animation.setDuration(300);
-            animation.setInterpolator(new AccelerateDecelerateInterpolator());
-            findViewById(R.id.loadingview).startAnimation(animation);
+            loadingView.setMessage(msg);
+            loadingView.show();
         }
     }
 
@@ -928,11 +930,23 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     private void requestPermission() {
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
+            finish();
+        }
+        BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        final BluetoothAdapter mBluetoothAdapter = bluetoothManager.getAdapter();
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
         AndPermission.with(this)
                 .permission(Permission.ACCESS_COARSE_LOCATION, Permission.WRITE_EXTERNAL_STORAGE)
                 .onGranted(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
+                        //开启蓝牙
                         bindService(new Intent(NewActivity.this, CoreService.class), serviceConnection, BIND_AUTO_CREATE);
                         ConnectivityManager manager = (ConnectivityManager) NewActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
                         NetworkInfo networkInfo = manager.getActiveNetworkInfo();
@@ -1154,23 +1168,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         @Override
         public void handleMessage(Message msg) {
             final NewActivity activity = mActivity.get();
-            AlphaAnimation animation = new AlphaAnimation(1.0f, 0.0f);
-            animation.setDuration(300);
-            animation.setInterpolator(new AccelerateDecelerateInterpolator());
-            animation.setAnimationListener(new Animation.AnimationListener() {
-                @Override
-                public void onAnimationStart(Animation animation) {
-                }
-
-                @Override
-                public void onAnimationEnd(Animation animation) {
-                    activity.loadingView.setVisibility(View.GONE);
-                }
-
-                @Override
-                public void onAnimationRepeat(Animation animation) {
-                }
-            });
             switch (msg.what) {
                 case 1:
                     WindowManager.LayoutParams lp = activity.getWindow().getAttributes();
@@ -1181,8 +1178,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     ((PopupWindow) msg.obj).showAtLocation(activity.mMapView, Gravity.CENTER, 0, 0);
                     break;
                 case 3:
-                    if (activity.loadingView.getVisibility() == View.VISIBLE) {
-                        activity.loadingView.startAnimation(animation);
+                    if (activity.loadingView.isShowing()) {
+                        activity.loadingView.dismiss();
                     }
                     activity.morph(UNREADY);
                     break;
@@ -1192,16 +1189,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     Log.d("非法数据", (String) msg.obj);
                     break;
                 case 6:
-                    if (activity.loadingView.getVisibility() == View.VISIBLE) {
-                        activity.loadingView.startAnimation(animation);
+                    if (activity.loadingView.isShowing()) {
+                        activity.loadingView.dismiss();
                     }
                     break;
                 case 7:
 //                    btn_start.setEnabled(true);
                     break;
                 case 8:
-                    if (activity.loadingView.getVisibility() == View.VISIBLE) {
-                        activity.loadingView.startAnimation(animation);
+                    if (activity.loadingView.isShowing()) {
+                        activity.loadingView.dismiss();
                     }
                     synchronized (activity.coreService) {
                         activity.morph((Integer) msg.obj);
@@ -1215,11 +1212,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     activity.handleState((Integer) msg.obj);
                     break;
                 case 11:
-                    if (activity.loadingView.getVisibility() == View.VISIBLE) {
-                        activity.loadingView.startAnimation(animation);
+                    if (activity.loadingView.isShowing()) {
+                        activity.loadingView.dismiss();
                     }
                     activity.tvFinish.setText(String.format(Locale.getDefault(),
                             "此次航行用时%d小时%d分，大约行走%d米", msg.arg1 / 60, msg.arg1 % 60, msg.arg2));
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault());
+                    activity.tvDate.setText(dateFormat.format(new Date(System.currentTimeMillis())));
                     synchronized (activity.coreService) {
                         activity.state = FINISH;
                         activity.coreService.notify();
@@ -1329,7 +1328,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             mData = data;
             mState = state;
             mPreState = preState;
-            showLoadingView();
+            showLoadingView("正在发送");
         }
 
         @Override
@@ -1371,8 +1370,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     private class QueryTimeDisThread implements Runnable {
         QueryTimeDisThread() {
-            loadingView.setVisibility(View.GONE);
-            showLoadingView();
+            loadingView.dismiss();
+            showLoadingView("正在查询航时航程");
         }
 
         @Override

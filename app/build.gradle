@@ -6,8 +6,8 @@ android {
         applicationId "com.xyz.rty813.cleanship"
         minSdkVersion 21
         targetSdkVersion 27
-        versionCode 23
-        versionName "0.9.4"
+        versionCode 24
+        versionName "0.10.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -36,7 +36,6 @@ dependencies {
     implementation 'com.allenliu.versionchecklib:library:1.8.2'
     implementation files('lib/MiStats_SDK_Client_1_9_6.jar')
     implementation 'com.github.fccaikai:AppUpdate:2.1.4'
-    implementation project(':LoadingView')
     implementation 'com.github.clans:fab:1.6.4'
     implementation 'com.yanzhenjie.nohttp:nohttp:1.1.7'
     implementation 'com.google.code.gson:gson:2.8.2'

@@ -52,7 +52,7 @@
             android:layout_marginLeft="5dp"
             android:background="@color/toolbarBlue"
             android:src="@drawable/app_ctl"
-            android:visibility="gone" />
+            android:visibility="visible"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -303,7 +303,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:text="2018年3月15日" />
+                android:id="@+id/tv_date"
+                android:text="____年__月__日" />
 
             <TextView
                 android:id="@+id/tv_finish"
@@ -311,7 +312,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="15dp"
-                android:text="此次航行用时1小时30分，大约行走2KM"
+                android:text="此次航行用时__小时__分，大约行走_KM"
                 android:textColor="#000000" />
 
             <TextView
@@ -362,13 +363,5 @@
 
         </LinearLayout>
 
-        <app.dinus.com.loadingdrawable.LoadingView
-            android:id="@+id/loadingview"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:background="#ffd4d9da"
-            android:visibility="gone"
-            app:loading_renderer="CircleBroodLoadingRenderer" />
     </FrameLayout>
 </LinearLayout>

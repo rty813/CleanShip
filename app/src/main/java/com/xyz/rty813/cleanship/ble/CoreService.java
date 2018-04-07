@@ -50,7 +50,7 @@ public class CoreService extends Service {
     public void onDestroy() {
         super.onDestroy();
         System.out.println("CoreService被摧毁啦！onDestory");
-        Toast.makeText(CoreService.this, "蓝牙连接已断开，核心服务停止！", Toast.LENGTH_SHORT).show();
+//        Toast.makeText(CoreService.this, "蓝牙连接已断开，核心服务停止！", Toast.LENGTH_SHORT).show();
         if (bluetoothLeService != null) {
             bluetoothLeService.close();
             bluetoothLeService = null;

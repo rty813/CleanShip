@@ -7,4 +7,5 @@
     <string name="curr_lng">当前经度：</string>
     <string name="raw_data">原始数据：</string>
     <string name="gps_num">当前卫星数量：</string>
+    <string name="ble_not_supported">当前系统不支持BLE！</string>
 </resources>

@@ -1,1 +1,1 @@
-include ':app', ':LoadingView', ':libk-switchbutton'
+include ':app', ':libk-switchbutton'
