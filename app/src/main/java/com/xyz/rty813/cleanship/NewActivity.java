@@ -789,8 +789,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         shipPointList = new ArrayList<>();
         shipPointList.add(new LatLng(0, 0));
         smoothMoveMarker = new SmoothMoveMarker(aMap);
-        smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromResource(R.drawable.ship));
-//        smoothMoveMarker.getMarker().setInfoWindowEnable(false);
+        smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(this, R.layout.ship_view, null)));
     }
 
     private void hideAll() {
@@ -899,7 +898,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             // 无网络
                             Toasty.error(NewActivity.this, "请检查网络连接！", Toast.LENGTH_LONG).show();
                         }
-
+                        CameraUpdate cameraUpdate = CameraUpdateFactory.zoomTo(14);
+                        aMap.moveCamera(cameraUpdate);
                         MyLocationStyle myLocationStyle = new MyLocationStyle();
                         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE)
                                 .strokeColor(Color.parseColor("#00000000"))
@@ -908,8 +908,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         aMap.setMyLocationStyle(myLocationStyle);
                         // 设置为true表示启动显示定位蓝点，false表示隐藏定位蓝点并不进行定位，默认是false。
                         aMap.setMyLocationEnabled(true);
-                        CameraUpdate cameraUpdate = CameraUpdateFactory.zoomTo(14);
-                        aMap.moveCamera(cameraUpdate);
                         checkUpdate();
                     }
                 })
@@ -1051,6 +1049,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             smoothMoveMarker.setTotalDuration(1);
             smoothMoveMarker.startSmoothMove();
             smoothMoveMarker.getMarker().setInfoWindowEnable(false);
+            smoothMoveMarker.getMarker().setFlat(true);
             trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
                     shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.parseColor("#FFE418"))));
         }
