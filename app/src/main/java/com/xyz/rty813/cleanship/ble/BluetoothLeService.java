@@ -96,6 +96,21 @@ public class BluetoothLeService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
                 findService(gatt.getServices());
+                BluetoothGattService service = gatt.getService(UUID_SERVICE);
+                if (service == null) {
+                    Log.e(TAG, "onServicesDiscovered: Service not Found!!!!");
+                    sendBroadcast(new Intent(ACTION_GATT_DISCONNECTED));
+                } else {
+                    BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_NOTIFY);
+                    if (characteristic == null) {
+                        Log.e(TAG, "onServicesDiscovered: Characteristic not Found!!!!");
+                        sendBroadcast(new Intent(ACTION_GATT_DISCONNECTED));
+                    } else {
+                        mNotifyCharacteristic = characteristic;
+                        setCharacteristicNotification(characteristic, true);
+                        broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+                    }
+                }
             } else {
                 if (mBluetoothGatt.getDevice().getUuids() == null) {
                     Log.w(TAG, "onServicesDiscovered received: " + status);
@@ -157,27 +172,47 @@ public class BluetoothLeService extends Service {
     }
 
     public void findService(List<BluetoothGattService> gattServices) {
-        Log.i(TAG, "Count is:" + gattServices.size());
         for (BluetoothGattService gattService : gattServices) {
-            Log.i(TAG, gattService.getUuid().toString());
-            Log.i(TAG, UUID_SERVICE.toString());
-            if (gattService.getUuid().toString().equalsIgnoreCase(UUID_SERVICE.toString())) {
-                List<BluetoothGattCharacteristic> gattCharacteristics =
-                        gattService.getCharacteristics();
-                Log.i(TAG, "Count is:" + gattCharacteristics.size());
-                for (BluetoothGattCharacteristic gattCharacteristic :
-                        gattCharacteristics) {
-                    if (gattCharacteristic.getUuid().toString().equalsIgnoreCase(UUID_NOTIFY.toString())) {
-                        Log.i(TAG, gattCharacteristic.getUuid().toString());
-                        Log.i(TAG, UUID_NOTIFY.toString());
-                        mNotifyCharacteristic = gattCharacteristic;
-                        setCharacteristicNotification(gattCharacteristic, true);
-                        broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
-                        return;
-                    }
+            List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
+            for (BluetoothGattCharacteristic gattCharacteristic : gattCharacteristics) {
+                int charaProp = gattCharacteristic.getProperties();
+                if ((charaProp | BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
+                    Log.e(TAG, "gattCharacteristic的UUID为:" + gattCharacteristic.getUuid());
+                    Log.e(TAG, "gattCharacteristic的属性为:  可读");
                 }
+                if ((charaProp | BluetoothGattCharacteristic.PROPERTY_WRITE) > 0) {
+                    Log.e(TAG, "gattCharacteristic的UUID为:" + gattCharacteristic.getUuid());
+                    Log.e(TAG, "gattCharacteristic的属性为:  可写");
+                }
+                if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
+                    Log.e(TAG, "gattCharacteristic的UUID为:" + gattCharacteristic.getUuid() + gattCharacteristic);
+                    Log.e(TAG, "gattCharacteristic的属性为:  具备通知属性");
+                }
+
             }
         }
+//
+//        Log.i(TAG, "Count is:" + gattServices.size());
+//        for (BluetoothGattService gattService : gattServices) {
+//            Log.i(TAG, gattService.getUuid().toString());
+//            Log.i(TAG, UUID_SERVICE.toString());
+//            if (gattService.getUuid().toString().equalsIgnoreCase(UUID_SERVICE.toString())) {
+//                List<BluetoothGattCharacteristic> gattCharacteristics =
+//                        gattService.getCharacteristics();
+//                Log.i(TAG, "Count is:" + gattCharacteristics.size());
+//                for (BluetoothGattCharacteristic gattCharacteristic :
+//                        gattCharacteristics) {
+//                    if (gattCharacteristic.getUuid().toString().equalsIgnoreCase(UUID_NOTIFY.toString())) {
+//                        Log.i(TAG, gattCharacteristic.getUuid().toString());
+//                        Log.i(TAG, UUID_NOTIFY.toString());
+//                        mNotifyCharacteristic = gattCharacteristic;
+//                        setCharacteristicNotification(gattCharacteristic, true);
+//                        broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
+//                        return;
+//                    }
+//                }
+//            }
+//        }
     }
 
     private void broadcastUpdate(final String action) {

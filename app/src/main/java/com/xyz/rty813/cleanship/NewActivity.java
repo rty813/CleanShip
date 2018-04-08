@@ -2,7 +2,6 @@ package com.xyz.rty813.cleanship;
 
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothManager;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
@@ -116,6 +115,7 @@ import lib.kingja.switchbutton.SwitchMultiButton;
  * @author doufu
  */
 public class NewActivity extends AppCompatActivity implements View.OnClickListener{
+    public static final String ACTION_STATE_CHANGED = "android.bluetooth.adapter.action.STATE_CHANGED";
     private static final int READY = 1;
     private static final int UNREADY = 0;
     private static final int GONE = 2;
@@ -127,7 +127,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
     private static final double CTL_RADIUS = 2000;
-    public static final String ACTION_STATE_CHANGED = "android.bluetooth.adapter.action.STATE_CHANGED";
     public static SQLiteDBHelper dbHelper;
     public MyHandler mHandler;
     private AMap aMap;
@@ -183,7 +182,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             switch (view.getId()) {
                 case R.id.btn_connect:
                     if (!loadingView.isShowing()) {
-//                        startActivity(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE));
                         if (mBluetoothAdapter.isEnabled()) {
                             showLoadingView("正在连接");
                             initBleSerial();
@@ -246,6 +244,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         MiStatInterface.setUploadPolicy(MiStatInterface.UPLOAD_POLICY_REALTIME, 0);
         MiStatInterface.enableExceptionCatcher(true);
         URLStatsRecorder.enableAutoRecord();
+        bindService(new Intent(NewActivity.this, CoreService.class), serviceConnection, BIND_AUTO_CREATE);
         initView(savedInstanceState);
         initAMap();
         initClass();
@@ -970,7 +969,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 .onGranted(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
-                        bindService(new Intent(NewActivity.this, CoreService.class), serviceConnection, BIND_AUTO_CREATE);
                         ConnectivityManager manager = (ConnectivityManager) NewActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
                         NetworkInfo networkInfo = manager.getActiveNetworkInfo();
                         if (networkInfo == null || !networkInfo.isAvailable()) {

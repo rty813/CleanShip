@@ -3,68 +3,74 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    android:background="@drawable/permission_ask_background"
     android:orientation="vertical"
-    android:padding="20dp"
-    android:background="@drawable/permission_ask_background">
+    android:padding="20dp">
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:textColor="@android:color/black"
         android:layout_margin="10dp"
-        android:textSize="25sp"
-        android:text="开启小蓝船"/>
+        android:text="开启小蓝船"
+        android:textColor="@android:color/black"
+        android:textSize="25sp" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:text="为了您正常使用小蓝船，需要以下信息"/>
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="250dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:orientation="horizontal">
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
             android:layout_margin="10dp"
-            android:src="@mipmap/ic_launcher"/>
+            android:layout_weight="1"
+            android:src="@drawable/permissionask1" />
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
             android:layout_margin="10dp"
-            android:src="@drawable/new_delete"/>
+            android:layout_weight="1"
+            android:src="@drawable/permissionask2" />
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
             android:layout_margin="10dp"
-            android:src="@drawable/help"/>
+            android:layout_weight="1"
+            android:src="@drawable/permissionask3" />
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
             android:layout_margin="10dp"
-            android:src="@drawable/more"/>
+            android:layout_weight="1"
+            android:src="@drawable/permissionask4" />
     </LinearLayout>
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
         android:layout_marginTop="5dp"
-        android:textColor="#313131"
-        android:text="获取此设备的位置信息。"/>
+        android:text="获取此设备的位置信息。"
+        android:textColor="#313131" />
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
         android:layout_marginTop="5dp"
-        android:textColor="#313131"
-        android:text="访问您设备上的照片、媒体内容和文件。"/>
+        android:text="访问您设备上的照片、媒体内容和文件。"
+        android:textColor="#313131" />
 
     <Button
+        android:id="@+id/btn_next"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="下一步"
-        android:id="@+id/btn_next"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="15dp"
-        android:textColor="@android:color/white"
-        android:background="@drawable/shape_gradient"/>
+        android:background="@drawable/shape_gradient"
+        android:text="下一步"
+        android:textColor="@android:color/white" />
 </LinearLayout>

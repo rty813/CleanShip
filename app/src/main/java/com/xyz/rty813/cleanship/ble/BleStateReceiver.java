@@ -26,6 +26,8 @@ public class BleStateReceiver extends BroadcastReceiver {
                 Log.e("BleStateReceiver", "onReceive: NPU_DISCONNECTED");
                 break;
             case BluetoothLeService.ACTION_GATT_DISCONNECTED:
+                Toasty.error(context, "本手机不支持该蓝牙模块！请联系开发者", Toast.LENGTH_LONG).show();
+                activity.mHandler.sendEmptyMessage(3);
                 Log.e("BleStateReceiver", "onReceive: GATT_DISCONNECTED");
                 break;
             case BluetoothLeService.ACTION_DATA_AVAILABLE:
@@ -37,6 +39,9 @@ public class BleStateReceiver extends BroadcastReceiver {
                 Log.i("BLE_STATE", String.valueOf(state));
                 if (state == BluetoothAdapter.STATE_ON) {
                     activity.initBleSerial();
+                }
+                if (state == BluetoothAdapter.STATE_OFF) {
+                    activity.mHandler.sendEmptyMessage(3);
                 }
                 break;
             default:
