@@ -1,15 +1,12 @@
 package com.xyz.rty813.cleanship.ble;
 
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
-import android.widget.Toast;
 
 
 /**
@@ -69,25 +66,16 @@ public class CoreService extends Service {
 
     public synchronized void writeData(String data, long delay) {
         if (isConnected) {
-            if (data.length() > 20) {
-                String data1 = data.substring(19);
-                String data2 = data.substring(0, 19);
-                bluetoothLeService.WriteValue(data2);
-                if (data1 == null || data1.equals("")) {
-                    data1 = "";
-                }
-                data1 += "\r\n";
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                bluetoothLeService.WriteValue(data1);
-
-            } else {
-                bluetoothLeService.WriteValue(data + "\r\n");
-            }
             try {
+                if (data.length() > 20) {
+                    String data1 = data.substring(0, 20);
+                    String data2 = data.substring(20) + "\r\n";
+                    bluetoothLeService.WriteValue(data1);
+                    Thread.sleep(100);
+                    bluetoothLeService.WriteValue(data2);
+                } else {
+                    bluetoothLeService.WriteValue(data + "\r\n");
+                }
                 Thread.sleep(delay);
             } catch (InterruptedException e) {
                 e.printStackTrace();

@@ -1135,7 +1135,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     public void handleState(int state) {
-        if (state != preState) {
+        if (state != preState && state >= -5) {
             long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
             int tempState = UNREADY;
             swNav.setSelectedTab(0);
