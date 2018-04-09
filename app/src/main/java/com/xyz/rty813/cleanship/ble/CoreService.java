@@ -69,7 +69,24 @@ public class CoreService extends Service {
 
     public synchronized void writeData(String data, long delay) {
         if (isConnected) {
-            bluetoothLeService.WriteValue(data);
+            if (data.length() > 20) {
+                String data1 = data.substring(19);
+                String data2 = data.substring(0, 19);
+                bluetoothLeService.WriteValue(data2);
+                if (data1 == null || data1.equals("")) {
+                    data1 = "";
+                }
+                data1 += "\r\n";
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                bluetoothLeService.WriteValue(data1);
+
+            } else {
+                bluetoothLeService.WriteValue(data + "\r\n");
+            }
             try {
                 Thread.sleep(delay);
             } catch (InterruptedException e) {
