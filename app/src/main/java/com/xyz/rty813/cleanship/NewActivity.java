@@ -94,7 +94,12 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.ref.WeakReference;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -617,12 +622,48 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                 stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
                             }
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
-                            saveRoute(dateFormat.format(new Date(System.currentTimeMillis())), stringBuilder.toString(), pos);
+                            final String date = dateFormat.format(new Date(System.currentTimeMillis()));
+                            saveRoute(date, stringBuilder.toString(), pos);
                             showLoadingView("正在发送");
 //                            使QueryThread进入Wait
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
+                                    try {
+                                        StringBuilder builder = new StringBuilder();
+                                        builder.append("lat=")
+                                                .append(markers.get(0).getPosition().latitude)
+                                                .append("&lng=")
+                                                .append(markers.get(0).getPosition().longitude)
+                                                .append("&addr=")
+                                                .append(pos)
+                                                .append("&date=")
+                                                .append(date.replace(" ", "+"));
+//                                        String data = builder.toString();
+                                        byte[] data = builder.toString().getBytes();
+                                        URL url = new URL("http://orca-tech.cn/app/data_collect.php");
+                                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                                        connection.setRequestMethod("POST");
+                                        connection.setConnectTimeout(5000);
+                                        connection.setRequestProperty("Content-Length", data.length + "");
+                                        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                                        connection.setDoOutput(true);
+                                        OutputStream outputStream = connection.getOutputStream();
+                                        outputStream.write(data);
+                                        int responseCode = connection.getResponseCode();
+                                        if (responseCode == 200) {
+                                            Log.d("data_collect", "ok");
+                                            mHandler.sendMessage(mHandler.obtainMessage(9, "OK"));
+                                        } else {
+                                            Log.d("data_collect", "err");
+                                            mHandler.sendMessage(mHandler.obtainMessage(9, "ERR"));
+                                        }
+                                        outputStream.close();
+                                    } catch (MalformedURLException e) {
+                                        e.printStackTrace();
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
                                     coreService.writeData("$CLEAR#", 1000);
                                     for (int i = 0; i < markers.size(); i++) {
                                         double latitude = markers.get(i).getPosition().latitude;
