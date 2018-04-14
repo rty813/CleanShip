@@ -11,6 +11,7 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
@@ -152,6 +153,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Button btnConnect;
     private LinearLayout llFinish;
     private LinearLayout llNav;
+    private LinearLayout llFab;
     private LinearLayout llMark;
     private LinearLayout llMethod;
     private LinearLayout llHome;
@@ -169,6 +171,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Drawable picMarkEnable;
     private Drawable picMarkDisable;
     private FloatingActionButton btnCtl;
+    private FloatingActionButton btnUs;
     private Button btnEnable;
     private TextView tvFinish;
     private TextView tvShipCharge;
@@ -182,6 +185,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private CoreService coreService;
     private BluetoothAdapter mBluetoothAdapter;
     private StringBuilder newData = null;
+    private ColorStateList usClose;
+    private ColorStateList usOpen;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
@@ -214,6 +219,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     break;
                 case R.id.fab_plane:
+                    coreService.showNotification(false);
                     ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
                     aMap.setMapType(AMap.MAP_TYPE_NORMAL);
                     break;
@@ -230,6 +236,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             coreService = ((CoreService.MyBinder) iBinder).getService();
+            coreService.showNotification(true);
         }
 
         @Override
@@ -239,7 +246,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     };
 
     public void initBleSerial() {
-        coreService.connect();
+        if (coreService.isConnected) {
+            onConnected();
+        } else {
+            coreService.connect();
+        }
     }
 
     @Override
@@ -251,6 +262,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         MiStatInterface.enableExceptionCatcher(true);
         URLStatsRecorder.enableAutoRecord();
         bindService(new Intent(NewActivity.this, CoreService.class), serviceConnection, BIND_AUTO_CREATE);
+        startService(new Intent(NewActivity.this, CoreService.class));
         initView(savedInstanceState);
         initAMap();
         initClass();
@@ -289,6 +301,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     @Override
     protected void onDestroy() {
         state = UNREADY;
+        coreService.showNotification(true);
         mMapView.onDestroy();
         unbindService(serviceConnection);
         super.onDestroy();
@@ -334,6 +347,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         loadingView.setCanceledOnTouchOutside(false);
         loadingView.setCancelable(false);
         initSmoothMove();
+        usOpen = getResources().getColorStateList(R.color.colorAccent);
+        usClose = getResources().getColorStateList(R.color.gray);
+        btnUs.setBackgroundTintList(usClose);
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
@@ -350,6 +366,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llMethod = findViewById(R.id.ll_method);
         llFinish = findViewById(R.id.ll_finish);
         llHome = findViewById(R.id.ll_home);
+        llFab = findViewById(R.id.ll_fab);
         swNav = findViewById(R.id.sw_nav);
         tvToolbar = findViewById(R.id.tv_toolbar);
         tvCircle = findViewById(R.id.tv_circle);
@@ -363,6 +380,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnAbort = findViewById(R.id.btn_abort);
         btnEnable = findViewById(R.id.btn_enable);
         btnCtl = findViewById(R.id.btn_ctl);
+        btnUs = findViewById(R.id.btn_us);
         seekBar = findViewById(R.id.seekbar);
         tvShipCharge = findViewById(R.id.tv_shipcharge);
         final SharedPreferences sharedPreferences = this.getSharedPreferences("cleanship", MODE_PRIVATE);
@@ -400,6 +418,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.btn_reload).setOnClickListener(this);
         findViewById(R.id.btn_finish).setOnClickListener(this);
         findViewById(R.id.btn_stop_home).setOnClickListener(this);
+        btnUs.setOnClickListener(this);
         btnCtl.setOnClickListener(this);
         btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
@@ -747,10 +766,21 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 case R.id.btn_ctl:
                     writeSerialThreadPool.execute(new WriteSerialThread("$ORDER,7#", NONE, state));
                     break;
+                case R.id.btn_us:
+                    boolean usEnable = btnUs.getBackgroundTintList().equals(usClose);
+                    writeSerialThreadPool.execute(new WriteSerialThread(
+                            String.format(Locale.getDefault(), "$ORDER,8,%d#", usEnable ? 1 : 0), NONE, state));
+                    setBtnUs(usEnable);
+                    break;
                 default:
                     break;
             }
         }
+    }
+
+    public void setBtnUs(boolean open) {
+        Toasty.info(NewActivity.this, String.valueOf(open), Toast.LENGTH_SHORT).show();
+        btnUs.setBackgroundTintList(open ? usOpen : usClose);
     }
 
     private void loadHistory(final SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
@@ -882,11 +912,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llMark.setVisibility(View.GONE);
         llMethod.setVisibility(View.INVISIBLE);
         llNav.setVisibility(View.GONE);
-        btnHome.setVisibility(View.GONE);
-        llHome.setVisibility(View.GONE);
-        btnConnect.setVisibility(View.GONE);
         llFinish.setVisibility(View.GONE);
-        btnCtl.setVisibility(View.VISIBLE);
+        llHome.setVisibility(View.GONE);
+        llFab.setVisibility(View.VISIBLE);
+        btnHome.setVisibility(View.GONE);
+        btnConnect.setVisibility(View.GONE);
         tvShipCharge.setVisibility(View.VISIBLE);
     }
 
@@ -907,6 +937,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 resetMap();
                 btnCtl.setVisibility(View.INVISIBLE);
                 tvShipCharge.setVisibility(View.INVISIBLE);
+                llFab.setVisibility(View.INVISIBLE);
                 break;
             case READY:
                 llMark.setVisibility(View.VISIBLE);
@@ -949,6 +980,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     public void onConnected() {
         coreService.isConnected = true;
+        coreService.showNotification(true);
         new Thread(new QueryThread()).start();
         new Thread(new QueryStateTread()).start();
     }
@@ -1309,7 +1341,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             coreService.wait();
                         }
                         coreService.writeData(String.format(Locale.getDefault(),
-                                "$QUERY,%d#", (type == 7 || type == 9) ? type : 0), 10);
+                                "$QUERY,%d#", (type == 0 ? 9 : (type % 5 == 0 ? 7 : 0))), 10);
                         data = readData();
                         Thread.sleep(300);
                         if (!data.startsWith("$") || !data.endsWith("#")) {
@@ -1319,7 +1351,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                         }
 
-                        type = (type + 1) % 10;
+                        type = (type + 1) % 100;
                         if (!"".equals(data)) {
                             retryTimes = 0;
                             String[] strings = data.split(";");

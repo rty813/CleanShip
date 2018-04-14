@@ -5,6 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/toolbarBlue"
     android:fitsSystemWindows="true"
+    android:keepScreenOn="true"
     android:orientation="vertical">
 
     <android.support.v7.widget.Toolbar
@@ -44,15 +45,29 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <android.support.design.widget.FloatingActionButton
-            android:id="@+id/btn_ctl"
+        <LinearLayout
+            android:id="@+id/ll_fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
-            android:layout_marginLeft="5dp"
-            android:background="@color/toolbarBlue"
-            android:src="@drawable/app_ctl"
-            android:visibility="visible"/>
+            android:layout_marginStart="5dp"
+            android:orientation="vertical"
+            android:visibility="invisible">
+
+            <android.support.design.widget.FloatingActionButton
+                android:id="@+id/btn_ctl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/app_ctl" />
+
+            <android.support.design.widget.FloatingActionButton
+                android:id="@+id/btn_us"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:layout_marginTop="10dp" />
+        </LinearLayout>
+
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -133,7 +148,7 @@
             android:layout_margin="10dp"
             android:background="@color/velGray"
             android:padding="15dp"
-            android:text="开启小蓝船"
+            android:text="@string/btn_connect"
             android:textColor="@color/mb_white"
             android:textSize="20sp" />
 

@@ -50,7 +50,8 @@ public class MyReceiver extends BroadcastReceiver {
                         activity.move();
                         break;
                     case 7:
-                        activity.handleState(Integer.parseInt(data));
+                        activity.handleState(Integer.parseInt(datas[0]));
+                        activity.setBtnUs("1".equals(datas[1]));
                         break;
                     case 9:
                         activity.setShipCharge(Integer.parseInt(data));
@@ -62,6 +63,5 @@ public class MyReceiver extends BroadcastReceiver {
                 e.printStackTrace();
             }
         }
-
     }
 }
