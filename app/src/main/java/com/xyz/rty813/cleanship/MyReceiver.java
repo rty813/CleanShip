@@ -52,8 +52,9 @@ public class MyReceiver extends BroadcastReceiver {
                     case 7:
                         activity.handleState(Integer.parseInt(data));
                         break;
-                    case 8:
-
+                    case 9:
+                        activity.setShipCharge(Integer.parseInt(data));
+                        break;
                     default:
                         break;
                 }

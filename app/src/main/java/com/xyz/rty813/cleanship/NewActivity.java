@@ -171,6 +171,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private FloatingActionButton btnCtl;
     private Button btnEnable;
     private TextView tvFinish;
+    private TextView tvShipCharge;
     private TextView tvToolbar;
     private TextView tvDate;
     private TextView tvCircle;
@@ -363,6 +364,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnEnable = findViewById(R.id.btn_enable);
         btnCtl = findViewById(R.id.btn_ctl);
         seekBar = findViewById(R.id.seekbar);
+        tvShipCharge = findViewById(R.id.tv_shipcharge);
         final SharedPreferences sharedPreferences = this.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -884,7 +886,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llHome.setVisibility(View.GONE);
         btnConnect.setVisibility(View.GONE);
         llFinish.setVisibility(View.GONE);
-        btnCtl.setVisibility(View.GONE);
+        btnCtl.setVisibility(View.VISIBLE);
+        tvShipCharge.setVisibility(View.VISIBLE);
     }
 
     private void morph(int state) {
@@ -902,12 +905,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 preState = Integer.MAX_VALUE;
                 coreService.close();
                 resetMap();
+                btnCtl.setVisibility(View.INVISIBLE);
+                tvShipCharge.setVisibility(View.INVISIBLE);
                 break;
             case READY:
                 llMark.setVisibility(View.VISIBLE);
                 llMethod.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.VISIBLE);
-                btnCtl.setVisibility(View.VISIBLE);
                 break;
             case GONE:
                 btnGoStop.setText("暂停");
@@ -915,7 +919,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-                btnCtl.setVisibility(View.VISIBLE);
                 break;
             case PAUSE:
                 btnGoStop.setText("开始");
@@ -923,15 +926,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-                btnCtl.setVisibility(View.VISIBLE);
                 break;
             case HOMING:
                 llHome.setVisibility(View.VISIBLE);
-                btnCtl.setVisibility(View.VISIBLE);
                 break;
             case FINISH:
                 llFinish.setVisibility(View.VISIBLE);
-                btnCtl.setVisibility(View.VISIBLE);
                 writeSerialThreadPool.execute(new QueryTimeDisThread());
                 break;
             default:
@@ -1152,6 +1152,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         initSmoothMove();
     }
 
+    public void setShipCharge(int shipCharge) {
+        tvShipCharge.setText(String.format(Locale.getDefault(), "剩余电量：%d%%", shipCharge));
+    }
+
     public ArrayList<LatLng> getShipPointList() {
         return shipPointList;
     }
@@ -1304,7 +1308,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         if (state == UNREADY) {
                             coreService.wait();
                         }
-                        coreService.writeData(String.format(Locale.getDefault(), "$QUERY,%d#", type == 5 ? 7 : 0), 10);
+                        coreService.writeData(String.format(Locale.getDefault(),
+                                "$QUERY,%d#", (type == 7 || type == 9) ? type : 0), 10);
                         data = readData();
                         Thread.sleep(300);
                         if (!data.startsWith("$") || !data.endsWith("#")) {
@@ -1314,6 +1319,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                         }
 
+                        type = (type + 1) % 10;
                         if (!"".equals(data)) {
                             retryTimes = 0;
                             String[] strings = data.split(";");
@@ -1321,7 +1327,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             if (strings.length == 2) {
                                 intent.putExtra("type", Integer.parseInt(strings[0]));
                                 intent.putExtra("data", strings[1]);
-                                type = (type + 1) % 6;
                             }
                             sendBroadcast(intent);
                         } else {
