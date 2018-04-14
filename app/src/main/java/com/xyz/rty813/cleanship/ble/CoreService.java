@@ -15,6 +15,7 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
+import android.widget.RemoteViews;
 
 import com.xyz.rty813.cleanship.NewActivity;
 import com.xyz.rty813.cleanship.R;
@@ -75,6 +76,21 @@ public class CoreService extends Service {
         }
     }
 
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        System.out.println("CoreService被摧毁啦！onTaskRemoved");
+        super.onTaskRemoved(rootIntent);
+        showNotification(false);
+        unregisterReceiver(mReceiver);
+        if (bluetoothLeService != null) {
+            bluetoothLeService.close();
+            bluetoothLeService = null;
+        }
+        if (isBindBleService) {
+            unbindService(mServiceConnection);
+        }
+    }
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -119,25 +135,24 @@ public class CoreService extends Service {
         NotificationCompat.Builder builder;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             NotificationChannel notificationChannel = new NotificationChannel("1", "正在运行", NotificationManager.IMPORTANCE_HIGH);
-            notificationChannel.enableLights(false);
-            notificationChannel.enableVibration(false);
-            notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-            notificationChannel.setShowBadge(false);
             notificationManager.createNotificationChannel(notificationChannel);
             builder = new NotificationCompat.Builder(this, "1");
         } else {
             builder = new NotificationCompat.Builder(this);
         }
-        builder.setContentTitle(getResources().getString(R.string.app_name))
-                .setContentText(isConnected ? "已连接" : "未连接")
-                .setContentIntent(PendingIntent.getActivity(this, 0,
-                        new Intent(this, NewActivity.class), 0))
+        RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.notification);
+
+        builder.setContentIntent(PendingIntent.getActivity(this, 0,
+                new Intent(this, NewActivity.class), 0))
+                .setContent(remoteViews)
+//                .setContentTitle(getResources().getString(R.string.app_name))
+//                .setContentText(isConnected ? "已连接" : "未连接")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setTicker(isConnected ? "已连接" : "未连接")
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .setOngoing(true)
                 .setSmallIcon(R.mipmap.ic_launcher);
         Notification notification = builder.build();
+        notification.flags |= Notification.FLAG_NO_CLEAR;
 
         if (enable) {
             notificationManager.notify(666, notification);
