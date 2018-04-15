@@ -52,20 +52,23 @@
             android:layout_gravity="center_vertical"
             android:layout_marginStart="5dp"
             android:orientation="vertical"
-            android:visibility="invisible">
+            android:visibility="visible">
 
             <android.support.design.widget.FloatingActionButton
                 android:id="@+id/btn_ctl"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/app_ctl" />
+                android:layout_margin="5dp"
+                android:src="@drawable/app_ctl"
+                app:elevation="4dp" />
 
             <android.support.design.widget.FloatingActionButton
                 android:id="@+id/btn_us"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:layout_marginTop="10dp" />
+                android:layout_margin="5dp"
+                android:src="@drawable/btn_us"
+                app:elevation="4dp" />
         </LinearLayout>
 
 
@@ -105,7 +108,7 @@
                 android:id="@+id/tv_shipcharge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="剩余电量：0%"
+                android:text="剩余电量：100%"
                 android:textColor="@android:color/white"
                 android:visibility="invisible" />
 

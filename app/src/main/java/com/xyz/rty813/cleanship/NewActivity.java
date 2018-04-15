@@ -187,6 +187,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private StringBuilder newData = null;
     private ColorStateList usClose;
     private ColorStateList usOpen;
+    //    private int shipCharge = 100;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
@@ -196,8 +197,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         if (mBluetoothAdapter.isEnabled()) {
                             showLoadingView("正在连接");
                             initBleSerial();
-                        }
-                        else {
+                        } else {
                             new AlertDialog.Builder(NewActivity.this)
                                     .setTitle("提示")
                                     .setMessage("本应用需要打开蓝牙")
@@ -219,7 +219,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     break;
                 case R.id.fab_plane:
-                    coreService.showNotification(false);
                     ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
                     aMap.setMapType(AMap.MAP_TYPE_NORMAL);
                     break;
@@ -236,7 +235,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             coreService = ((CoreService.MyBinder) iBinder).getService();
-            coreService.showNotification(true);
+            coreService.startBackgroundThread(false);
         }
 
         @Override
@@ -301,9 +300,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     @Override
     protected void onDestroy() {
         state = UNREADY;
-        coreService.showNotification(true);
-        mMapView.onDestroy();
+        if (!coreService.isConnected) {
+            stopService(new Intent(this, CoreService.class));
+        } else {
+            coreService.startBackgroundThread(true);
+        }
         unbindService(serviceConnection);
+        mMapView.onDestroy();
         super.onDestroy();
     }
 
@@ -348,7 +351,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         loadingView.setCancelable(false);
         initSmoothMove();
         usOpen = getResources().getColorStateList(R.color.colorAccent);
-        usClose = getResources().getColorStateList(R.color.gray);
+        usClose = getResources().getColorStateList(R.color.usgray);
         btnUs.setBackgroundTintList(usClose);
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
@@ -980,7 +983,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     public void onConnected() {
         coreService.isConnected = true;
-        coreService.showNotification(true);
         new Thread(new QueryThread()).start();
         new Thread(new QueryStateTread()).start();
     }
@@ -1185,6 +1187,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     public void setShipCharge(int shipCharge) {
+//        this.shipCharge = shipCharge;
         tvShipCharge.setText(String.format(Locale.getDefault(), "剩余电量：%d%%", shipCharge));
     }
 

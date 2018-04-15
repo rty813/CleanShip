@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout android:layout_width="match_parent"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="10dp"
-    xmlns:android="http://schemas.android.com/apk/res/android" >
+    android:paddingBottom="10dp"
+    android:paddingEnd="16dp"
+    android:paddingStart="16dp"
+    android:paddingTop="10dp">
     <ImageView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -12,27 +15,32 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_marginStart="20dp"
+        android:gravity="center_vertical"
         android:orientation="vertical">
         <TextView
+            style="@android:style/TextAppearance.Material.Notification.Title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="蓝藻抑制机器人"
-            style="@android:style/TextAppearance.Material.Notification.Title"/>
+            android:text="蓝藻抑制机器人" />
         <TextView
+            android:id="@+id/tv_charge"
+            style="@android:style/TextAppearance.Material.Notification"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            style="@android:style/TextAppearance.Material.Notification"
-            android:text="已连接"/>
+            android:text="剩余电量：0%" />
     </LinearLayout>
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <Button
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical">
+
+        <ImageButton
+            android:id="@+id/btn_close"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
-            android:text="关闭"
-            android:id="@+id/btn_close"
+            android:background="#00000000"
+            android:src="@drawable/close"
             />
     </FrameLayout>
 
