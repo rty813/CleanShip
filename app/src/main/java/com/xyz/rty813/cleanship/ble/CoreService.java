@@ -121,7 +121,7 @@ public class CoreService extends Service {
                     String data1 = data.substring(0, 20);
                     String data2 = data.substring(20) + "\r\n";
                     bluetoothLeService.WriteValue(data1);
-                    Thread.sleep(100);
+                    Thread.sleep(1000);
                     bluetoothLeService.WriteValue(data2);
                 } else {
                     bluetoothLeService.WriteValue(data + "\r\n");

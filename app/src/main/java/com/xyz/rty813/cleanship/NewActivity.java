@@ -21,6 +21,7 @@ import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -662,6 +663,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             saveRoute(date, stringBuilder.toString(), pos);
                             showLoadingView("正在发送");
 //                            使QueryThread进入Wait
+//                            String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
+//                            new MyAsyncTask(this, new WriteSerialThread(data, GONE, READY), markers.size(), date).execute();
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
@@ -675,7 +678,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                                 .append(pos)
                                                 .append("&date=")
                                                 .append(date.replace(" ", "+"));
-//                                        String data = builder.toString();
                                         byte[] data = builder.toString().getBytes();
                                         URL url = new URL("http://orca-tech.cn/app/data_collect.php");
                                         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -689,10 +691,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                         int responseCode = connection.getResponseCode();
                                         if (responseCode == 200) {
                                             Log.d("data_collect", "ok");
-//                                            mHandler.sendMessage(mHandler.obtainMessage(9, "OK"));
                                         } else {
                                             Log.d("data_collect", "err");
-//                                            mHandler.sendMessage(mHandler.obtainMessage(9, "ERR"));
                                         }
                                         outputStream.close();
                                     } catch (MalformedURLException e) {
@@ -708,13 +708,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                                 && latitude == markers.get(0).getPosition().latitude
                                                 && longitude == markers.get(0).getPosition().longitude)) {
                                             coreService.writeData(String.format(Locale.getDefault(),
-                                                    "$GNGGA,%.6f,%.6f#", latitude, longitude), 500);
+                                                    "$GNGGA,%.6f,%.6f#", latitude, longitude), 1000);
                                         }
                                     }
                                     String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
                                     writeSerialThreadPool.execute(new WriteSerialThread(data, GONE, READY));
-//                                    serialPort.writeData(data, 500);
-//                                    mHandler.sendMessage(mHandler.obtainMessage(8, GONE));
                                 }
                             }).start();
                         } else {
@@ -950,7 +948,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 preState = Integer.MAX_VALUE;
                 coreService.close();
                 resetMap();
-                btnCtl.setVisibility(View.INVISIBLE);
                 tvShipCharge.setVisibility(View.INVISIBLE);
                 llFab.setVisibility(View.INVISIBLE);
                 break;
@@ -1378,6 +1375,78 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
+    private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
+        private String date;
+        private WeakReference<NewActivity> activity;
+        private WeakReference<WriteSerialThread> writeSerialThread;
+
+        MyAsyncTask(NewActivity activity, WriteSerialThread writeSerialThread, int max, String date) {
+            this.activity = new WeakReference<>(activity);
+            this.writeSerialThread = new WeakReference<>(writeSerialThread);
+            this.date = date;
+            activity.loadingView.setMax(max);
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            NewActivity activity = this.activity.get();
+            ArrayList<Marker> markers = activity.markers;
+            try {
+                StringBuilder builder = new StringBuilder();
+                builder.append("lat=")
+                        .append(markers.get(0).getPosition().latitude)
+                        .append("&lng=")
+                        .append(markers.get(0).getPosition().longitude)
+                        .append("&addr=")
+                        .append(activity.pos)
+                        .append("&date=")
+                        .append(date.replace(" ", "+"));
+                byte[] data = builder.toString().getBytes();
+                URL url = new URL("http://orca-tech.cn/app/data_collect.php");
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setConnectTimeout(5000);
+                connection.setRequestProperty("Content-Length", data.length + "");
+                connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                connection.setDoOutput(true);
+                OutputStream outputStream = connection.getOutputStream();
+                outputStream.write(data);
+                int responseCode = connection.getResponseCode();
+                if (responseCode == 200) {
+                    Log.d("data_collect", "ok");
+                } else {
+                    Log.d("data_collect", "err");
+                }
+                outputStream.close();
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            activity.coreService.writeData("$CLEAR#", 1000);
+            for (int i = 0; i < markers.size(); i++) {
+                double latitude = markers.get(i).getPosition().latitude;
+                double longitude = markers.get(i).getPosition().longitude;
+                if (!(activity.swNav.getSelectedTab() == 1 && i == markers.size() - 1
+                        && latitude == markers.get(0).getPosition().latitude
+                        && longitude == markers.get(0).getPosition().longitude)) {
+                    activity.coreService.writeData(String.format(Locale.getDefault(),
+                            "$GNGGA,%.6f,%.6f#", latitude, longitude), 1000);
+                    publishProgress(i);
+                }
+            }
+            activity.writeSerialThreadPool.execute(writeSerialThread.get());
+            return null;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            activity.get().loadingView.setProgress(values[0]);
+//            Toasty.info(activity.get(), String.valueOf(values[0]), Toast.LENGTH_SHORT).show();
+            super.onProgressUpdate(values);
+        }
+    }
+
     private class QueryThread implements Runnable {
         @Override
         public void run() {
@@ -1393,11 +1462,14 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         coreService.writeData(String.format(Locale.getDefault(),
                                 "$QUERY,%d#", (type == 0 ? 9 : (type % 5 == 0 ? 7 : 0))), 10);
                         data = readData();
-                        for (int timeGap = 0; timeGap < 50 && !coreService.notificationEnable; timeGap++) {
+                        for (int timeGap = 0; timeGap < 50 && !coreService.notificationEnable && state != UNREADY; timeGap++) {
                             Thread.sleep(10);
                         }
                         if (coreService.notificationEnable) {
                             break;
+                        }
+                        if (state == UNREADY) {
+                            continue;
                         }
                         if (data.startsWith("$") && data.endsWith("#")) {
                             data = data.replaceAll("#", "");
