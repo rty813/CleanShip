@@ -43,6 +43,7 @@ public class CoreService extends Service {
     private final static String ACTION_NOTIFICATION_CLOSE = "com.xyz.rty813.cleanship.ble.action.notification.close";
     private static BluetoothLeService bluetoothLeService;
     public boolean isConnected = false;
+    public boolean notificationEnable = false;
     private boolean isBindBleService = false;
     //BluetoothLeService回调
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -63,7 +64,6 @@ public class CoreService extends Service {
     };
     private MyBinder binder = new MyBinder();
     private MyReceiver mReceiver = null;
-    private boolean notificationEnable = false;
     private StringBuilder newData;
     private MediaPlayer mediaPlayer = null;
     private Vibrator vibrator = null;
@@ -80,7 +80,7 @@ public class CoreService extends Service {
 
     @Override
     public void onDestroy() {
-        Toasty.info(CoreService.this, "后台服务已关闭", Toast.LENGTH_SHORT).show();
+        Toasty.warning(CoreService.this, "后台服务已关闭", Toast.LENGTH_SHORT).show();
         System.out.println("CoreService被摧毁啦！onDestory");
         startBackgroundThread(false);
         if (bluetoothLeService != null) {
@@ -182,7 +182,7 @@ public class CoreService extends Service {
         if (enable) {
             NotificationCompat.Builder builder;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                NotificationChannel notificationChannel = new NotificationChannel("1", "正在运行", NotificationManager.IMPORTANCE_DEFAULT);
+                NotificationChannel notificationChannel = new NotificationChannel("1", "正在运行", NotificationManager.IMPORTANCE_LOW);
                 notificationManager.createNotificationChannel(notificationChannel);
                 builder = new NotificationCompat.Builder(this, "1");
             } else {
@@ -258,11 +258,14 @@ public class CoreService extends Service {
             int timeGap = 0;
             String result = newData.toString();
             String oldResult = result;
-            while (timeGap < 500 && !result.endsWith("#")) {
+            while (timeGap < 200 && !result.endsWith("#")) {
                 timeGap = result.equals(oldResult) ? timeGap + 1 : 0;
                 Thread.sleep(10);
                 oldResult = result;
                 result = newData.toString();
+                if (!notificationEnable) {
+                    break;
+                }
             }
             newData = new StringBuilder();
             return result;
@@ -297,25 +300,28 @@ public class CoreService extends Service {
         public void run() {
             while (notificationEnable) {
                 try {
-                    writeData(String.format(Locale.getDefault(), "$QUERY,7#"), 10);
+                    writeData(String.format(Locale.getDefault(), "$QUERY,9#"), 10);
                     String data = readData();
-                    Thread.sleep(30000);
-                    if (!data.startsWith("$") || !data.endsWith("#")) {
-                        continue;
-                    } else {
+                    if (!notificationEnable) {
+                        break;
+                    }
+                    Thread.sleep(100);
+                    if (data.startsWith("$") && data.endsWith("#")) {
                         data = data.replaceAll("#", "");
                         data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-                    }
-
-                    if (!"".equals(data)) {
-                        String[] strings = data.split(";");
-                        if (strings.length == 2) {
-                            int charge = Integer.parseInt(strings[1]);
-                            showNotification(true, charge);
-                            if (charge < 15) {
-                                lowBtNotification();
+                        if (!"".equals(data)) {
+                            String[] strings = data.split(";");
+                            if (strings.length == 2) {
+                                int charge = Integer.parseInt(strings[1]);
+                                showNotification(true, charge);
+                                if (charge < 15) {
+                                    lowBtNotification();
+                                }
                             }
                         }
+                    }
+                    for (int timeGap = 0; timeGap < 1000 && notificationEnable; timeGap++) {
+                        Thread.sleep(10);
                     }
                 } catch (NumberFormatException | InterruptedException e) {
                     e.printStackTrace();

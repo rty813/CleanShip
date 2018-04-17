@@ -20,10 +20,13 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.os.PowerManager;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
@@ -98,6 +101,7 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -129,6 +133,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final int HOMING = 5;
     private static final int FINISH = 6;
     private static final int PAUSE = 4;
+    private static final int USOPEN = 7;
+    private static final int USCLOSE = 8;
     private static final String MY_APPID = "2882303761517676503";
     private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
@@ -266,6 +272,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         initAMap();
         initClass();
         requestPermission();
+        btnUs.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                setWhiteList();
+            }
+        }, 500);
     }
 
     @Override
@@ -299,12 +311,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
     @Override
     protected void onDestroy() {
-        state = UNREADY;
         if (!coreService.isConnected) {
             stopService(new Intent(this, CoreService.class));
         } else {
             coreService.startBackgroundThread(true);
         }
+        state = UNREADY;
         unbindService(serviceConnection);
         mMapView.onDestroy();
         super.onDestroy();
@@ -568,7 +580,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                 if (address.getPois().size() != 0) {
                                     pos = pos + " " + address.getPois().get(0);
                                 }
-                                System.out.println(pos);
+//                                System.out.println(pos);
                             }
                         }
 
@@ -677,10 +689,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                                         int responseCode = connection.getResponseCode();
                                         if (responseCode == 200) {
                                             Log.d("data_collect", "ok");
-                                            mHandler.sendMessage(mHandler.obtainMessage(9, "OK"));
+//                                            mHandler.sendMessage(mHandler.obtainMessage(9, "OK"));
                                         } else {
                                             Log.d("data_collect", "err");
-                                            mHandler.sendMessage(mHandler.obtainMessage(9, "ERR"));
+//                                            mHandler.sendMessage(mHandler.obtainMessage(9, "ERR"));
                                         }
                                         outputStream.close();
                                     } catch (MalformedURLException e) {
@@ -772,8 +784,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 case R.id.btn_us:
                     boolean usEnable = btnUs.getBackgroundTintList().equals(usClose);
                     writeSerialThreadPool.execute(new WriteSerialThread(
-                            String.format(Locale.getDefault(), "$ORDER,8,%d#", usEnable ? 1 : 0), NONE, state));
-                    setBtnUs(usEnable);
+                            String.format(Locale.getDefault(), "$ORDER,8,%d#", usEnable ? 1 : 0), usEnable ? USOPEN : USCLOSE, state));
                     break;
                 default:
                     break;
@@ -782,7 +793,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     public void setBtnUs(boolean open) {
-        Toasty.info(NewActivity.this, String.valueOf(open), Toast.LENGTH_SHORT).show();
         btnUs.setBackgroundTintList(open ? usOpen : usClose);
     }
 
@@ -847,7 +857,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             public void onItemClick(SwipeMenuBridge menuBridge) {
                 menuBridge.closeMenu();
                 final int pos = menuBridge.getAdapterPosition();
-                System.out.println(menuBridge.getDirection());
+//                System.out.println(menuBridge.getDirection());
                 if (menuBridge.getDirection() > 0) {
                     Map<String, String> map = new HashMap<>();
                     map.put("id", list.get(pos).get("id"));
@@ -924,7 +934,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     private void morph(int state) {
-        if (state != NONE) {
+        if (state == USOPEN || state == USCLOSE) {
+            setBtnUs(state == USOPEN);
+        } else if (state != NONE) {
             this.state = state;
             this.markEnable = false;
             btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
@@ -981,6 +993,40 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         }
     }
 
+    public void setWhiteList() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            try {
+                // 是否是省电模式
+                PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+                Class<?> cls = pm.getClass();
+                Method method1 = cls.getMethod("isPowerSaveMode", new Class<?>[]{});
+                Method method2 = cls.getMethod("isIgnoringBatteryOptimizations", String.class);
+                boolean isSavedMode = (Boolean) method1.invoke(pm, new Object[]{});
+                boolean isWhileList = (Boolean) method2.invoke(pm, getPackageName());
+                Log.i("coreService", "isSavedMode : " + isSavedMode + ", isWhileList :" + isWhileList);
+                if (!isWhileList) {
+                    // 弹窗是否把当前App添加到白名单
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toasty.warning(NewActivity.this, "为保证本应用在后台能正常运行，请允许将本应用加入到电池优化白名单", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                    try {
+                        Intent ignore = new Intent("android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS");
+                        ignore.setData(Uri.parse("package:" + getPackageName()));
+                        ignore.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(ignore);
+                    } catch (Exception e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public void onConnected() {
         coreService.isConnected = true;
         new Thread(new QueryThread()).start();
@@ -997,12 +1043,14 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             int timeGap = 0;
             String result = newData.toString();
             String oldResult = result;
-            while(timeGap < 200 && !result.endsWith("#"))
-            {
+            while (timeGap < 200 && !result.endsWith("#")) {
                 timeGap = result.equals(oldResult) ? timeGap + 1 : 0;
                 Thread.sleep(10);
                 oldResult = result;
                 result = newData.toString();
+                if (coreService.notificationEnable) {
+                    break;
+                }
             }
             newData = new StringBuilder();
             return result;
@@ -1050,7 +1098,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             // 无网络
                             Toasty.error(NewActivity.this, "请检查网络连接！", Toast.LENGTH_LONG).show();
                         }
-
                         MyLocationStyle myLocationStyle = new MyLocationStyle();
                         myLocationStyle.myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATE)
                                 .strokeColor(Color.parseColor("#00000000"))
@@ -1067,7 +1114,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 .onDenied(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
-                        System.out.println(AndPermission.hasAlwaysDeniedPermission(NewActivity.this, permissions));
                         final SettingService settingService = AndPermission.permissionSetting(NewActivity.this);
                         new AlertDialog.Builder(NewActivity.this)
                                 .setMessage("请赋予权限")
@@ -1310,7 +1356,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     Toasty.info(activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
                     break;
                 case 10:
-                    activity.handleState((Integer) msg.obj);
+                    activity.handleState(msg.arg1);
+                    activity.setBtnUs(msg.arg2 == 1);
                     break;
                 case 11:
                     if (activity.loadingView.isShowing()) {
@@ -1337,7 +1384,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             synchronized (coreService) {
                 int type = 0;
                 long retryTimes = 0;
-                while (true) {
+                while (!coreService.notificationEnable) {
                     String data = null;
                     try {
                         if (state == UNREADY) {
@@ -1346,24 +1393,31 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         coreService.writeData(String.format(Locale.getDefault(),
                                 "$QUERY,%d#", (type == 0 ? 9 : (type % 5 == 0 ? 7 : 0))), 10);
                         data = readData();
-                        Thread.sleep(300);
-                        if (!data.startsWith("$") || !data.endsWith("#")) {
-                            continue;
-                        } else {
+                        for (int timeGap = 0; timeGap < 50 && !coreService.notificationEnable; timeGap++) {
+                            Thread.sleep(10);
+                        }
+                        if (coreService.notificationEnable) {
+                            break;
+                        }
+                        if (data.startsWith("$") && data.endsWith("#")) {
                             data = data.replaceAll("#", "");
                             data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-                        }
-
-                        type = (type + 1) % 100;
-                        if (!"".equals(data)) {
-                            retryTimes = 0;
-                            String[] strings = data.split(";");
-                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                            if (strings.length == 2) {
-                                intent.putExtra("type", Integer.parseInt(strings[0]));
-                                intent.putExtra("data", strings[1]);
+                            type = (type + 1) % 100;
+                            if (!"".equals(data)) {
+                                retryTimes = 0;
+                                String[] strings = data.split(";");
+                                Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                                if (strings.length == 2) {
+                                    intent.putExtra("type", Integer.parseInt(strings[0]));
+                                    intent.putExtra("data", strings[1]);
+                                }
+                                sendBroadcast(intent);
+                            } else {
+                                retryTimes++;
+                                if (retryTimes % 5 == 0) {
+                                    mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+                                }
                             }
-                            sendBroadcast(intent);
                         } else {
                             retryTimes++;
                             if (retryTimes % 5 == 0) {
@@ -1401,7 +1455,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     if (retryTimes == 6) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
                         mHandler.sendMessage(mHandler.obtainMessage(8, READY));
-//                        mHandler.sendMessage(mHandler.obtainMessage(10, 0));
                         break;
                     }
                     coreService.writeData("$QUERY,7#", 10);
@@ -1416,12 +1469,15 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     if (!"".equals(data)) {
                         String[] strings = data.split(";");
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
-                            mHandler.sendMessage(mHandler.obtainMessage(10, Integer.parseInt(strings[1])));
+                            strings = strings[1].split(",");
+                            mHandler.sendMessage(mHandler.obtainMessage(10, Integer.parseInt(strings[0]), Integer.parseInt(strings[1])));
                             break;
                         }
                     }
                 } while (true);
-            } catch (NumberFormatException | InterruptedException e) {
+            } catch (NumberFormatException | InterruptedException | ArrayIndexOutOfBoundsException e) {
+                mHandler.sendMessage(mHandler.obtainMessage(9, "查询失败"));
+                mHandler.sendMessage(mHandler.obtainMessage(8, READY));
                 e.printStackTrace();
             } finally {
                 mHandler.sendEmptyMessage(7);
@@ -1454,6 +1510,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         if (mState == NONE) {
                             state = mPreState;
                             mHandler.sendEmptyMessage(6);
+                            synchronized (coreService) {
+                                coreService.notify();
+                            }
+                        } else if (mState == USCLOSE || mState == USOPEN) {
+                            state = mPreState;
+                            mHandler.sendMessage(mHandler.obtainMessage(8, mState));
                         } else {
                             mHandler.sendMessage(mHandler.obtainMessage(8, mState));
                         }
@@ -1465,7 +1527,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     if (retryTimes == 4) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-                        mHandler.sendMessage(mHandler.obtainMessage(8, mPreState));
+                        state = mPreState;
+                        mHandler.sendEmptyMessage(6);
+                        synchronized (coreService) {
+                            coreService.notify();
+                        }
                         break;
                     }
                 } while (true);
