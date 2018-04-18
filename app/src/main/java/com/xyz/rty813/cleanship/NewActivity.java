@@ -362,6 +362,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         loadingView.setTitle("提示");
         loadingView.setCanceledOnTouchOutside(false);
         loadingView.setCancelable(false);
+        loadingView.setIcon(R.mipmap.ic_launcher);
         initSmoothMove();
         usOpen = getResources().getColorStateList(R.color.colorAccent);
         usClose = getResources().getColorStateList(R.color.usgray);
@@ -495,9 +496,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     markerOptions.setFlat(true);
                     markerOptions.draggable(true);
                     markers.add(aMap.addMarker(markerOptions));
-
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(10).color(Color.parseColor("#0B76CE"))));
-//                    Toast.makeText(NewActivity.this, "完成闭合回路！", Toast.LENGTH_SHORT).show();
+                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(14).color(Color.parseColor("#0B76CE"))));
                 }
                 return true;
             }
@@ -563,7 +562,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
                     LatLng latLng1 = latLng;
                     LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10)
+                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(14)
                             .color(Color.parseColor("#0B76CE"))));
                 } else {
                     markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
@@ -661,60 +660,17 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
                             final String date = dateFormat.format(new Date(System.currentTimeMillis()));
                             saveRoute(date, stringBuilder.toString(), pos);
-                            showLoadingView("正在发送");
 //                            使QueryThread进入Wait
-//                            String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
-//                            new MyAsyncTask(this, new WriteSerialThread(data, GONE, READY), markers.size(), date).execute();
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        StringBuilder builder = new StringBuilder();
-                                        builder.append("lat=")
-                                                .append(markers.get(0).getPosition().latitude)
-                                                .append("&lng=")
-                                                .append(markers.get(0).getPosition().longitude)
-                                                .append("&addr=")
-                                                .append(pos)
-                                                .append("&date=")
-                                                .append(date.replace(" ", "+"));
-                                        byte[] data = builder.toString().getBytes();
-                                        URL url = new URL("http://orca-tech.cn/app/data_collect.php");
-                                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                                        connection.setRequestMethod("POST");
-                                        connection.setConnectTimeout(5000);
-                                        connection.setRequestProperty("Content-Length", data.length + "");
-                                        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                                        connection.setDoOutput(true);
-                                        OutputStream outputStream = connection.getOutputStream();
-                                        outputStream.write(data);
-                                        int responseCode = connection.getResponseCode();
-                                        if (responseCode == 200) {
-                                            Log.d("data_collect", "ok");
-                                        } else {
-                                            Log.d("data_collect", "err");
-                                        }
-                                        outputStream.close();
-                                    } catch (MalformedURLException e) {
-                                        e.printStackTrace();
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                    coreService.writeData("$CLEAR#", 1000);
-                                    for (int i = 0; i < markers.size(); i++) {
-                                        double latitude = markers.get(i).getPosition().latitude;
-                                        double longitude = markers.get(i).getPosition().longitude;
-                                        if (!(swNav.getSelectedTab() == 1 && i == markers.size() - 1
-                                                && latitude == markers.get(0).getPosition().latitude
-                                                && longitude == markers.get(0).getPosition().longitude)) {
-                                            coreService.writeData(String.format(Locale.getDefault(),
-                                                    "$GNGGA,%.6f,%.6f#", latitude, longitude), 1000);
-                                        }
-                                    }
-                                    String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
-                                    writeSerialThreadPool.execute(new WriteSerialThread(data, GONE, READY));
-                                }
-                            }).start();
+                            loadingView = new ProgressDialog(this);
+                            loadingView.setTitle("发送中");
+                            loadingView.setCanceledOnTouchOutside(false);
+                            loadingView.setCancelable(false);
+                            loadingView.setMax(markers.size());
+                            loadingView.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                            loadingView.setIcon(R.mipmap.ic_launcher);
+                            loadingView.show();
+                            String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
+                            new MyAsyncTask(this, new WriteSerialThread(data, GONE, READY), date).execute();
                         } else {
                             loadRoute(null);
                         }
@@ -985,6 +941,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private void showLoadingView(String msg) {
         if (!loadingView.isShowing()) {
             state = UNREADY;
+            loadingView = new ProgressDialog(this);
+            loadingView.setTitle("提示");
+            loadingView.setCanceledOnTouchOutside(false);
+            loadingView.setCancelable(false);
+            loadingView.setIcon(R.mipmap.ic_launcher);
             loadingView.setMessage(msg);
             loadingView.show();
         }
@@ -1206,7 +1167,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 if (markers.size() > 0) {
                     LatLng latLng1 = latLng;
                     LatLng latLng2 = markers.get(markers.size() - 1).getPosition();
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(10).color(Color.parseColor("#0B76CE"))));
+                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng1, latLng2).width(14).color(Color.parseColor("#0B76CE"))));
                     markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
                 } else {
                     markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
@@ -1253,7 +1214,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             smoothMoveMarker.getMarker().setFlat(true);
             smoothMoveMarker.getMarker().setAnchor(0.5f, 0.5f);
             trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
-                    shipPointList.get(shipPointList.size() - 1)).width(5).color(Color.parseColor("#FFE418"))));
+                    shipPointList.get(shipPointList.size() - 1)).width(7).color(Color.parseColor("#FFE418"))));
         }
     }
 
@@ -1296,7 +1257,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 }
                 this.state = UNREADY;
                 mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
-
             }
             preState = state;
         }
@@ -1380,11 +1340,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         private WeakReference<NewActivity> activity;
         private WeakReference<WriteSerialThread> writeSerialThread;
 
-        MyAsyncTask(NewActivity activity, WriteSerialThread writeSerialThread, int max, String date) {
+        MyAsyncTask(NewActivity activity, WriteSerialThread writeSerialThread, String date) {
             this.activity = new WeakReference<>(activity);
             this.writeSerialThread = new WeakReference<>(writeSerialThread);
             this.date = date;
-            activity.loadingView.setMax(max);
+            activity.state = UNREADY;
         }
 
         @Override
@@ -1432,18 +1392,22 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         && longitude == markers.get(0).getPosition().longitude)) {
                     activity.coreService.writeData(String.format(Locale.getDefault(),
                             "$GNGGA,%.6f,%.6f#", latitude, longitude), 1000);
-                    publishProgress(i);
+                    publishProgress(i + 1);
                 }
             }
-            activity.writeSerialThreadPool.execute(writeSerialThread.get());
             return null;
         }
 
         @Override
         protected void onProgressUpdate(Integer... values) {
             activity.get().loadingView.setProgress(values[0]);
-//            Toasty.info(activity.get(), String.valueOf(values[0]), Toast.LENGTH_SHORT).show();
             super.onProgressUpdate(values);
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            activity.get().writeSerialThreadPool.execute(writeSerialThread.get());
+            super.onPostExecute(aVoid);
         }
     }
 
