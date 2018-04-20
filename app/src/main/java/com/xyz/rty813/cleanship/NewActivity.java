@@ -1422,7 +1422,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 while (!coreService.notificationEnable) {
                     String data = null;
                     try {
-                        if (state == UNREADY) 
+                        if (state == UNREADY) {
                             coreService.wait();
                         }
                         coreService.writeData(String.format(Locale.getDefault(),

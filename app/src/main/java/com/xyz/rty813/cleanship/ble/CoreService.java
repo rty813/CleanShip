@@ -160,7 +160,6 @@ public class CoreService extends Service {
             // 启动问询线程
             showNotification(true, -1);
             queryThread.execute(new QueryRunnable());
-//            lowBtNotification();
         } else {
             if (mReceiver != null) {
                 unregisterReceiver(mReceiver);
@@ -178,7 +177,7 @@ public class CoreService extends Service {
         }
     }
 
-    public void showNotification(boolean enable, @Nullable Integer charge) {
+    private void showNotification(boolean enable, @Nullable Integer charge) {
         NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         if (enable) {
             NotificationCompat.Builder builder;
@@ -228,7 +227,6 @@ public class CoreService extends Service {
         Notification notification = builder.build();
         notificationManager.notify(6, notification);
         AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
-        audioManager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
         // 震动
         if (vibrator == null) {
             vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
