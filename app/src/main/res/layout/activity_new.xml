@@ -46,33 +46,6 @@
             android:layout_height="match_parent" />
 
         <LinearLayout
-            android:id="@+id/ll_fab"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_marginStart="5dp"
-            android:orientation="vertical"
-            android:visibility="invisible">
-
-            <android.support.design.widget.FloatingActionButton
-                android:id="@+id/btn_ctl"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:src="@drawable/app_ctl"
-                app:elevation="4dp" />
-
-            <android.support.design.widget.FloatingActionButton
-                android:id="@+id/btn_us"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:src="@drawable/btn_us"
-                app:elevation="4dp" />
-        </LinearLayout>
-
-
-        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
@@ -113,35 +86,7 @@
                 android:textColor="@android:color/black"
                 android:visibility="invisible" />
 
-            <com.github.clans.fab.FloatingActionMenu
-                android:id="@+id/fam"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:menu_colorNormal="@color/velGray"
-                app:menu_colorPressed="#6b6b6b"
-                app:menu_fab_size="mini"
-                app:menu_icon="@drawable/normal_map"
-                app:menu_openDirection="down"
-                app:menu_showShadow="true">
 
-                <com.github.clans.fab.FloatingActionButton
-                    android:id="@+id/fab_plane"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@drawable/normal_map"
-                    app:fab_colorNormal="@color/velGray"
-                    app:fab_colorPressed="#6b6b6b"
-                    app:fab_size="mini" />
-
-                <com.github.clans.fab.FloatingActionButton
-                    android:id="@+id/fab_satellite"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@drawable/satellite_map"
-                    app:fab_colorNormal="@color/velGray"
-                    app:fab_colorPressed="#6b6b6b"
-                    app:fab_size="mini" />
-            </com.github.clans.fab.FloatingActionMenu>
         </LinearLayout>
 
         <Button
@@ -309,7 +254,7 @@
                     android:layout_height="match_parent"
                     android:layout_gravity="center_vertical"
                     android:layout_margin="20dp"
-                    android:max="800"
+                    android:max="600"
                     android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
@@ -389,6 +334,48 @@
                 android:textSize="20sp" />
 
         </LinearLayout>
+
+        <com.github.clans.fab.FloatingActionMenu
+            android:id="@+id/fam"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingTop="150dp"
+            app:menu_backgroundColor="#65000000"
+            app:menu_colorNormal="@color/velGray"
+            app:menu_colorPressed="#6b6b6b"
+            app:menu_openDirection="down"
+            app:menu_showShadow="true">
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/btn_ctl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/app_ctl"
+                app:fab_colorNormal="@color/velGray"
+                app:fab_colorPressed="#6b6b6b"
+                app:fab_label="剥夺控制权"
+                app:fab_size="mini" />
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/btn_changemap"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/change_map"
+                app:fab_colorNormal="@color/velGray"
+                app:fab_colorPressed="#6b6b6b"
+                app:fab_label="切换地图"
+                app:fab_size="mini" />
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/btn_us"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/btn_us"
+                app:fab_colorNormal="@color/velGray"
+                app:fab_colorPressed="#6b6b6b"
+                app:fab_label="超声开关"
+                app:fab_size="mini" />
+        </com.github.clans.fab.FloatingActionMenu>
 
     </FrameLayout>
 </LinearLayout>

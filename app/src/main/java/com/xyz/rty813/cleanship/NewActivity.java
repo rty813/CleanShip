@@ -11,7 +11,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
@@ -29,7 +28,6 @@ import android.os.IBinder;
 import android.os.Message;
 import android.os.PowerManager;
 import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.AppCompatSeekBar;
@@ -74,6 +72,7 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
+import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.kcode.lib.UpdateWrapper;
 import com.kcode.lib.bean.VersionModel;
@@ -160,7 +159,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Button btnConnect;
     private LinearLayout llFinish;
     private LinearLayout llNav;
-    private LinearLayout llFab;
     private LinearLayout llMark;
     private LinearLayout llMethod;
     private LinearLayout llHome;
@@ -192,8 +190,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private CoreService coreService;
     private BluetoothAdapter mBluetoothAdapter;
     private StringBuilder newData = null;
-    private ColorStateList usClose;
-    private ColorStateList usOpen;
+    private FloatingActionMenu fam;
+    private int usClose;
+    private int usOpen;
     //    private int shipCharge = 100;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
@@ -225,13 +224,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         }
                     }
                     break;
-                case R.id.fab_plane:
+                case R.id.btn_changemap:
+                    if (aMap.getMapType() == AMap.MAP_TYPE_NORMAL) {
+                        aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
+                    } else {
+                        aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+                    }
                     ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
-                    aMap.setMapType(AMap.MAP_TYPE_NORMAL);
-                    break;
-                case R.id.fab_satellite:
-                    ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
-                    aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
                     break;
                 default:
                     break;
@@ -364,9 +363,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         loadingView.setCancelable(false);
         loadingView.setIcon(R.mipmap.ic_launcher);
         initSmoothMove();
-        usOpen = getResources().getColorStateList(R.color.colorAccent);
-        usClose = getResources().getColorStateList(R.color.usgray);
-        btnUs.setBackgroundTintList(usClose);
+        usOpen = getResources().getColor(R.color.colorAccent);
+        usClose = getResources().getColor(R.color.velGray);
+        btnUs.setColorNormal(usClose);
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
@@ -383,7 +382,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llMethod = findViewById(R.id.ll_method);
         llFinish = findViewById(R.id.ll_finish);
         llHome = findViewById(R.id.ll_home);
-        llFab = findViewById(R.id.ll_fab);
         swNav = findViewById(R.id.sw_nav);
         tvToolbar = findViewById(R.id.tv_toolbar);
         tvCircle = findViewById(R.id.tv_circle);
@@ -399,6 +397,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnCtl = findViewById(R.id.btn_ctl);
         btnUs = findViewById(R.id.btn_us);
         seekBar = findViewById(R.id.seekbar);
+        fam = findViewById(R.id.fam);
+        fam.hideMenu(false);
         tvShipCharge = findViewById(R.id.tv_shipcharge);
         final SharedPreferences sharedPreferences = this.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
@@ -422,7 +422,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 seekBar.setVisibility(View.GONE);
                 sharedPreferences.edit().putInt("seekbar", seekBar.getProgress()).apply();
                 writeSerialThreadPool.execute(new WriteSerialThread(String.format(Locale.getDefault(),
-                        "$ORDER,6,%d#", 1200 + seekBar.getProgress()), GONE, state));
+                        "$ORDER,6,%d#", 1400 + seekBar.getProgress()), GONE, state));
             }
         });
 
@@ -445,8 +445,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnEnable.setOnClickListener(this);
 
         btnConnect.setOnClickListener(clickListener);
-        findViewById(R.id.fab_plane).setOnClickListener(clickListener);
-        findViewById(R.id.fab_satellite).setOnClickListener(clickListener);
+        findViewById(R.id.btn_changemap).setOnClickListener(clickListener);
 
         picStart = getResources().getDrawable(R.drawable.btn_start_selector);
         picPause = getResources().getDrawable(R.drawable.btn_pause_selector);
@@ -733,10 +732,12 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     loadRoute(id == -1 ? null : String.valueOf(id));
                     break;
                 case R.id.btn_ctl:
+                    ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
                     writeSerialThreadPool.execute(new WriteSerialThread("$ORDER,7#", NONE, state));
                     break;
                 case R.id.btn_us:
-                    boolean usEnable = btnUs.getBackgroundTintList().equals(usClose);
+                    ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
+                    boolean usEnable = btnUs.getColorNormal() == usClose;
                     writeSerialThreadPool.execute(new WriteSerialThread(
                             String.format(Locale.getDefault(), "$ORDER,8,%d#", usEnable ? 1 : 0), usEnable ? USOPEN : USCLOSE, state));
                     break;
@@ -747,7 +748,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     public void setBtnUs(boolean open) {
-        btnUs.setBackgroundTintList(open ? usOpen : usClose);
+        btnUs.setColorNormal(open ? usOpen : usClose);
+//        btnUs.setBackgroundTintList(open ? usOpen : usClose);
     }
 
     private void loadHistory(final SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
@@ -881,10 +883,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llNav.setVisibility(View.GONE);
         llFinish.setVisibility(View.GONE);
         llHome.setVisibility(View.GONE);
-        llFab.setVisibility(View.VISIBLE);
         btnHome.setVisibility(View.GONE);
         btnConnect.setVisibility(View.GONE);
         tvShipCharge.setVisibility(View.VISIBLE);
+        fam.showMenu(true);
     }
 
     private void morph(int state) {
@@ -905,7 +907,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 coreService.close();
                 resetMap();
                 tvShipCharge.setVisibility(View.INVISIBLE);
-                llFab.setVisibility(View.INVISIBLE);
+                fam.hideMenu(true);
                 break;
             case READY:
                 llMark.setVisibility(View.VISIBLE);
@@ -1426,6 +1428,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         coreService.writeData(String.format(Locale.getDefault(),
                                 "$QUERY,%d#", (type == 0 ? 9 : (type % 5 == 0 ? 7 : 0))), 10);
                         data = readData();
+                        type = (type + 1) % 100;
                         for (int timeGap = 0; timeGap < 50 && !coreService.notificationEnable && state != UNREADY; timeGap++) {
                             Thread.sleep(10);
                         }
@@ -1438,7 +1441,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         if (data.startsWith("$") && data.endsWith("#")) {
                             data = data.replaceAll("#", "");
                             data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-                            type = (type + 1) % 100;
                             if (!"".equals(data)) {
                                 retryTimes = 0;
                                 String[] strings = data.split(";");

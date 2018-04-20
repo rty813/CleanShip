@@ -68,6 +68,7 @@ public class CoreService extends Service {
     private MediaPlayer mediaPlayer = null;
     private Vibrator vibrator = null;
     private ExecutorService queryThread;
+    private boolean hasAlarmed = false;
 
     @Override
     public void onCreate() {
@@ -155,7 +156,7 @@ public class CoreService extends Service {
             intentFilter.addAction(ACTION_NOTIFICATION_CLOSE);
             mReceiver = new MyReceiver();
             registerReceiver(mReceiver, intentFilter);
-
+            hasAlarmed = false;
             // 启动问询线程
             showNotification(true, -1);
             queryThread.execute(new QueryRunnable());
@@ -314,8 +315,9 @@ public class CoreService extends Service {
                             if (strings.length == 2) {
                                 int charge = Integer.parseInt(strings[1]);
                                 showNotification(true, charge);
-                                if (charge < 15) {
+                                if (charge < 20 && !hasAlarmed) {
                                     lowBtNotification();
+                                    hasAlarmed = true;
                                 }
                             }
                         }
