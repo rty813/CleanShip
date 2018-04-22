@@ -1340,11 +1340,11 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
         private String date;
         private WeakReference<NewActivity> activity;
-        private WeakReference<WriteSerialThread> writeSerialThread;
+        private WriteSerialThread writeSerialThread;
 
         MyAsyncTask(NewActivity activity, WriteSerialThread writeSerialThread, String date) {
             this.activity = new WeakReference<>(activity);
-            this.writeSerialThread = new WeakReference<>(writeSerialThread);
+            this.writeSerialThread = writeSerialThread;
             this.date = date;
             activity.state = UNREADY;
         }
@@ -1385,6 +1385,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            if (!activity.coreService.isConnected) {
+                return null;
+            }
             activity.coreService.writeData("$CLEAR#", 1000);
             for (int i = 0; i < markers.size(); i++) {
                 double latitude = markers.get(i).getPosition().latitude;
@@ -1392,6 +1395,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 if (!(activity.swNav.getSelectedTab() == 1 && i == markers.size() - 1
                         && latitude == markers.get(0).getPosition().latitude
                         && longitude == markers.get(0).getPosition().longitude)) {
+                    if (!activity.coreService.isConnected) {
+                        return null;
+                    }
                     activity.coreService.writeData(String.format(Locale.getDefault(),
                             "$GNGGA,%.6f,%.6f#", latitude, longitude), 1000);
                     publishProgress(i + 1);
@@ -1408,7 +1414,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            activity.get().writeSerialThreadPool.execute(writeSerialThread.get());
+            if (activity.get().coreService.isConnected) {
+                activity.get().writeSerialThreadPool.execute(writeSerialThread);
+            }
             super.onPostExecute(aVoid);
         }
     }
@@ -1540,6 +1548,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             int retryTimes = 0;
             try {
                 do {
+                    if (!coreService.isConnected) {
+                        mHandler.sendEmptyMessage(6);
+                        break;
+                    }
                     coreService.writeData(mData, 10);
                     Thread.sleep(1000);
                     String data = readData();
@@ -1597,7 +1609,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     if (retryTimes == 3) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
                     }
-                    if (retryTimes == 6) {
+                    if (retryTimes == 6 || !coreService.isConnected) {
                         mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
                         mHandler.sendMessage(mHandler.obtainMessage(11, 0, 0));
                         break;

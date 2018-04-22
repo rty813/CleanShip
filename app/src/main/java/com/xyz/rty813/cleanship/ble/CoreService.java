@@ -40,6 +40,7 @@ import es.dmoral.toasty.Toasty;
  */
 public class CoreService extends Service {
     private final static String DEVICE_ADDRESS = "00:15:83:00:77:AF";
+    //    private final static String DEVICE_ADDRESS = "00:15:87:20:EF:D2";
     private final static String ACTION_NOTIFICATION_CLOSE = "com.xyz.rty813.cleanship.ble.action.notification.close";
     private static BluetoothLeService bluetoothLeService;
     public boolean isConnected = false;
@@ -123,7 +124,9 @@ public class CoreService extends Service {
                     String data2 = data.substring(20) + "\r\n";
                     bluetoothLeService.WriteValue(data1);
                     Thread.sleep(1000);
-                    bluetoothLeService.WriteValue(data2);
+                    if (isConnected) {
+                        bluetoothLeService.WriteValue(data2);
+                    }
                 } else {
                     bluetoothLeService.WriteValue(data + "\r\n");
                 }
