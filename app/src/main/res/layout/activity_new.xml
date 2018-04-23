@@ -81,12 +81,13 @@
                 android:id="@+id/tv_shipcharge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
                 android:layout_marginTop="5dp"
+                android:background="#86ffffff"
+                android:padding="5dp"
                 android:text="剩余电量：100%"
                 android:textColor="@android:color/black"
                 android:visibility="invisible" />
-
-
         </LinearLayout>
 
         <Button
@@ -203,7 +204,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="20dp"
-                android:text="第0圈"/>
+                android:text="第1圈" />
 
             <LinearLayout
                 android:layout_width="match_parent"

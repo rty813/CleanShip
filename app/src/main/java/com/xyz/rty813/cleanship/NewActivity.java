@@ -724,12 +724,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     break;
                 case R.id.btn_finish:
                     writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
+                    resetMap();
                     break;
                 case R.id.btn_reload:
                     writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
-                    resetMap();
-                    long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
-                    loadRoute(id == -1 ? null : String.valueOf(id));
+//                    resetMap();
+//                    long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+//                    loadRoute(id == -1 ? null : String.valueOf(id));
                     break;
                 case R.id.btn_ctl:
                     ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
@@ -907,7 +908,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 coreService.close();
                 resetMap();
                 tvShipCharge.setVisibility(View.INVISIBLE);
-                fam.hideMenu(true);
+                fam.hideMenu(false);
                 break;
             case READY:
                 llMark.setVisibility(View.VISIBLE);
