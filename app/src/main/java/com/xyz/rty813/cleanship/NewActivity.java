@@ -1026,7 +1026,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         new UpdateWrapper.Builder(getApplicationContext())
                 .setTime(1000)
                 .setNotificationIcon(R.mipmap.ic_launcher)
-                .setUrl("http://orca-tech.cn/app/apk.json")
+                .setUrl("http://orca-tech.cn/app/benenv/apk.json")
                 .setIsShowToast(false)
                 .setCallback(new CheckUpdateTask.Callback() {
                     @Override
@@ -1437,7 +1437,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         coreService.writeData(String.format(Locale.getDefault(),
                                 "$QUERY,%d#", (type == 0 ? 9 : (type % 5 == 0 ? 7 : 0))), 10);
                         data = readData();
-                        type = (type + 1) % 100;
+                        type = (type + 1) % 50;
                         for (int timeGap = 0; timeGap < 50 && !coreService.notificationEnable && state != UNREADY; timeGap++) {
                             Thread.sleep(10);
                         }
