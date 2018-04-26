@@ -1,4 +1,4 @@
-package com.xyz.rty813.cleanship.util;
+package com.benenv.rty813.cleanship.util;
 
 import android.view.View;
 import android.widget.PopupWindow;
@@ -8,7 +8,6 @@ import android.widget.PopupWindow;
  */
 
 public class LayoutGravity {
-    private int layoutGravity;
     // waring, don't change the order of these constants!
     public static final int ALIGN_LEFT=0x1;
     public static final int ALIGN_ABOVE=0x2;
@@ -20,6 +19,7 @@ public class LayoutGravity {
     public static final int TO_BOTTOM=0x80;
     public static final int CENTER_HORI=0x100;
     public static final int CENTER_VERT=0x200;
+    private int layoutGravity;
 
     public LayoutGravity(int gravity) {
         layoutGravity=gravity;

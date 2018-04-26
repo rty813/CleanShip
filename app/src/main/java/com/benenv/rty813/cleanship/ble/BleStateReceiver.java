@@ -1,4 +1,4 @@
-package com.xyz.rty813.cleanship.ble;
+package com.benenv.rty813.cleanship.ble;
 
 import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
@@ -7,7 +7,7 @@ import android.content.Intent;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.xyz.rty813.cleanship.NewActivity;
+import com.benenv.rty813.cleanship.NewActivity;
 
 import es.dmoral.toasty.Toasty;
 

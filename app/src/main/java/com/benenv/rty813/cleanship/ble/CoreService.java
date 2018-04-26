@@ -1,4 +1,4 @@
-package com.xyz.rty813.cleanship.ble;
+package com.benenv.rty813.cleanship.ble;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -23,8 +23,8 @@ import android.support.v4.app.NotificationCompat;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 
-import com.xyz.rty813.cleanship.NewActivity;
-import com.xyz.rty813.cleanship.R;
+import com.benenv.rty813.cleanship.NewActivity;
+import com.benenv.rty813.cleanship.R;
 
 import java.io.IOException;
 import java.util.Locale;

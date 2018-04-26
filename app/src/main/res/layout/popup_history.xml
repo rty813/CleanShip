@@ -4,7 +4,7 @@
     android:id="@+id/root_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    tools:context="com.xyz.rty813.cleanship.HistoryActivity">
+    tools:context="com.benenv.rty813.cleanship.HistoryActivity">
 
     <LinearLayout
         android:layout_width="match_parent"

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.xyz.rty813.cleanship.ble;
+package com.benenv.rty813.cleanship.ble;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;

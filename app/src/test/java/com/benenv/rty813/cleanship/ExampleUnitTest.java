@@ -1,8 +1,8 @@
-package com.xyz.rty813.cleanship;
+package com.benenv.rty813.cleanship;
 
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Example local unit test, which will execute on the development machine (host).

@@ -1,4 +1,4 @@
-package com.xyz.rty813.cleanship.util;
+package com.benenv.rty813.cleanship.util;
 
 import android.support.annotation.NonNull;
 

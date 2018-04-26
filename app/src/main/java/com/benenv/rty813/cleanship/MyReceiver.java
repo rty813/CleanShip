@@ -1,4 +1,4 @@
-package com.xyz.rty813.cleanship;
+package com.benenv.rty813.cleanship;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
