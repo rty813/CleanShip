@@ -6,7 +6,7 @@ android {
         applicationId "com.xyz.rty813.cleanship"
         minSdkVersion 21
         targetSdkVersion 27
-        versionCode 29
+        versionCode 30
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
