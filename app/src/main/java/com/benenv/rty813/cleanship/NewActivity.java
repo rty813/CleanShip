@@ -133,10 +133,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final int HOMING = 5;
     private static final int FINISH = 6;
     private static final int PAUSE = 4;
-    private static final int USOPEN = 7;
-    private static final int USCLOSE = 8;
-    private static final String MY_APPID = "2882303761517781993";
-    private static final String MY_APP_KEY = "5871778169993";
+    private static final String MY_APPID = "2882303761517676503";
+    private static final String MY_APP_KEY = "5131767662503";
     private static final String CHANNEL = "SELF";
     private static final double CTL_RADIUS = 2000;
     public static SQLiteDBHelper dbHelper;
@@ -176,7 +174,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private Drawable picMarkEnable;
     private Drawable picMarkDisable;
     private FloatingActionButton btnCtl;
-    private FloatingActionButton btnUs;
     private Button btnEnable;
     private TextView tvFinish;
     private TextView tvShipCharge;
@@ -191,9 +188,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private BluetoothAdapter mBluetoothAdapter;
     private StringBuilder newData = null;
     private FloatingActionMenu fam;
-    private int usClose;
-    private int usOpen;
-    //    private int shipCharge = 100;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
@@ -272,7 +266,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         initAMap();
         initClass();
         requestPermission();
-        btnUs.postDelayed(new Runnable() {
+        btnCtl.postDelayed(new Runnable() {
             @Override
             public void run() {
                 setWhiteList();
@@ -363,9 +357,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         loadingView.setCancelable(false);
         loadingView.setIcon(R.mipmap.ic_launcher);
         initSmoothMove();
-        usOpen = getResources().getColor(R.color.colorAccent);
-        usClose = getResources().getColor(R.color.velGray);
-        btnUs.setColorNormal(usClose);
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
@@ -395,7 +386,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnAbort = findViewById(R.id.btn_abort);
         btnEnable = findViewById(R.id.btn_enable);
         btnCtl = findViewById(R.id.btn_ctl);
-        btnUs = findViewById(R.id.btn_us);
         seekBar = findViewById(R.id.seekbar);
         fam = findViewById(R.id.fam);
         fam.hideMenu(false);
@@ -435,7 +425,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         findViewById(R.id.btn_reload).setOnClickListener(this);
         findViewById(R.id.btn_finish).setOnClickListener(this);
         findViewById(R.id.btn_stop_home).setOnClickListener(this);
-        btnUs.setOnClickListener(this);
         btnCtl.setOnClickListener(this);
         btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
@@ -736,21 +725,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
                     writeSerialThreadPool.execute(new WriteSerialThread("$ORDER,7#", NONE, state));
                     break;
-                case R.id.btn_us:
-                    ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
-                    boolean usEnable = btnUs.getColorNormal() == usClose;
-                    writeSerialThreadPool.execute(new WriteSerialThread(
-                            String.format(Locale.getDefault(), "$ORDER,8,%d#", usEnable ? 1 : 0), usEnable ? USOPEN : USCLOSE, state));
-                    break;
                 default:
                     break;
             }
         }
-    }
-
-    public void setBtnUs(boolean open) {
-        btnUs.setColorNormal(open ? usOpen : usClose);
-//        btnUs.setBackgroundTintList(open ? usOpen : usClose);
     }
 
     private void loadHistory(final SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
@@ -891,9 +869,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     }
 
     private void morph(int state) {
-        if (state == USOPEN || state == USCLOSE) {
-            setBtnUs(state == USOPEN);
-        } else if (state != NONE) {
+        if (state != NONE) {
             this.state = state;
             this.markEnable = false;
             btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
@@ -1317,7 +1293,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     break;
                 case 10:
                     activity.handleState(msg.arg1);
-                    activity.setBtnUs(msg.arg2 == 1);
                     break;
                 case 11:
                     if (activity.loadingView.isShowing()) {
@@ -1565,9 +1540,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                             synchronized (coreService) {
                                 coreService.notify();
                             }
-                        } else if (mState == USCLOSE || mState == USOPEN) {
-                            state = mPreState;
-                            mHandler.sendMessage(mHandler.obtainMessage(8, mState));
                         } else {
                             mHandler.sendMessage(mHandler.obtainMessage(8, mState));
                         }

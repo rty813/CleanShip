@@ -366,16 +366,6 @@
                 app:fab_colorPressed="#6b6b6b"
                 app:fab_label="切换地图"
                 app:fab_size="mini" />
-
-            <com.github.clans.fab.FloatingActionButton
-                android:id="@+id/btn_us"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/btn_us"
-                app:fab_colorNormal="@color/velGray"
-                app:fab_colorPressed="#6b6b6b"
-                app:fab_label="超声开关"
-                app:fab_size="mini" />
         </com.github.clans.fab.FloatingActionMenu>
 
     </FrameLayout>
