@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">蓝藻抑制机器人</string>
+    <string name="app_name">欧卡小蓝船</string>
     <string name="aim_angle">目标方向角：</string>
     <string name="gyro_angle">陀螺仪方向角：</string>
     <string name="curr_vel">当前速度：</string>
