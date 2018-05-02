@@ -1,4 +1,4 @@
-package com.benenv.rty813.cleanship.ble;
+package com.cn.orcatech.cleanship.ble;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -23,8 +23,8 @@ import android.support.v4.app.NotificationCompat;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 
-import com.benenv.rty813.cleanship.NewActivity;
-import com.benenv.rty813.cleanship.R;
+import com.cn.orcatech.cleanship.NewActivity;
+import com.cn.orcatech.cleanship.R;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -39,8 +39,7 @@ import es.dmoral.toasty.Toasty;
  * @author doufu
  */
 public class CoreService extends Service {
-    private final static String DEVICE_ADDRESS = "00:15:83:00:77:AF";
-    //    private final static String DEVICE_ADDRESS = "00:15:87:20:EF:D2";
+    private final static String DEVICE_ADDRESS = "00:15:87:20:EF:D2";
     private final static String ACTION_NOTIFICATION_CLOSE = "com.xyz.rty813.cleanship.ble.action.notification.close";
     private static BluetoothLeService bluetoothLeService;
     public boolean isConnected = false;

@@ -1,4 +1,4 @@
-package com.benenv.rty813.cleanship;
+package com.cn.orcatech.cleanship;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

@@ -1,4 +1,4 @@
-package com.benenv.rty813.cleanship;
+package com.cn.orcatech.cleanship;
 
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
