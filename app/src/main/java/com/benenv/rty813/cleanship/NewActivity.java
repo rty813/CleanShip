@@ -1354,38 +1354,38 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         protected Void doInBackground(Void... voids) {
             NewActivity activity = this.activity.get();
             ArrayList<Marker> markers = activity.markers;
-            try {
-                StringBuilder builder = new StringBuilder();
-                builder.append("lat=")
-                        .append(markers.get(0).getPosition().latitude)
-                        .append("&lng=")
-                        .append(markers.get(0).getPosition().longitude)
-                        .append("&addr=")
-                        .append(activity.pos)
-                        .append("&date=")
-                        .append(date.replace(" ", "+"));
-                byte[] data = builder.toString().getBytes();
-                URL url = new URL("http://orca-tech.cn/app/benenv/data_collect.php");
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("POST");
-                connection.setConnectTimeout(5000);
-                connection.setRequestProperty("Content-Length", data.length + "");
-                connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                connection.setRequestProperty("charset", "UTF-8");
-                connection.setDoOutput(true);
-                OutputStream outputStream = connection.getOutputStream();
-                outputStream.write(data);
-                int responseCode = connection.getResponseCode();
-                if (responseCode == 200) {
-                    Log.d("data_collect", "ok");
-                } else {
-                    Log.d("data_collect", "err");
+            if (markers.size() > 1){
+                try {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    int i;
+                    for (i = 0; i < markers.size() - 1; i++) {
+                        Marker marker = markers.get(i);
+                        stringBuilder.append(String.format(Locale.getDefault(), "[%.6f,%.6f],", marker.getPosition().longitude, marker.getPosition().latitude));
+                    }
+                    stringBuilder.append(String.format(Locale.getDefault(), "[%.6f,%.6f]", markers.get(i).getPosition().longitude, markers.get(i).getPosition().latitude));
+                    byte[] data = ("latlng=" + stringBuilder.toString() + "&addr=" + activity.pos + "&date=" + date.replace(" ", "+")).getBytes();
+                    URL url = new URL("http://orca-tech.cn/app/benenv/data_collect.php");
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setConnectTimeout(5000);
+                    connection.setRequestProperty("Content-Length", data.length + "");
+                    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                    connection.setRequestProperty("charset", "utf-8");
+                    connection.setDoOutput(true);
+                    OutputStream outputStream = connection.getOutputStream();
+                    outputStream.write(data);
+                    int responseCode = connection.getResponseCode();
+                    if (responseCode == 200) {
+                        Log.d("data_collect", "ok");
+                    } else {
+                        Log.d("data_collect", "err");
+                    }
+                    outputStream.close();
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                outputStream.close();
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
             }
             if (!activity.coreService.isConnected) {
                 return null;
