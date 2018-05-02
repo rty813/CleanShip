@@ -1,4 +1,4 @@
-package com.benenv.rty813.cleanship;
+package com.cn.orcatech.cleanship;
 
 import org.junit.Test;
 

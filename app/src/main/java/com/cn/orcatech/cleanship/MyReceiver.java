@@ -1,4 +1,4 @@
-package com.benenv.rty813.cleanship;
+package com.cn.orcatech.cleanship;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,6 +10,9 @@ import com.amap.api.maps.model.LatLng;
 
 import es.dmoral.toasty.Toasty;
 
+/**
+ * @author doufu
+ */
 public class MyReceiver extends BroadcastReceiver {
     public static final String ACTION_DATA_RECEIVED = "com.xyz.rty813.cleanship.ACTION_DATA_RECEIVED";
 
@@ -51,7 +54,6 @@ public class MyReceiver extends BroadcastReceiver {
                         break;
                     case 7:
                         activity.handleState(Integer.parseInt(datas[0]));
-                        activity.setBtnUs("1".equals(datas[1]));
                         break;
                     case 9:
                         activity.setShipCharge(Integer.parseInt(data));

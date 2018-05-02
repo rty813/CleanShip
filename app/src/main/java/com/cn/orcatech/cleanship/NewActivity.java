@@ -1,4 +1,4 @@
-package com.benenv.rty813.cleanship;
+package com.cn.orcatech.cleanship;
 
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
@@ -72,11 +72,11 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
-import com.benenv.rty813.cleanship.ble.BleStateReceiver;
-import com.benenv.rty813.cleanship.ble.BluetoothLeService;
-import com.benenv.rty813.cleanship.ble.CoreService;
-import com.benenv.rty813.cleanship.util.SQLiteDBHelper;
-import com.benenv.rty813.cleanship.util.WriteSerialThreadFactory;
+import com.cn.orcatech.cleanship.ble.BleStateReceiver;
+import com.cn.orcatech.cleanship.ble.BluetoothLeService;
+import com.cn.orcatech.cleanship.ble.CoreService;
+import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
+import com.cn.orcatech.cleanship.util.WriteSerialThreadFactory;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.kcode.lib.UpdateWrapper;

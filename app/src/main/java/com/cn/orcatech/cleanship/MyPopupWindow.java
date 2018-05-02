@@ -1,4 +1,4 @@
-package com.benenv.rty813.cleanship;
+package com.cn.orcatech.cleanship;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -7,7 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.PopupWindow;
 
-import com.benenv.rty813.cleanship.util.LayoutGravity;
+import com.cn.orcatech.cleanship.util.LayoutGravity;
 
 /**
  * Created by doufu on 2017/12/2.

@@ -1,4 +1,4 @@
-package com.benenv.rty813.cleanship.util;
+package com.cn.orcatech.cleanship.util;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;

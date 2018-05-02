@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.benenv.rty813.cleanship">
+    package="com.cn.orcatech.cleanship">
 
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -27,11 +27,11 @@
             android:value="c026cc87761755de77828d295b844238" />
 
         <receiver
-            android:name="com.benenv.rty813.cleanship.MyReceiver"
+            android:name="com.cn.orcatech.cleanship.MyReceiver"
             android:enabled="true" />
 
         <activity
-            android:name="com.benenv.rty813.cleanship.NewActivity"
+            android:name="com.cn.orcatech.cleanship.NewActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -46,12 +46,12 @@
         </activity>
 
         <receiver
-            android:name="com.benenv.rty813.cleanship.ble.BleStateReceiver"
+            android:name="com.cn.orcatech.cleanship.ble.BleStateReceiver"
             android:enabled="true"
             android:exported="false" />
 
-        <service android:name="com.benenv.rty813.cleanship.ble.CoreService" />
-        <service android:name="com.benenv.rty813.cleanship.ble.BluetoothLeService" />
+        <service android:name="com.cn.orcatech.cleanship.ble.CoreService" />
+        <service android:name="com.cn.orcatech.cleanship.ble.BluetoothLeService" />
     </application>
 
 </manifest>
