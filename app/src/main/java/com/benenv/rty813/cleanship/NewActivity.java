@@ -135,8 +135,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final int PAUSE = 4;
     private static final int USOPEN = 7;
     private static final int USCLOSE = 8;
-    private static final String MY_APPID = "2882303761517676503";
-    private static final String MY_APP_KEY = "5131767662503";
+    private static final String MY_APPID = "2882303761517781993";
+    private static final String MY_APP_KEY = "5871778169993";
     private static final String CHANNEL = "SELF";
     private static final double CTL_RADIUS = 2000;
     public static SQLiteDBHelper dbHelper;
@@ -1365,12 +1365,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                         .append("&date=")
                         .append(date.replace(" ", "+"));
                 byte[] data = builder.toString().getBytes();
-                URL url = new URL("http://orca-tech.cn/app/data_collect.php");
+                URL url = new URL("http://orca-tech.cn/app/benenv/data_collect.php");
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                 connection.setRequestMethod("POST");
                 connection.setConnectTimeout(5000);
                 connection.setRequestProperty("Content-Length", data.length + "");
                 connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                connection.setRequestProperty("charset", "UTF-8");
                 connection.setDoOutput(true);
                 OutputStream outputStream = connection.getOutputStream();
                 outputStream.write(data);
