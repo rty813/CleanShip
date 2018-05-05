@@ -24,7 +24,7 @@
         android:theme="@style/AppTheme">
         <meta-data
             android:name="com.amap.api.v2.apikey"
-            android:value="c026cc87761755de77828d295b844238" />
+            android:value="a5c3916500e4e6464a917559408d09ac" />
 
         <receiver
             android:name="com.cn.orcatech.cleanship.MyReceiver"

@@ -133,8 +133,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private static final int HOMING = 5;
     private static final int FINISH = 6;
     private static final int PAUSE = 4;
-    private static final String MY_APPID = "2882303761517676503";
-    private static final String MY_APP_KEY = "5131767662503";
+    private static final String MY_APPID = "2882303761517784606";
+    private static final String MY_APP_KEY = "5451778422606";
     private static final String CHANNEL = "SELF";
     private static final double CTL_RADIUS = 2000;
     public static SQLiteDBHelper dbHelper;
