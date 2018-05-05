@@ -27,16 +27,18 @@
             android:value="a5c3916500e4e6464a917559408d09ac" />
 
         <receiver
-            android:name="com.cn.orcatech.cleanship.MyReceiver"
+            android:name=".MyReceiver"
             android:enabled="true" />
 
         <activity
-            android:name="com.cn.orcatech.cleanship.NewActivity"
+            android:name=".NewActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
+
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
             </intent-filter>
 
@@ -46,12 +48,16 @@
         </activity>
 
         <receiver
-            android:name="com.cn.orcatech.cleanship.ble.BleStateReceiver"
+            android:name=".ble.BleStateReceiver"
             android:enabled="true"
             android:exported="false" />
 
-        <service android:name="com.cn.orcatech.cleanship.ble.CoreService" />
-        <service android:name="com.cn.orcatech.cleanship.ble.BluetoothLeService" />
+        <service android:name=".ble.CoreService" />
+        <service android:name=".ble.BluetoothLeService" />
+
+        <activity
+            android:name=".RemoteControlActivity"
+            android:screenOrientation="landscape" />
     </application>
 
 </manifest>

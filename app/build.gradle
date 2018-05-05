@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 27
     defaultConfig {
-        applicationId "com.orcatech.cleanship"
+        applicationId "com.cn.orcatech.cleanship"
         minSdkVersion 21
         targetSdkVersion 27
         versionCode 30
@@ -19,6 +19,7 @@ android {
 }
 repositories {
     jcenter()
+    maven { url 'http://raw.github.com/saki4510t/libcommon/master/repository/' }
     maven { url "https://jitpack.io" }
 }
 dependencies {
@@ -39,4 +40,5 @@ dependencies {
     implementation project(':libk-switchbutton')
     implementation 'com.yanzhenjie:permission:2.0.0-rc3'
     implementation 'com.github.GrenderG:Toasty:1.2.8'
+    implementation 'com.github.jiangdongguo:AndroidUSBCamera:2.1.0'
 }

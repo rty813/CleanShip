@@ -456,6 +456,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llMark.setOnTouchListener(onTouchListener);
         llMethod.setOnTouchListener(onTouchListener);
         llNav.setOnTouchListener(onTouchListener);
+
+        findViewById(R.id.btn_rc).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(NewActivity.this, RemoteControlActivity.class));
+            }
+        });
     }
 
     private void initAMap() {
@@ -1002,7 +1009,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         new UpdateWrapper.Builder(getApplicationContext())
                 .setTime(1000)
                 .setNotificationIcon(R.mipmap.ic_launcher)
-                .setUrl("http://orca-tech.cn/app/benenv/apk.json")
+                .setUrl("http://orca-tech.cn/app/master/apk.json")
                 .setIsShowToast(false)
                 .setCallback(new CheckUpdateTask.Callback() {
                     @Override
