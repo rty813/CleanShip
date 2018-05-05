@@ -94,17 +94,9 @@ public class RemoteControlActivity extends AppCompatActivity {
                 isRequest = true;
                 if (mCameraHelper != null) {
                     USBMonitor mUSBMonitor = mCameraHelper.getUSBMonitor();
-                    HashMap<String, UsbDevice> deviceList = ((UsbManager) (RemoteControlActivity.this.getSystemService("usb"))).getDeviceList();
-                    UsbDevice device1 = null;
-                    if(deviceList != null) {
-                        Iterator var4 = deviceList.values().iterator();
-                        device1 = (UsbDevice)var4.next();
-                    }
-
                     if(mUSBMonitor != null) {
-                        mUSBMonitor.requestPermission(device1);
+                        mUSBMonitor.requestPermission(device);
                     }
-//                    mCameraHelper.requestPermission(0);
                 }
             }
         }

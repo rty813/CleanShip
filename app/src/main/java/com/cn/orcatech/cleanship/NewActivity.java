@@ -461,6 +461,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             @Override
             public void onClick(View view) {
                 startActivity(new Intent(NewActivity.this, RemoteControlActivity.class));
+                finish();
             }
         });
     }
