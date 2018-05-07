@@ -364,15 +364,14 @@
                 android:src="@drawable/change_map"
                 app:fab_colorNormal="@color/velGray"
                 app:fab_colorPressed="#6b6b6b"
-                app:fab_label="切换地图"
-                app:fab_size="mini" />
+                app:fab_label="切换地图"/>
         </com.github.clans.fab.FloatingActionMenu>
 
         <android.support.design.widget.FloatingActionButton
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:id="@+id/btn_rc"
-            android:src="@drawable/app_ctl"
+            android:src="@drawable/camera"
             android:layout_marginStart="10dp"
             android:layout_gravity="center_vertical|start"/>
 

@@ -474,8 +474,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setZoomControlsEnabled(false);
         aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
-            private int i;
-
             @Override
             public boolean onMarkerClick(Marker marker) {
                 if (marker.isInfoWindowShown()) {
@@ -535,8 +533,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             }
         });
         aMap.setOnMapClickListener(new AMap.OnMapClickListener() {
-            private int i;
-
             @Override
             public void onMapClick(LatLng latLng) {
                 if (!markEnable) {

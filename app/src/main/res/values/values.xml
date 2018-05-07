@@ -20,7 +20,7 @@
 
     <dimen name="mb_height_4">4dp</dimen>
 
-    <dimen name="design_fab_size_normal" tools:override="true">35dp</dimen>
+    <!--<dimen name="design_fab_size_normal" tools:override="true">35dp</dimen>-->
 
     <color name="mb_white">#ffffff</color>
 

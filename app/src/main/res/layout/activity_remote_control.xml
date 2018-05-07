@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/toolbarBlue"
+    android:background="@color/colorBlue"
     android:fitsSystemWindows="true"
     android:keepScreenOn="true"
     tools:context="com.cn.orcatech.cleanship.RemoteControlActivity">
@@ -13,4 +14,36 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/textureview"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="30dp"
+        android:layout_marginEnd="20dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:src="@drawable/capture"
+        android:id="@+id/btn_capture"/>
+
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/btn_record"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:layout_marginEnd="20dp"
+        android:src="@drawable/record"
+        app:layout_constraintBottom_toTopOf="@+id/btn_capture"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:areaBackground="#FF333333"
+        app:rockerBackground="#FF987654"
+        app:rockerRadius="15dp"/>
+
+    <com.kongqw.rockerlibrary.view.RockerView
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/rockerview"
+        android:layout_marginStart="20dp"
+        android:layout_marginBottom="20dp"/>
 </android.support.constraint.ConstraintLayout>
