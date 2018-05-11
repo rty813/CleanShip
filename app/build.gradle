@@ -42,4 +42,5 @@ dependencies {
     implementation 'com.github.GrenderG:Toasty:1.2.8'
     implementation 'com.github.jiangdongguo:AndroidUSBCamera:2.1.0'
     implementation 'com.github.kongqw:AndroidRocker:1.0.1'
+    implementation 'cn.bingoogolapple:bga-qrcode-zxing:1.2.1'
 }

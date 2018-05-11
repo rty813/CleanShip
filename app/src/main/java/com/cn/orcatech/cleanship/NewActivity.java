@@ -1034,6 +1034,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     @Override
                     public void onAction(List<String> permissions) {
                         ConnectivityManager manager = (ConnectivityManager) NewActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
+
                         NetworkInfo networkInfo = manager.getActiveNetworkInfo();
                         if (networkInfo == null || !networkInfo.isAvailable()) {
                             // 无网络
