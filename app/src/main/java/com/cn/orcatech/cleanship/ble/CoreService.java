@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
@@ -39,7 +40,7 @@ import es.dmoral.toasty.Toasty;
  * @author doufu
  */
 public class CoreService extends Service {
-    private final static String DEVICE_ADDRESS = "00:15:87:20:EF:D2";
+    private static String DEVICE_ADDRESS;
     private final static String ACTION_NOTIFICATION_CLOSE = "com.xyz.rty813.cleanship.ble.action.notification.close";
     private static BluetoothLeService bluetoothLeService;
     public boolean isConnected = false;
@@ -73,6 +74,7 @@ public class CoreService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        DEVICE_ADDRESS = getSharedPreferences("DeviceInfo", MODE_PRIVATE).getString("addr",  "00:15:87:20:EF:D2");
         newData = new StringBuilder();
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         System.out.println(bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE));

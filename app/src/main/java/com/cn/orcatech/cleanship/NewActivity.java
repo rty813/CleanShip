@@ -226,6 +226,10 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
                     break;
+                case R.id.btn_rc:
+                    startActivity(new Intent(NewActivity.this, RemoteControlActivity.class));
+                    finish();
+                    break;
                 default:
                     break;
             }
@@ -432,9 +436,9 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnHome.setOnClickListener(this);
         btnGoStop.setOnClickListener(this);
         btnEnable.setOnClickListener(this);
-
         btnConnect.setOnClickListener(clickListener);
         findViewById(R.id.btn_changemap).setOnClickListener(clickListener);
+        findViewById(R.id.btn_rc).setOnClickListener(clickListener);
 
         picStart = getResources().getDrawable(R.drawable.btn_start_selector);
         picPause = getResources().getDrawable(R.drawable.btn_pause_selector);
@@ -456,14 +460,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llMark.setOnTouchListener(onTouchListener);
         llMethod.setOnTouchListener(onTouchListener);
         llNav.setOnTouchListener(onTouchListener);
-
-        findViewById(R.id.btn_rc).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                startActivity(new Intent(NewActivity.this, RemoteControlActivity.class));
-                finish();
-            }
-        });
+        tvToolbar.setText(getSharedPreferences("DeviceInfo", MODE_PRIVATE).getString("name", "") + " 欧卡小蓝船");
     }
 
     private void initAMap() {
@@ -1029,7 +1026,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             finish();
         }
         AndPermission.with(this)
-                .permission(Permission.ACCESS_COARSE_LOCATION, Permission.WRITE_EXTERNAL_STORAGE)
+                .permission(Permission.ACCESS_COARSE_LOCATION, Permission.WRITE_EXTERNAL_STORAGE, Permission.READ_PHONE_STATE)
                 .onGranted(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {

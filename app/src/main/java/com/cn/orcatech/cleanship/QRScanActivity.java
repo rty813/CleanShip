@@ -1,5 +1,7 @@
 package com.cn.orcatech.cleanship;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -11,9 +13,15 @@ import com.yanzhenjie.permission.AndPermission;
 import com.yanzhenjie.permission.Permission;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import cn.bingoogolapple.qrcode.core.QRCodeView;
+import es.dmoral.toasty.Toasty;
 
+/**
+ * @author doufu
+ */
 public class QRScanActivity extends AppCompatActivity implements QRCodeView.Delegate {
 
     private static final String TAG = "QRScan";
@@ -34,15 +42,21 @@ public class QRScanActivity extends AppCompatActivity implements QRCodeView.Dele
                         finish();
                     }
                 })
+                .onGranted(new Action() {
+                    @Override
+                    public void onAction(List<String> permissions) {
+                        mQRCodeView.startCamera();
+                        mQRCodeView.showScanRect();
+                        mQRCodeView.startSpot();
+                    }
+                })
                 .start();
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        mQRCodeView.startCamera();
-        mQRCodeView.showScanRect();
-        mQRCodeView.startSpot();
+
     }
 
     @Override
@@ -67,10 +81,33 @@ public class QRScanActivity extends AppCompatActivity implements QRCodeView.Dele
 
     @Override
     public void onScanQRCodeSuccess(String result) {
-        Log.i(TAG, "result:" + result);
-        Toast.makeText(this, result, Toast.LENGTH_SHORT).show();
-        vibrate();
-        mQRCodeView.stopSpot();
+        Log.e(TAG, "onScanQRCodeSuccess: " + result);
+        mQRCodeView.startSpot();
+        String[] datas = result.split(";");
+        if (datas.length != 3) {
+            return;
+        }
+        String id = datas[0];
+        String name = datas[1];
+        String addr = datas[2];
+        String pattern = "\\w+:\\w+:\\w+:\\w+:\\w+:\\w+";
+        Pattern p = Pattern.compile(pattern);
+        Matcher m = p.matcher(addr);
+        if (m.matches()) {
+            Toasty.success(this, id + "：" + name + "连接成功！", Toast.LENGTH_SHORT).show();
+            vibrate();
+            SharedPreferences sharedPreferences = getSharedPreferences("DeviceInfo", MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString("addr", addr);
+            editor.putString("name", name);
+            editor.putString("id", id);
+            editor.apply();
+            finish();
+            startActivity(new Intent(this, NewActivity.class));
+        }
+        else {
+            return;
+        }
     }
 
     @Override
