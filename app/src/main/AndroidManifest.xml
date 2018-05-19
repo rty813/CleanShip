@@ -69,13 +69,8 @@
                 android:resource="@xml/device_filter" />
         </activity>
         <activity android:name=".QRScanActivity"
-            android:label="二维码扫描"
             android:screenOrientation="portrait"
             android:launchMode="singleTop">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
     </application>
 

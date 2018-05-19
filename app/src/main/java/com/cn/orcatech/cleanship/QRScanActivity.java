@@ -26,6 +26,7 @@ public class QRScanActivity extends AppCompatActivity implements QRCodeView.Dele
 
     private static final String TAG = "QRScan";
     private QRCodeView mQRCodeView;
+    public static final String BLE_INFO = "BLE_DEVICE_INFO";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,7 +85,7 @@ public class QRScanActivity extends AppCompatActivity implements QRCodeView.Dele
         Log.e(TAG, "onScanQRCodeSuccess: " + result);
         mQRCodeView.startSpot();
         String[] datas = result.split(";");
-        if (datas.length != 3) {
+        if (datas.length < 3) {
             return;
         }
         String id = datas[0];
@@ -94,9 +95,9 @@ public class QRScanActivity extends AppCompatActivity implements QRCodeView.Dele
         Pattern p = Pattern.compile(pattern);
         Matcher m = p.matcher(addr);
         if (m.matches()) {
-            Toasty.success(this, id + "：" + name + "连接成功！", Toast.LENGTH_SHORT).show();
+            Toasty.success(this, name + "连接成功！", Toast.LENGTH_SHORT).show();
             vibrate();
-            SharedPreferences sharedPreferences = getSharedPreferences("DeviceInfo", MODE_PRIVATE);
+            SharedPreferences sharedPreferences = getSharedPreferences(BLE_INFO, MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPreferences.edit();
             editor.putString("addr", addr);
             editor.putString("name", name);

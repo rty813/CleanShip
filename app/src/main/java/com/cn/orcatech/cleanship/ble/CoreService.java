@@ -40,7 +40,7 @@ import es.dmoral.toasty.Toasty;
  * @author doufu
  */
 public class CoreService extends Service {
-    private static String DEVICE_ADDRESS;
+    public static String DEVICE_ADDRESS = null;
     private final static String ACTION_NOTIFICATION_CLOSE = "com.xyz.rty813.cleanship.ble.action.notification.close";
     private static BluetoothLeService bluetoothLeService;
     public boolean isConnected = false;
@@ -74,7 +74,7 @@ public class CoreService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        DEVICE_ADDRESS = getSharedPreferences("DeviceInfo", MODE_PRIVATE).getString("addr",  "00:15:87:20:EF:D2");
+        System.out.println("onCreate");
         newData = new StringBuilder();
         Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
         System.out.println(bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE));
@@ -98,16 +98,8 @@ public class CoreService extends Service {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        System.out.println("CoreService被摧毁啦！onTaskRemoved");
         Toasty.info(CoreService.this, "后台服务已关闭", Toast.LENGTH_SHORT).show();
         startBackgroundThread(false);
-        if (isBindBleService) {
-            unbindService(mServiceConnection);
-        }
-        if (bluetoothLeService != null) {
-            bluetoothLeService.close();
-            bluetoothLeService = null;
-        }
         super.onTaskRemoved(rootIntent);
     }
 

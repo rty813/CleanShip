@@ -121,6 +121,8 @@ import java.util.regex.Matcher;
 import es.dmoral.toasty.Toasty;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
+import static com.cn.orcatech.cleanship.QRScanActivity.BLE_INFO;
+
 /**
  * @author doufu
  */
@@ -188,12 +190,20 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
     private BluetoothAdapter mBluetoothAdapter;
     private StringBuilder newData = null;
     private FloatingActionMenu fam;
+    private String toolbarTitle;
     private View.OnClickListener clickListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
             switch (view.getId()) {
                 case R.id.btn_connect:
                     if (!loadingView.isShowing()) {
+                        CoreService.DEVICE_ADDRESS = getSharedPreferences(BLE_INFO, MODE_PRIVATE).getString("addr", null);
+                        if (CoreService.DEVICE_ADDRESS == null) {
+                            Toasty.info(NewActivity.this, "请先扫码绑定数传电台", Toast.LENGTH_SHORT).show();
+                            startActivity(new Intent(NewActivity.this, QRScanActivity.class));
+                            return;
+                        }
+
                         if (mBluetoothAdapter.isEnabled()) {
                             showLoadingView("正在连接");
                             initBleSerial();
@@ -224,10 +234,15 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     } else {
                         aMap.setMapType(AMap.MAP_TYPE_NORMAL);
                     }
-                    ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
+                    fam.close(true);
                     break;
                 case R.id.btn_rc:
                     startActivity(new Intent(NewActivity.this, RemoteControlActivity.class));
+                    finish();
+                    break;
+                case R.id.btn_bind:
+                    startActivity(new Intent(NewActivity.this, QRScanActivity.class));
+                    coreService.close();
                     finish();
                     break;
                 default:
@@ -392,7 +407,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnCtl = findViewById(R.id.btn_ctl);
         seekBar = findViewById(R.id.seekbar);
         fam = findViewById(R.id.fam);
-        fam.hideMenu(false);
         tvShipCharge = findViewById(R.id.tv_shipcharge);
         final SharedPreferences sharedPreferences = this.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
@@ -439,6 +453,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnConnect.setOnClickListener(clickListener);
         findViewById(R.id.btn_changemap).setOnClickListener(clickListener);
         findViewById(R.id.btn_rc).setOnClickListener(clickListener);
+        findViewById(R.id.btn_bind).setOnClickListener(clickListener);
 
         picStart = getResources().getDrawable(R.drawable.btn_start_selector);
         picPause = getResources().getDrawable(R.drawable.btn_pause_selector);
@@ -460,7 +475,8 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llMark.setOnTouchListener(onTouchListener);
         llMethod.setOnTouchListener(onTouchListener);
         llNav.setOnTouchListener(onTouchListener);
-        tvToolbar.setText(getSharedPreferences("DeviceInfo", MODE_PRIVATE).getString("name", "") + " 欧卡小蓝船");
+        toolbarTitle = getSharedPreferences(BLE_INFO, MODE_PRIVATE).getString("name", "") + " " + getResources().getString(R.string.app_name);
+        tvToolbar.setText(toolbarTitle);
     }
 
     private void initAMap() {
@@ -723,7 +739,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
 //                    loadRoute(id == -1 ? null : String.valueOf(id));
                     break;
                 case R.id.btn_ctl:
-                    ((FloatingActionMenu) findViewById(R.id.fam)).close(true);
+                    fam.close(true);
                     writeSerialThreadPool.execute(new WriteSerialThread("$ORDER,7#", NONE, state));
                     break;
                 default:
@@ -866,7 +882,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnHome.setVisibility(View.GONE);
         btnConnect.setVisibility(View.GONE);
         tvShipCharge.setVisibility(View.VISIBLE);
-        fam.showMenu(true);
     }
 
     private void morph(int state) {
@@ -874,7 +889,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             this.state = state;
             this.markEnable = false;
             btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
-            tvToolbar.setText(getResources().getString(R.string.app_name));
+            tvToolbar.setText(toolbarTitle);
             hideAll();
         }
         switch (state) {
@@ -891,6 +906,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llMark.setVisibility(View.VISIBLE);
                 llMethod.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.VISIBLE);
+                fam.showMenu(true);
                 break;
             case GONE:
                 btnGoStop.setText("暂停");
@@ -898,6 +914,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+                fam.showMenu(true);
                 break;
             case PAUSE:
                 btnGoStop.setText("开始");
@@ -905,13 +922,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+                fam.showMenu(true);
                 break;
             case HOMING:
                 llHome.setVisibility(View.VISIBLE);
+                fam.showMenu(true);
                 break;
             case FINISH:
                 llFinish.setVisibility(View.VISIBLE);
                 writeSerialThreadPool.execute(new QueryTimeDisThread());
+                fam.showMenu(true);
                 break;
             default:
                 break;

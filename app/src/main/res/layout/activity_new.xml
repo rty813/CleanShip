@@ -336,6 +336,14 @@
 
         </LinearLayout>
 
+        <android.support.design.widget.FloatingActionButton
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/btn_rc"
+            android:src="@drawable/camera"
+            android:layout_marginStart="10dp"
+            android:layout_gravity="center_vertical|start"/>
+
         <com.github.clans.fab.FloatingActionMenu
             android:id="@+id/fam"
             android:layout_width="match_parent"
@@ -364,16 +372,19 @@
                 android:src="@drawable/change_map"
                 app:fab_colorNormal="@color/velGray"
                 app:fab_colorPressed="#6b6b6b"
-                app:fab_label="切换地图"/>
-        </com.github.clans.fab.FloatingActionMenu>
+                app:fab_label="切换地图"
+                app:fab_size="mini" />
 
-        <android.support.design.widget.FloatingActionButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/btn_rc"
-            android:src="@drawable/camera"
-            android:layout_marginStart="10dp"
-            android:layout_gravity="center_vertical|start"/>
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/btn_bind"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/bind"
+                app:fab_colorNormal="@color/velGray"
+                app:fab_colorPressed="#6b6b6b"
+                app:fab_label="重新绑定"
+                app:fab_size="mini" />
+        </com.github.clans.fab.FloatingActionMenu>
 
     </FrameLayout>
 </LinearLayout>
