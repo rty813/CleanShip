@@ -51,23 +51,6 @@
 
         <service android:name=".ble.CoreService" />
         <service android:name=".ble.BluetoothLeService" />
-
-        <activity
-            android:name=".RemoteControlActivity"
-            android:label="图传遥控器"
-            android:launchMode="singleTop"
-            android:screenOrientation="landscape">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <meta-data
-                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
-                android:resource="@xml/device_filter" />
-        </activity>
         <activity android:name=".QRScanActivity"
             android:screenOrientation="portrait"
             android:launchMode="singleTop">

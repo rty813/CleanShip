@@ -336,14 +336,6 @@
 
         </LinearLayout>
 
-        <android.support.design.widget.FloatingActionButton
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/btn_rc"
-            android:src="@drawable/camera"
-            android:layout_marginStart="10dp"
-            android:layout_gravity="center_vertical|start"/>
-
         <com.github.clans.fab.FloatingActionMenu
             android:id="@+id/fam"
             android:layout_width="match_parent"
