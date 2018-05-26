@@ -236,10 +236,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                     }
                     fam.close(true);
                     break;
-                case R.id.btn_rc:
-                    startActivity(new Intent(NewActivity.this, RemoteControlActivity.class));
-                    finish();
-                    break;
                 case R.id.btn_bind:
                     startActivity(new Intent(NewActivity.this, QRScanActivity.class));
                     coreService.close();
@@ -452,7 +448,6 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         btnEnable.setOnClickListener(this);
         btnConnect.setOnClickListener(clickListener);
         findViewById(R.id.btn_changemap).setOnClickListener(clickListener);
-        findViewById(R.id.btn_rc).setOnClickListener(clickListener);
         findViewById(R.id.btn_bind).setOnClickListener(clickListener);
 
         picStart = getResources().getDrawable(R.drawable.btn_start_selector);

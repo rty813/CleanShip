@@ -1,0 +1,14 @@
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/camera"
+        android:shortcutLongLabel="@string/lable_shortcut_static_search_long"
+        android:shortcutShortLabel="@string/lable_shortcut_static_search_short">
+
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.cn.orcatech.cleanship"
+            android:targetClass="com.cn.orcatech.cleanship.RemoteControlActivity" />
+        <categories android:name="android.shortcut.conversation"/>
+    </shortcut>
+</shortcuts>
