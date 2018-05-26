@@ -340,7 +340,7 @@
             android:id="@+id/fam"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:paddingTop="150dp"
+            android:paddingTop="100dp"
             app:menu_backgroundColor="#65000000"
             app:menu_colorNormal="@color/velGray"
             app:menu_colorPressed="#6b6b6b"
