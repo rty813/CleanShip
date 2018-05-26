@@ -100,13 +100,6 @@ public class CoreService extends Service {
         System.out.println("CoreService被摧毁啦！onTaskRemoved");
         Toasty.info(CoreService.this, "后台服务已关闭", Toast.LENGTH_SHORT).show();
         startBackgroundThread(false);
-        if (isBindBleService) {
-            unbindService(mServiceConnection);
-        }
-        if (bluetoothLeService != null) {
-            bluetoothLeService.close();
-            bluetoothLeService = null;
-        }
         super.onTaskRemoved(rootIntent);
     }
 
