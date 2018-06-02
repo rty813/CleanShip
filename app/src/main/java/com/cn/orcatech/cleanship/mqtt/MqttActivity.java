@@ -832,6 +832,7 @@ public class MqttActivity extends AppCompatActivity implements View.OnClickListe
 
     private void morph(int state) {
         if (state != NONE) {
+            preState = this.state;
             this.state = state;
             this.markEnable = false;
             btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
@@ -1162,7 +1163,6 @@ public class MqttActivity extends AppCompatActivity implements View.OnClickListe
                 this.state = UNREADY;
                 mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
             }
-            preState = state;
         }
     }
 
@@ -1217,7 +1217,7 @@ public class MqttActivity extends AppCompatActivity implements View.OnClickListe
                     Toasty.info(activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
                     break;
                 case 10:
-                    activity.handleState(msg.arg1);
+                    activity.handleState((Integer) msg.obj);
                     break;
                 case 11:
                     if (activity.loadingView.isShowing()) {
@@ -1417,8 +1417,7 @@ public class MqttActivity extends AppCompatActivity implements View.OnClickListe
                     if (!"".equals(data)) {
                         String[] strings = data.split(";");
                         if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
-                            strings = strings[1].split(",");
-                            mHandler.sendMessage(mHandler.obtainMessage(10, Integer.parseInt(strings[0]), Integer.parseInt(strings[1])));
+                            mHandler.sendMessage(mHandler.obtainMessage(10, Integer.parseInt(strings[1])));
                             break;
                         }
                     }
