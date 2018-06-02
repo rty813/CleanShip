@@ -29,6 +29,7 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -43,14 +44,17 @@ public class MqttService extends Service {
     public boolean isConnected = false;
     public boolean notificationEnable = false;
     private MyBinder binder = new MyBinder();
-    private StringBuilder newData;
+    public StringBuilder newData;
     private MediaPlayer mediaPlayer = null;
     private Vibrator vibrator = null;
     private ExecutorService queryThread;
     private boolean hasAlarmed = false;
     private static final String TAG = "MQTT";
-    private static final String TOPIC_SEND = "APP2SHIP";
-    private static final String TOPIC_RECV = "SHIP2APP";
+    private static final String TOPIC_SEND_PREFIX = "APP2SHIP";
+    private static final String TOPIC_RECV_PREFIX = "SHIP2APP";
+    private String TOPIC_SEND;
+    private String TOPIC_RECV;
+    public  String DEVICE_ID = null;
     private static final String MQTT_SERVER_URL = "tcp://orca-tech.cn:11883";
     public static final String MQTT_ONCONNCET = "MQTT_ONCONNECT";
     private MqttClient mqttClient;
@@ -226,8 +230,7 @@ public class MqttService extends Service {
         newData.append(data);
     }
 
-    @Nullable
-    synchronized public String readData() {
+    synchronized public String readData(boolean mode) {
         try {
             int timeGap = 0;
             String result = newData.toString();
@@ -237,7 +240,7 @@ public class MqttService extends Service {
                 Thread.sleep(10);
                 oldResult = result;
                 result = newData.toString();
-                if (!notificationEnable) {
+                if (notificationEnable != mode) {
                     break;
                 }
             }
@@ -246,17 +249,28 @@ public class MqttService extends Service {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        return null;
+        return "";
     }
 
-    synchronized public void writeData(String msg, long interval) throws MqttException {
+    synchronized public void writeData(String msg, long interval) {
         if (isConnected) {
             try {
                 mqttClient.publish(TOPIC_SEND, (msg + "\r\n").getBytes(), 1, false);
                 Thread.sleep(interval);
             } catch (InterruptedException e) {
                 e.printStackTrace();
+            } catch (MqttException e) {
+                isConnected = false;
+                e.printStackTrace();
             }
+        }
+    }
+
+    public void setDeviceID(String id, int num) {
+        DEVICE_ID = id;
+        if (id != null) {
+            TOPIC_SEND = String.format(Locale.getDefault(), "%s_%s_%d", TOPIC_SEND_PREFIX, id, num);
+            TOPIC_RECV = String.format(Locale.getDefault(), "%s_%s_%d", TOPIC_RECV_PREFIX, id, num);
         }
     }
 
@@ -267,7 +281,7 @@ public class MqttService extends Service {
             while (notificationEnable) {
                 try {
                     writeData(String.format(Locale.getDefault(), "$QUERY,9#"), 10);
-                    String data = readData();
+                    String data = readData(true);
                     if (!notificationEnable) {
                         break;
                     }
@@ -290,7 +304,7 @@ public class MqttService extends Service {
                     for (int timeGap = 0; timeGap < 1000 && notificationEnable; timeGap++) {
                         Thread.sleep(10);
                     }
-                } catch (NumberFormatException | InterruptedException | MqttException e) {
+                } catch (NumberFormatException | InterruptedException e) {
                     e.printStackTrace();
                 }
             }

@@ -121,7 +121,7 @@ import java.util.regex.Matcher;
 import es.dmoral.toasty.Toasty;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
-import static com.cn.orcatech.cleanship.QRScanActivity.BLE_INFO;
+import static com.cn.orcatech.cleanship.QRScanActivity.DEVICE_INFO;
 
 /**
  * @author doufu
@@ -197,7 +197,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
             switch (view.getId()) {
                 case R.id.btn_connect:
                     if (!loadingView.isShowing()) {
-                        CoreService.DEVICE_ADDRESS = getSharedPreferences(BLE_INFO, MODE_PRIVATE).getString("addr", null);
+                        CoreService.DEVICE_ADDRESS = getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("addr", null);
                         if (CoreService.DEVICE_ADDRESS == null) {
                             Toasty.info(NewActivity.this, "请先扫码绑定数传电台", Toast.LENGTH_SHORT).show();
                             startActivity(new Intent(NewActivity.this, QRScanActivity.class));
@@ -470,7 +470,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         llMark.setOnTouchListener(onTouchListener);
         llMethod.setOnTouchListener(onTouchListener);
         llNav.setOnTouchListener(onTouchListener);
-        toolbarTitle = getSharedPreferences(BLE_INFO, MODE_PRIVATE).getString("name", "") + " " + getResources().getString(R.string.app_name);
+        toolbarTitle = getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("name", "") + " " + getResources().getString(R.string.app_name);
         tvToolbar.setText(toolbarTitle);
     }
 

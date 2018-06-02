@@ -34,12 +34,12 @@
         <activity
             android:name=".NewActivity"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            android:screenOrientation="portrait"
+            android:label="欧卡小蓝船蓝牙版">
+            <!--<intent-filter>-->
+                <!--<action android:name="android.intent.action.MAIN" />-->
+                <!--<category android:name="android.intent.category.LAUNCHER" />-->
+            <!--</intent-filter>-->
         </activity>
 
         <receiver
@@ -59,7 +59,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
+                <!--<category android:name="android.intent.category.LAUNCHER" />-->
             </intent-filter>
 
             <meta-data
@@ -73,11 +73,11 @@
             android:name=".QRScanActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait" />
-
-        <activity android:name=".mqtt.MqttActivity"
+        <activity
+            android:name=".mqtt.MqttActivity"
+            android:label="欧卡小蓝船4G版"
             android:launchMode="singleTop"
-            android:screenOrientation="portrait"
-            android:label="MQTT测试">
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -88,7 +88,12 @@
         <service
             android:name=".mqtt.MqttService"
             android:enabled="true"
-            android:exported="true"></service>
+            android:exported="true" />
+
+        <receiver
+            android:name=".mqtt.MyReceiver"
+            android:enabled="true"
+            android:exported="true"></receiver>
     </application>
 
 </manifest>
