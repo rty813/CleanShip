@@ -21,6 +21,7 @@ repositories {
     jcenter()
     maven { url 'http://raw.github.com/saki4510t/libcommon/master/repository/' }
     maven { url "https://jitpack.io" }
+    maven { url "https://repo.eclipse.org/content/repositories/paho-snapshots/" }
 }
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
@@ -43,4 +44,6 @@ dependencies {
     implementation 'com.github.jiangdongguo:AndroidUSBCamera:2.1.0'
     implementation 'com.github.kongqw:AndroidRocker:1.0.1'
     implementation 'cn.bingoogolapple:bga-qrcode-zxing:1.2.1'
+    implementation files('lib/org.eclipse.paho.android.service-1.1.1.jar')
+    implementation files('lib/org.eclipse.paho.client.mqttv3-1.2.0.jar')
 }
