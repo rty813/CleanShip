@@ -1,1 +1,1 @@
-include ':app', ':libk-switchbutton'
+include ':app', ':libk-switchbutton', ':wear'
