@@ -14,5 +14,12 @@
         android:id="@+id/mapview">
     </com.amap.api.maps.WearMapView>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/btnSpeak"
+        android:layout_margin="30dp"
+        android:text="说话"/>
+
 </android.support.wear.widget.BoxInsetLayout>
 

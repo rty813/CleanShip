@@ -2,14 +2,17 @@ package xyz.rty813.wear;
 
 import android.Manifest;
 import android.app.Service;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.speech.RecognizerIntent;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.wearable.activity.WearableActivity;
+import android.view.View;
 import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
@@ -37,6 +40,7 @@ public class MainActivity extends WearableActivity {
     private long mLastNotifyTime;
     private ArrayList<Marker> markers;
     private ArrayList<Polyline> polylines;
+    private AMap aMap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,9 +53,16 @@ public class MainActivity extends WearableActivity {
                 new String[]{Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION},
                 0);
 
+        findViewById(R.id.btnSpeak).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                displaySpeechRecognizer();
+            }
+        });
+
         mapView = findViewById(R.id.mapview);
         mapView.onCreate(savedInstanceState);
-        final AMap aMap = mapView.getMap();
+        aMap = mapView.getMap();
         aMap.getUiSettings().setCompassEnabled(false);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setZoomControlsEnabled(false);
@@ -165,5 +176,29 @@ public class MainActivity extends WearableActivity {
         super.onSaveInstanceState(outState);
         //在activity执行onSaveInstanceState时执行map.onSaveInstanceState (outState)，保存地图当前的状态
         mapView.onSaveInstanceState(outState);
+    }
+
+    private static final int SPEECH_REQUEST_CODE = 0;
+
+    private void displaySpeechRecognizer() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        startActivityForResult(intent, SPEECH_REQUEST_CODE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == SPEECH_REQUEST_CODE && resultCode == RESULT_OK) {
+            List<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            String spokenText = results.get(0);
+            Toast.makeText(this, spokenText, Toast.LENGTH_SHORT).show();
+            if (spokenText.equals("清空")) {
+                aMap.clear(false);
+                markers.removeAll(markers);
+                polylines.removeAll(polylines);
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }
