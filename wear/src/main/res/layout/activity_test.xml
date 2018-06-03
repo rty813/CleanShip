@@ -7,41 +7,37 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <android.support.wear.widget.BoxInsetLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        xmlns:tools="http://schemas.android.com/tools"
+    <android.support.wear.widget.BoxInsetLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context="xyz.rty813.wear.MainActivity"
+        tools:content="xyz.rty813.wear.TestActivity"
         tools:deviceIds="wear">
-
-        <com.amap.api.maps.WearMapView
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:id="@+id/mapview">
-        </com.amap.api.maps.WearMapView>
+            app:boxedEdges="all">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hello world\nMain Content"/>
+        </FrameLayout>
     </android.support.wear.widget.BoxInsetLayout>
-
-
 
     <android.support.wear.widget.drawer.WearableDrawerView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="top"
+        android:layout_gravity="bottom"
+        android:id="@+id/drawerView"
         android:background="@color/red"
-        android:id="@+id/drawer_view"
         app:drawerContent="@+id/drawer_content">
         <FrameLayout
             android:id="@id/drawer_content"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
-            <Button
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/btnSpeak"
-                android:layout_gravity="center"
-                android:text="说话"/>
+                android:text="hello world drawer view"/>
         </FrameLayout>
     </android.support.wear.widget.drawer.WearableDrawerView>
 </android.support.wear.widget.drawer.WearableDrawerLayout>
-
