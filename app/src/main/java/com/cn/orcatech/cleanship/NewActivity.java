@@ -1018,7 +1018,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         new UpdateWrapper.Builder(getApplicationContext())
                 .setTime(1000)
                 .setNotificationIcon(R.mipmap.ic_launcher)
-                .setUrl("http://orca-tech.cn/app/master/apk.json")
+                .setUrl("http://orca-tech.cn/app/fengqing/apk.json")
                 .setIsShowToast(false)
                 .setCallback(new CheckUpdateTask.Callback() {
                     @Override
