@@ -1,0 +1,4 @@
+#Mon Jun 04 00:20:59 CST 2018
+base.0=E\:\\cleanship\\CleanShipAndroid\\wear\\build\\intermediates\\transforms\\dexMerger\\debug\\1
+path.0=classes.dex
+renamed.0=classes.dex

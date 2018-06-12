@@ -2,9 +2,9 @@ package com.cn.orcatech.cleanship;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -85,7 +85,7 @@ public class QRScanActivity extends AppCompatActivity implements QRCodeView.Dele
         Log.e(TAG, "onScanQRCodeSuccess: " + result);
         mQRCodeView.startSpot();
         String[] datas = result.split(";");
-        if (datas.length < 3) {
+        if (datas.length < 2) {
             return;
         }
         String id = datas[0];

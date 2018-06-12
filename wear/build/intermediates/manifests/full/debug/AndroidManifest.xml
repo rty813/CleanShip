@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="xyz.rty813.wear"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="23"
+        android:targetSdkVersion="27" />
+
+    <uses-feature android:name="android.hardware.type.watch" />
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- 允许程序设置内置sd卡的写权限 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- 允许程序获取网络状态 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 允许程序访问WiFi网络信息 -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- 允许程序读写手机状态和身份 -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- 允许程序访问CellID或WiFi热点来获取粗略的位置 -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <application
+        android:allowBackup="true"
+        android:debuggable="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:testOnly="true"
+        android:theme="@style/WearAppTheme" >
+        <meta-data
+            android:name="com.amap.api.v2.apikey"
+            android:value="fc05b392b0245292d177079eac2449a7" />
+
+        <uses-library
+            android:name="com.google.android.wearable"
+            android:required="true" />
+
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="true" />
+
+        <activity
+            android:name="xyz.rty813.wear.MainActivity"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="xyz.rty813.wear.TestActivity"
+            android:label="@string/title_activity_test" >
+        </activity>
+        <activity
+            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+    </application>
+
+</manifest>

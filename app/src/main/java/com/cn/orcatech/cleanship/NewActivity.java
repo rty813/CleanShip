@@ -895,13 +895,13 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 coreService.close();
                 resetMap();
                 tvShipCharge.setVisibility(View.INVISIBLE);
-                fam.hideMenu(false);
+//                fam.hideMenu(false);
                 break;
             case READY:
                 llMark.setVisibility(View.VISIBLE);
                 llMethod.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.VISIBLE);
-                fam.showMenu(true);
+//                fam.showMenu(true);
                 break;
             case GONE:
                 btnGoStop.setText("暂停");
@@ -909,7 +909,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-                fam.showMenu(true);
+//                fam.showMenu(true);
                 break;
             case PAUSE:
                 btnGoStop.setText("开始");
@@ -917,16 +917,16 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 llNav.setVisibility(View.VISIBLE);
                 tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
                 tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-                fam.showMenu(true);
+//                fam.showMenu(true);
                 break;
             case HOMING:
                 llHome.setVisibility(View.VISIBLE);
-                fam.showMenu(true);
+//                fam.showMenu(true);
                 break;
             case FINISH:
                 llFinish.setVisibility(View.VISIBLE);
                 writeSerialThreadPool.execute(new QueryTimeDisThread());
-                fam.showMenu(true);
+//                fam.showMenu(true);
                 break;
             default:
                 break;
