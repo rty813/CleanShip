@@ -46,4 +46,6 @@ dependencies {
     implementation 'cn.bingoogolapple:bga-qrcode-zxing:1.2.1'
     implementation files('lib/org.eclipse.paho.android.service-1.1.1.jar')
     implementation files('lib/org.eclipse.paho.client.mqttv3-1.2.0.jar')
+    implementation 'com.yanzhenjie:fragment:1.0.1'
+    implementation 'com.ashokvarma.android:bottom-navigation-bar:2.0.4'
 }

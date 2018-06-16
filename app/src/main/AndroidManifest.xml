@@ -58,7 +58,7 @@
             android:launchMode="singleTop"
             android:screenOrientation="landscape">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+                <!--<action android:name="android.intent.action.MAIN" />-->
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
 
                 <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
@@ -80,11 +80,11 @@
             android:label="欧卡小蓝船4G版"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            <!--<intent-filter>-->
+                <!--<action android:name="android.intent.action.MAIN" />-->
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+                <!--<category android:name="android.intent.category.LAUNCHER" />-->
+            <!--</intent-filter>-->
         </activity>
 
         <service
@@ -96,6 +96,16 @@
             android:name=".mqtt.MyReceiver"
             android:enabled="true"
             android:exported="true" />
+
+        <activity android:name=".MainActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>
