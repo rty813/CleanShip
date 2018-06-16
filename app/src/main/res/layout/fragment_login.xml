@@ -1,9 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
-    android:layout_height="match_parent">
-    <TextView
-        android:layout_width="wrap_content"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:background="#ffffff">
+    <com.rengwuxian.materialedittext.MaterialEditText
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="LoginFragment"/>
-</android.support.constraint.ConstraintLayout>
+        android:id="@+id/tv_username"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginTop="50dp"
+        android:layout_marginBottom="50dp"
+        android:hint="用户名"
+        app:met_iconLeft="@drawable/username"
+        app:met_floatingLabel="highlight"
+        app:met_floatingLabelText="用户名"
+        app:met_singleLineEllipsis="true"
+        app:met_minCharacters="5"
+        app:met_maxCharacters="20"
+        />
+
+    <com.rengwuxian.materialedittext.MaterialEditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginTop="50dp"
+        android:layout_marginBottom="50dp"
+        android:id="@+id/tv_password"
+        android:hint="密码"
+        app:met_iconLeft="@drawable/password"
+        app:met_floatingLabel="highlight"
+        app:met_floatingLabelText="密码"
+        app:met_singleLineEllipsis="true"
+        app:met_minCharacters="6"
+        />
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:layout_marginRight="20dp"
+        android:layout_marginTop="50dp"
+        android:layout_marginBottom="50dp"
+        android:id="@+id/btn_login"
+        android:text="登陆"
+        />
+
+</LinearLayout>

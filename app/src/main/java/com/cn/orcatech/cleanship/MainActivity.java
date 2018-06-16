@@ -31,7 +31,7 @@ public class MainActivity extends CompatActivity {
                 .hide(loginFragment)
                 .commit();
         navigationBar.setMode(BottomNavigationBar.MODE_FIXED);
-        navigationBar.setBackgroundStyle(BottomNavigationBar.BACKGROUND_STYLE_RIPPLE);
+        navigationBar.setBackgroundStyle(BottomNavigationBar.BACKGROUND_STYLE_STATIC);
         navigationBar.setTabSelectedListener(new BottomNavigationBar.OnTabSelectedListener() {
             @Override
             public void onTabSelected(int position) {

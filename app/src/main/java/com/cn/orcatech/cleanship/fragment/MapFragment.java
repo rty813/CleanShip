@@ -36,9 +36,9 @@ public class MapFragment extends NoFragment {
         mMapView = view.findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
         aMap = mMapView.getMap();
-        aMap.getUiSettings().setCompassEnabled(true);
+        aMap.getUiSettings().setCompassEnabled(false);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
-        aMap.getUiSettings().setZoomControlsEnabled(true);
+        aMap.getUiSettings().setZoomControlsEnabled(false);
         aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
