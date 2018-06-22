@@ -8,9 +8,11 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.activity.ForgetPwActivity;
 import com.cn.orcatech.cleanship.activity.LogonActivity;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.util.MD5Utils;
@@ -27,6 +29,7 @@ public class LoginFragment extends Fragment implements View.OnClickListener {
 
     private MaterialEditText etUsername;
     private MaterialEditText etPassword;
+    private ProgressBar progressbar;
 
     @Nullable
     @Override
@@ -42,6 +45,7 @@ public class LoginFragment extends Fragment implements View.OnClickListener {
         view.findViewById(R.id.btn_login).setOnClickListener(this);
         etUsername = view.findViewById(R.id.et_username);
         etPassword = view.findViewById(R.id.et_password);
+        progressbar = view.findViewById(R.id.progressBar);
     }
 
     @Override
@@ -52,6 +56,7 @@ public class LoginFragment extends Fragment implements View.OnClickListener {
         }
         switch (v.getId()) {
             case R.id.tv_forget:
+                startActivity(new Intent(activity, ForgetPwActivity.class));
                 break;
             case R.id.tv_logon:
                 startActivity(new Intent(activity, LogonActivity.class));
@@ -60,6 +65,10 @@ public class LoginFragment extends Fragment implements View.OnClickListener {
                 String username = etUsername.getText().toString();
                 String password_origin = etPassword.getText().toString();
                 String password = MD5Utils.stringToMD5(password_origin);
+                if (username.length() < 5 || username.length() > 20 || password_origin.length() < 6) {
+                    Toasty.error(activity, "用户名或密码长度不符", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 StringRequest request = new StringRequest("http://orca-tech.cn/app/loginlogon.php", RequestMethod.POST);
                 request.add("username", username).add("password", password).add("type", "login");
                 AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
@@ -82,6 +91,18 @@ public class LoginFragment extends Fragment implements View.OnClickListener {
                     public void onFailed(int what, Response<String> response) {
                         Toasty.error(activity, "服务器连接失败，请检查网络连接", Toast.LENGTH_SHORT).show();
                         super.onFailed(what, response);
+                    }
+
+                    @Override
+                    public void onStart(int what) {
+                        progressbar.setVisibility(View.VISIBLE);
+                        super.onStart(what);
+                    }
+
+                    @Override
+                    public void onFinish(int what) {
+                        progressbar.setVisibility(View.INVISIBLE);
+                        super.onFinish(what);
                     }
                 });
                 break;
