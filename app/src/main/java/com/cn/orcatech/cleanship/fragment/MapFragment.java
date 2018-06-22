@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,9 +19,8 @@ import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
 import com.amap.api.maps.model.MyLocationStyle;
 import com.cn.orcatech.cleanship.R;
-import com.yanzhenjie.fragment.NoFragment;
 
-public class MapFragment extends NoFragment {
+public class MapFragment extends Fragment {
     private MapView mMapView;
     private AMap aMap;
 

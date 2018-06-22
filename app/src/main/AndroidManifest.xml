@@ -33,7 +33,7 @@
             android:enabled="true" />
 
         <activity
-            android:name=".NewActivity"
+            android:name=".activity.NewActivity"
             android:label="欧卡小蓝船蓝牙版"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">
@@ -53,12 +53,13 @@
         <service android:name=".ble.BluetoothLeService" />
 
         <activity
-            android:name=".RemoteControlActivity"
+            android:name=".activity.RemoteControlActivity"
             android:label="图传遥控器"
             android:launchMode="singleTop"
             android:screenOrientation="landscape">
             <intent-filter>
-                <!--<action android:name="android.intent.action.MAIN" />-->
+
+                <!-- <action android:name="android.intent.action.MAIN" /> -->
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
 
                 <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
@@ -72,7 +73,7 @@
                 android:resource="@xml/shortcuts" />
         </activity>
         <activity
-            android:name=".QRScanActivity"
+            android:name=".activity.QRScanActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait" />
         <activity
@@ -80,11 +81,13 @@
             android:label="欧卡小蓝船4G版"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">
-            <!--<intent-filter>-->
-                <!--<action android:name="android.intent.action.MAIN" />-->
 
-                <!--<category android:name="android.intent.category.LAUNCHER" />-->
-            <!--</intent-filter>-->
+            <!-- <intent-filter> -->
+            <!-- <action android:name="android.intent.action.MAIN" /> -->
+
+
+            <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
+            <!-- </intent-filter> -->
         </activity>
 
         <service
@@ -97,7 +100,8 @@
             android:enabled="true"
             android:exported="true" />
 
-        <activity android:name=".MainActivity"
+        <activity
+            android:name=".activity.MainActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -106,6 +110,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".activity.LogonActivity"></activity>
     </application>
 
 </manifest>

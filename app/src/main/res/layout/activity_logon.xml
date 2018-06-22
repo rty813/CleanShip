@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:fitsSystemWindows="true"
-    android:background="#ffffff">
+    android:background="#ffffff"
+    tools:context=".activity.LogonActivity">
+
     <com.rengwuxian.materialedittext.MaterialEditText
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -46,32 +49,8 @@
         android:layout_height="wrap_content"
         android:layout_marginLeft="20dp"
         android:layout_marginRight="20dp"
-        android:id="@+id/btn_login"
-        android:text="登陆"
+        android:id="@+id/btn_logon"
+        android:text="注册"
         />
-
-    <android.support.constraint.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginLeft="20dp"
-        android:layout_marginRight="20dp">
-
-        <TextView
-            android:id="@+id/tv_forget"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="忘记密码"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <TextView
-            android:id="@+id/tv_logon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="注册用户"
-            app:layout_constraintEnd_toEndOf="parent" />
-    </android.support.constraint.ConstraintLayout>
 
 </LinearLayout>

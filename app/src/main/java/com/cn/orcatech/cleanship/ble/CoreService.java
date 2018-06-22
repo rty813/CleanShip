@@ -11,7 +11,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
@@ -24,8 +23,8 @@ import android.support.v4.app.NotificationCompat;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 
-import com.cn.orcatech.cleanship.NewActivity;
 import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.activity.NewActivity;
 
 import java.io.IOException;
 import java.util.Locale;

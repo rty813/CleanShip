@@ -7,7 +7,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.cn.orcatech.cleanship"
-            android:targetClass="com.cn.orcatech.cleanship.RemoteControlActivity" />
+            android:targetClass="com.cn.orcatech.cleanship.activity.RemoteControlActivity" />
         <categories android:name="android.shortcut.conversation"/>
     </shortcut>
 </shortcuts>

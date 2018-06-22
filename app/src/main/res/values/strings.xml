@@ -11,4 +11,7 @@
     <string name="btn_connect">开启小蓝船</string>
     <string name="lable_shortcut_static_search_long">图传</string>
     <string name="lable_shortcut_static_search_short">图传</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

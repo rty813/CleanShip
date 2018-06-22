@@ -5,7 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
@@ -21,15 +20,14 @@ import android.util.Log;
 import android.widget.RemoteViews;
 import android.widget.Toast;
 
-import com.cn.orcatech.cleanship.NewActivity;
 import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.activity.NewActivity;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 
 import java.io.IOException;
 import java.util.Locale;

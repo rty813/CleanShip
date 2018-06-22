@@ -70,9 +70,9 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
-import com.cn.orcatech.cleanship.QRScanActivity;
 import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.SwipeRecyclerViewAdapter;
+import com.cn.orcatech.cleanship.activity.QRScanActivity;
 import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
 import com.cn.orcatech.cleanship.util.WriteSerialThreadFactory;
 import com.github.clans.fab.FloatingActionButton;
@@ -119,7 +119,7 @@ import java.util.regex.Matcher;
 import es.dmoral.toasty.Toasty;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
-import static com.cn.orcatech.cleanship.QRScanActivity.DEVICE_INFO;
+import static com.cn.orcatech.cleanship.activity.QRScanActivity.DEVICE_INFO;
 
 
 public class MqttActivity extends AppCompatActivity implements View.OnClickListener {

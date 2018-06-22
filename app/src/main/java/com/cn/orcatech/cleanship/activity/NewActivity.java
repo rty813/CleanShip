@@ -1,4 +1,4 @@
-package com.cn.orcatech.cleanship;
+package com.cn.orcatech.cleanship.activity;
 
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
@@ -72,6 +72,9 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
+import com.cn.orcatech.cleanship.MyReceiver;
+import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.ble.BleStateReceiver;
 import com.cn.orcatech.cleanship.ble.BluetoothLeService;
 import com.cn.orcatech.cleanship.ble.CoreService;
@@ -121,7 +124,7 @@ import java.util.regex.Matcher;
 import es.dmoral.toasty.Toasty;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
-import static com.cn.orcatech.cleanship.QRScanActivity.DEVICE_INFO;
+import static com.cn.orcatech.cleanship.activity.QRScanActivity.DEVICE_INFO;
 
 /**
  * @author doufu

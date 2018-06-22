@@ -1,4 +1,4 @@
-package com.cn.orcatech.cleanship;
+package com.cn.orcatech.cleanship.activity;
 
 import android.hardware.usb.UsbDevice;
 import android.os.Bundle;
@@ -9,6 +9,7 @@ import android.view.Surface;
 import android.view.View;
 import android.widget.Toast;
 
+import com.cn.orcatech.cleanship.R;
 import com.jiangdg.usbcamera.UVCCameraHelper;
 import com.jiangdg.usbcamera.utils.FileUtils;
 import com.kongqw.rockerlibrary.view.RockerView;
@@ -18,8 +19,6 @@ import com.serenegiant.usb.encoder.RecordParams;
 import com.serenegiant.usb.widget.CameraViewInterface;
 
 import java.io.File;
-
-import es.dmoral.toasty.Toasty;
 
 /**
  * @author doufu

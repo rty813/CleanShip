@@ -1,13 +1,14 @@
-package com.cn.orcatech.cleanship;
+package com.cn.orcatech.cleanship.activity;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Bundle;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.cn.orcatech.cleanship.R;
 import com.yanzhenjie.permission.Action;
 import com.yanzhenjie.permission.AndPermission;
 import com.yanzhenjie.permission.Permission;

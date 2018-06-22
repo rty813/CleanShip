@@ -7,6 +7,7 @@ import android.os.BatteryManager;
 import android.widget.Toast;
 
 import com.amap.api.maps.model.LatLng;
+import com.cn.orcatech.cleanship.activity.NewActivity;
 
 import es.dmoral.toasty.Toasty;
 

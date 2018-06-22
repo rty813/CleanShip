@@ -7,7 +7,7 @@ import android.content.Intent;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.cn.orcatech.cleanship.NewActivity;
+import com.cn.orcatech.cleanship.activity.NewActivity;
 
 import es.dmoral.toasty.Toasty;
 
