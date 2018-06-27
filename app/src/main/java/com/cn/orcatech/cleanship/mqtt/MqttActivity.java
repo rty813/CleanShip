@@ -224,7 +224,7 @@ public class MqttActivity extends AppCompatActivity implements View.OnClickListe
     protected void onResume() {
         MiStatInterface.recordPageStart(MqttActivity.this, "主界面");
         mMapView.onResume();
-        myReceiver = new MyReceiver();
+        myReceiver = new MyReceiver(null);
         IntentFilter filter = new IntentFilter();
         filter.addAction(MqttService.MQTT_ONCONNCET);
         filter.addAction(Intent.ACTION_BATTERY_CHANGED);

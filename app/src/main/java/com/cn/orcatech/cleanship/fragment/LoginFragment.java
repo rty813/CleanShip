@@ -1,10 +1,11 @@
 package com.cn.orcatech.cleanship.fragment;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +18,7 @@ import com.cn.orcatech.cleanship.activity.LogonActivity;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.util.MD5Utils;
 import com.rengwuxian.materialedittext.MaterialEditText;
+import com.yanzhenjie.fragment.NoFragment;
 import com.yanzhenjie.nohttp.RequestMethod;
 import com.yanzhenjie.nohttp.rest.AsyncRequestExecutor;
 import com.yanzhenjie.nohttp.rest.Response;
@@ -25,7 +27,7 @@ import com.yanzhenjie.nohttp.rest.StringRequest;
 
 import es.dmoral.toasty.Toasty;
 
-public class LoginFragment extends Fragment implements View.OnClickListener {
+public class LoginFragment extends NoFragment implements View.OnClickListener {
 
     private MaterialEditText etUsername;
     private MaterialEditText etPassword;
@@ -46,6 +48,15 @@ public class LoginFragment extends Fragment implements View.OnClickListener {
         etUsername = view.findViewById(R.id.et_username);
         etPassword = view.findViewById(R.id.et_password);
         progressbar = view.findViewById(R.id.progressBar);
+        MainActivity activity = (MainActivity) getActivity();
+        if (activity != null) {
+            SharedPreferences sharedPreferences = activity.getSharedPreferences("userinfo", Context.MODE_PRIVATE);
+            String username = sharedPreferences.getString("username", null);
+            String password = sharedPreferences.getString("password", null);
+            if (username != null && password != null) {
+                login(activity, username, password);
+            }
+        }
     }
 
     @Override
@@ -67,45 +78,60 @@ public class LoginFragment extends Fragment implements View.OnClickListener {
                 String password = MD5Utils.stringToMD5(password_origin);
                 if (username.length() < 5 || username.length() > 20 || password_origin.length() < 6) {
                     Toasty.error(activity, "用户名或密码长度不符", Toast.LENGTH_SHORT).show();
-                    return;
                 }
-                StringRequest request = new StringRequest("http://orca-tech.cn/app/loginlogon.php", RequestMethod.POST);
-                request.add("username", username).add("password", password).add("type", "login");
-                AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
-                    @Override
-                    public void onSucceed(int what, Response<String> response) {
-                        super.onSucceed(what, response);
-                        if (response.get().equals("success")) {
-                            Toasty.success(activity, "登陆成功", Toast.LENGTH_SHORT).show();
-                            activity.loginSuccess();
-                        }
-                        else if (response.get().equals("fail")){
-                            Toasty.error(activity, "密码错误", Toast.LENGTH_SHORT).show();
-                        }
-                        else {
-                            Toasty.error(activity, "用户名不存在", Toast.LENGTH_SHORT).show();
-                        }
-                    }
-
-                    @Override
-                    public void onFailed(int what, Response<String> response) {
-                        Toasty.error(activity, "服务器连接失败，请检查网络连接", Toast.LENGTH_SHORT).show();
-                        super.onFailed(what, response);
-                    }
-
-                    @Override
-                    public void onStart(int what) {
-                        progressbar.setVisibility(View.VISIBLE);
-                        super.onStart(what);
-                    }
-
-                    @Override
-                    public void onFinish(int what) {
-                        progressbar.setVisibility(View.INVISIBLE);
-                        super.onFinish(what);
-                    }
-                });
+                else {
+                    login(activity, username, password);
+                }
                 break;
         }
+    }
+
+    private void login(final MainActivity activity, final String username, final String password) {
+        StringRequest request = new StringRequest("http://orca-tech.cn/app/loginlogon.php", RequestMethod.POST);
+        request.add("username", username).add("password", password).add("type", "login");
+        AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
+            @Override
+            public void onSucceed(int what, Response<String> response) {
+                super.onSucceed(what, response);
+                String[] res = response.get().split(";");
+                if (res.length == 3 && res[0].equals("success")) {
+                    Toasty.success(activity, "登陆成功", Toast.LENGTH_SHORT).show();
+                    SharedPreferences sharedPreferences = activity.getSharedPreferences("userinfo", Context.MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sharedPreferences.edit();
+                    editor.putString("username", username);
+                    editor.putString("password", password);
+                    editor.apply();
+                    activity.userInfo.setUsername(username);
+                    activity.userInfo.setPassword(password);
+                    activity.userInfo.setShip_id(Integer.parseInt(res[1]));
+                    activity.userInfo.setTotalship(Integer.parseInt(res[2]));
+                    activity.loginSuccess();
+                }
+                else if (response.get().equals("fail")){
+                    Toasty.error(activity, "密码错误", Toast.LENGTH_SHORT).show();
+                }
+                else {
+                    Toasty.error(activity, "用户名不存在", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailed(int what, Response<String> response) {
+                Toasty.error(activity, "服务器连接失败，请检查网络连接", Toast.LENGTH_SHORT).show();
+                super.onFailed(what, response);
+            }
+
+            @Override
+            public void onStart(int what) {
+                progressbar.setVisibility(View.VISIBLE);
+                super.onStart(what);
+            }
+
+            @Override
+            public void onFinish(int what) {
+                progressbar.setVisibility(View.INVISIBLE);
+                super.onFinish(what);
+            }
+        });
     }
 }
