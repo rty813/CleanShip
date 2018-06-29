@@ -10,6 +10,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -31,6 +32,7 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
     private Toolbar toolbar;
     private TextView tvVerify;
     private TextView tvTotalship;
+    private Button btnVerify;
 
     @Nullable
     @Override
@@ -41,8 +43,9 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        btnVerify = view.findViewById(R.id.btn_verify);
         view.findViewById(R.id.btn_logout).setOnClickListener(this);
-        view.findViewById(R.id.btn_verify).setOnClickListener(this);
+        btnVerify.setOnClickListener(this);
         MainActivity activity = (MainActivity) getActivity();
         if (activity == null) {
             System.exit(0);
@@ -118,9 +121,11 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
         this.userinfo = userinfo;
         toolbar.setTitle(userinfo.getUsername());
         if (userinfo.getShip_id() == -1) {
+            btnVerify.setEnabled(true);
             Toasty.warning(getActivity(), "未认证！", Toast.LENGTH_SHORT).show();
         }
         else {
+            btnVerify.setEnabled(false);
             tvTotalship.setText("拥有的船：" + userinfo.getTotalship() + "艘");
             tvVerify.setText("已认证！ID=" + String.valueOf(userinfo.getShip_id()));
         }

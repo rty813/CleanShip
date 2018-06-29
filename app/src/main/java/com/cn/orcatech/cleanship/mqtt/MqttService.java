@@ -50,8 +50,8 @@ public class MqttService extends Service {
     private static final String TAG = "MQTT";
     private static final String TOPIC_SEND_PREFIX = "APP2SHIP";
     private static final String TOPIC_RECV_PREFIX = "SHIP2APP";
-    private String TOPIC_SEND;
-    private String TOPIC_RECV;
+    public String TOPIC_SEND;
+    public String TOPIC_RECV;
     public  String DEVICE_ID = null;
     private static final String MQTT_SERVER_URL = "tcp://orca-tech.cn:11883";
     public static final String MQTT_ONCONNCET = "MQTT_ONCONNECT";

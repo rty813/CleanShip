@@ -11,6 +11,7 @@ import android.widget.Toast;
 import com.ashokvarma.bottomnavigation.BottomNavigationBar;
 import com.ashokvarma.bottomnavigation.BottomNavigationItem;
 import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.Ship;
 import com.cn.orcatech.cleanship.UserInfo;
 import com.cn.orcatech.cleanship.fragment.DataFragment;
 import com.cn.orcatech.cleanship.fragment.LoginFragment;
@@ -22,12 +23,16 @@ import com.yanzhenjie.fragment.CompatActivity;
 import com.yanzhenjie.fragment.NoFragment;
 import com.yanzhenjie.nohttp.NoHttp;
 
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttException;
+
 import java.util.ArrayList;
 
 import es.dmoral.toasty.Toasty;
 
 public class MainActivity extends CompatActivity {
 
+    private static final String MQTT_SERVER_URL = "tcp://orca-tech.cn:11883";
     private FragmentManager fm;
     private ArrayList<NoFragment> fragmentList;
     public static boolean hasLogin = false;
@@ -36,6 +41,8 @@ public class MainActivity extends CompatActivity {
     private static final String MY_APP_KEY = "5451778422606";
     private static final String CHANNEL = "SELF";
     private long mExitTime = 0;
+    public ArrayList<Ship> ships;
+    public int selectShip = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,11 +120,31 @@ public class MainActivity extends CompatActivity {
     public void loginSuccess() {
         hasLogin = true;
         ((UserInfoFragment)fragmentList.get(3)).setUserinfo(userInfo);
+        MapFragment mapFragment = (MapFragment) fragmentList.get(0);
+        ships = new ArrayList<>();
+        for (int i = 0; i < userInfo.getTotalship(); i++) {
+            ships.add(new Ship());
+        }
+        mapFragment.setShips(ships);
         if (fragmentList.get(2).isVisible()) {
             fm.beginTransaction()
                     .hide(fragmentList.get(2))
                     .show(fragmentList.get(3))
                     .commit();
+        }
+        try {
+            mapFragment.mqttClient = new MqttClient(MQTT_SERVER_URL, "APP", null);
+            MqttClient mqttClient = mapFragment.mqttClient;
+            mqttClient.setCallback(mapFragment.mqttCallBack);
+            mqttClient.connect();
+            for (int i = 0; i < userInfo.getTotalship(); i++){
+                mqttClient.subscribe("SHIP2APP_" + userInfo.getShip_id() + "_" + i);
+            }
+            Toasty.info(this, "已建立MQTT连接", Toast.LENGTH_SHORT).show();
+//            sendBroadcast(new Intent(MqttService.MQTT_ONCONNCET));
+        } catch (MqttException e) {
+            e.printStackTrace();
+            Toasty.error(this, "与MQTT服务器连接失败", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -126,10 +153,13 @@ public class MainActivity extends CompatActivity {
         editor.clear();
         editor.apply();
         hasLogin = false;
-        hideAllFragments();
-        fm.beginTransaction()
-                .show(fragmentList.get(2))
-                .commit();
+        if (fragmentList.get(3).isVisible()) {
+            fm.beginTransaction()
+                    .hide(fragmentList.get(3))
+                    .show(fragmentList.get(2))
+                    .commit();
+        }
+        userInfo = new UserInfo();
     }
 
     @Override

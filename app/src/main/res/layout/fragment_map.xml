@@ -1,11 +1,384 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:keepScreenOn="true">
-    <com.amap.api.maps.MapView
-        android:id="@+id/mapview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+    android:background="@color/toolbarBlue"
+    android:fitsSystemWindows="true"
+    android:keepScreenOn="true"
+    android:orientation="vertical">
 
-</android.support.constraint.ConstraintLayout>
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/toolbarBlue">
+
+        <TextView
+            android:id="@+id/tv_toolbar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/app_name"
+            android:drawableEnd="@drawable/shiplist"
+            android:drawablePadding="10dp"
+            android:textColor="@color/mb_white"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/btn_home"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:background="#00000000"
+            android:drawableLeft="@drawable/home_white"
+            android:text="返航"
+            android:textColor="@color/mb_white"
+            android:visibility="gone" />
+    </android.support.v7.widget.Toolbar>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <com.amap.api.maps.MapView
+            android:id="@+id/mapview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/ll_method"
+                android:layout_width="match_parent"
+                android:layout_height="25dp"
+                android:background="@color/gray"
+                android:elevation="6dp"
+                android:orientation="horizontal"
+                android:visibility="invisible">
+
+                <Button
+                    android:id="@+id/btn_manual"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:text="规划路线"
+                    android:textColor="@color/toolbarBlue" />
+
+                <Button
+                    android:id="@+id/btn_history"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:text="历史路线" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tv_shipcharge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
+                android:layout_marginTop="5dp"
+                android:background="#86ffffff"
+                android:padding="5dp"
+                android:text="剩余电量：100%"
+                android:textColor="@android:color/black"
+                android:visibility="invisible" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_connect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_margin="10dp"
+            android:background="@color/velGray"
+            android:padding="15dp"
+            android:text="@string/btn_connect"
+            android:textColor="@color/mb_white"
+            android:textSize="20sp" />
+
+        <LinearLayout
+            android:id="@+id/ll_mark"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_margin="10dp"
+            android:background="@color/popup"
+            android:elevation="6dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:layout_marginTop="30dp">
+
+                <Button
+                    android:id="@+id/btn_enable"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_mark_selector"
+                    android:text="标点" />
+
+                <Button
+                    android:id="@+id/btn_cancel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_cancel_selector"
+                    android:text="撤销" />
+
+                <Button
+                    android:id="@+id/btn_delete"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_delete_selector"
+                    android:text="全部删除" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="15dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:text="选择模式："/>
+                <lib.kingja.switchbutton.SwitchMultiButton
+                    android:id="@+id/sw_nav"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    android:paddingBottom="5dp"
+                    android:paddingLeft="15dp"
+                    android:paddingRight="15dp"
+                    android:paddingTop="5dp"
+                    app:selectedColor="#ffffff"
+                    app:strokeRadius="15dp"
+                    app:strokeWidth="2dp"
+                    app:switchTabs="@array/switch_tabs"
+                    app:textSize="13sp" />
+            </LinearLayout>
+
+
+            <Button
+                android:id="@+id/btn_go"
+                android:layout_width="200dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="20dp"
+                android:layout_marginTop="15dp"
+                android:background="@color/velGray"
+                android:text="开始导航"
+                android:textColor="@color/mb_white" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/ll_nav"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_margin="10dp"
+            android:background="@color/popup"
+            android:elevation="6dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_circle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="20dp"
+                android:text="第1圈" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:layout_marginTop="20dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_vel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_vel_selector"
+                    android:text="速度" />
+
+                <Button
+                    android:id="@+id/btn_gostop"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_pause_selector"
+                    android:text="暂停" />
+
+                <Button
+                    android:id="@+id/btn_abort"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_abort_selector"
+                    android:text="终止" />
+
+                <Button
+                    android:id="@+id/btn_home2"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="#00000000"
+                    android:drawableTop="@drawable/btn_home_selector"
+                    android:text="一键返航" />
+
+                <android.support.v7.widget.AppCompatSeekBar
+                    android:id="@+id/seekbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center_vertical"
+                    android:layout_margin="20dp"
+                    android:max="600"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/ll_finish"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_margin="10dp"
+            android:background="@color/popup"
+            android:elevation="6dp"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tv_date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="____年__月__日" />
+
+            <TextView
+                android:id="@+id/tv_finish"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="15dp"
+                android:text="此次航行用时__小时__分，大约行走_KM"
+                android:textColor="#000000" />
+
+            <TextView
+                android:id="@+id/btn_reload"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="20dp"
+                android:background="#00000000"
+                android:text="再次行走此航线" />
+
+            <Button
+                android:id="@+id/btn_finish"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_gravity="center_horizontal|bottom"
+                android:layout_marginTop="20dp"
+                android:background="@color/velGray"
+                android:paddingLeft="70dp"
+                android:paddingRight="70dp"
+                android:text="结束导航"
+                android:textColor="@color/mb_white" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/ll_home"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_margin="10dp"
+            android:background="@color/popup"
+            android:elevation="6dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_stop_home"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal|bottom"
+                android:layout_margin="25dp"
+                android:background="@color/velGray"
+                android:paddingLeft="70dp"
+                android:paddingRight="70dp"
+                android:text="取消返航"
+                android:textColor="@color/mb_white"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <com.github.clans.fab.FloatingActionMenu
+            android:id="@+id/fam"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingTop="150dp"
+            app:menu_backgroundColor="#65000000"
+            app:menu_colorNormal="@color/velGray"
+            app:menu_colorPressed="#6b6b6b"
+            app:menu_openDirection="down"
+            app:menu_showShadow="true"
+            android:visibility="gone">
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/btn_ctl"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/app_ctl"
+                app:fab_colorNormal="@color/velGray"
+                app:fab_colorPressed="#6b6b6b"
+                app:fab_label="剥夺控制权"
+                app:fab_size="mini" />
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/btn_changemap"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/change_map"
+                app:fab_colorNormal="@color/velGray"
+                app:fab_colorPressed="#6b6b6b"
+                app:fab_label="切换地图"
+                app:fab_size="mini" />
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/btn_bind"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/bind"
+                app:fab_colorNormal="@color/velGray"
+                app:fab_colorPressed="#6b6b6b"
+                app:fab_label="重新绑定"
+                app:fab_size="mini" />
+        </com.github.clans.fab.FloatingActionMenu>
+
+    </FrameLayout>
+</LinearLayout>

@@ -27,6 +27,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.AppCompatSeekBar;
 import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.Toolbar;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -67,6 +68,8 @@ import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.Ship;
+import com.cn.orcatech.cleanship.ShiplistAdapter;
 import com.cn.orcatech.cleanship.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.activity.QRScanActivity;
@@ -90,6 +93,11 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuCreator;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
+
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -124,6 +132,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private static final int HOMING = 5;
     private static final int FINISH = 6;
     private static final int PAUSE = 4;
+    private static final String TAG = "MapFragment";
     public static SQLiteDBHelper dbHelper;
     private final float CTL_RADIUS = 2000;
     public MyHandler mHandler;
@@ -186,12 +195,54 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private ExecutorService writeSerialThreadPool;
     private FloatingActionMenu fam;
     private String toolbarTitle;
-    private LinearLayout ll_method;
+    private Toolbar toolbar;
+    private MainActivity activity;
+    public MqttClient mqttClient;
+    private ArrayList<Ship> ships;
+    private ArrayList<Map<String, String>> shipPopupWindowList;
+    private ShiplistAdapter shipPopupWindowAdapter;
+    public MqttCallback mqttCallBack = new MqttCallback() {
+        @Override
+        public void messageArrived(String topic, MqttMessage message) {
+            if (message != null) {
+                Log.d(TAG, "messageArrived, topic: " + topic + "; message: " + new String(message.getPayload()));
+                String[] topics = topic.split("_");
+                try {
+                    final int ship_id = Integer.parseInt(topics[2]);
+                    ships.get(ship_id).setOnline(true);
+                    if (shipPopupWindowList != null) {
+                        shipPopupWindowList.get(ship_id).put("detail", "在线");
+                        shipPopupWindowList.get(ship_id).put("status", "true");
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                shipPopupWindowAdapter.notifyItemChanged(ship_id);
+                            }
+                        });
+                    }
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        @Override
+        public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+        }
+
+        @Override
+        public void connectionLost(Throwable cause) {
+            Log.d(TAG, "connectionLost");
+            Toasty.error(activity, "连接中断！", Toast.LENGTH_SHORT).show();
+            activity.logout();
+        }
+    };
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.activity_new, container, false);
+        return inflater.inflate(R.layout.fragment_map, container, false);
     }
 
     @Override
@@ -202,9 +253,15 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         initView(view);
         initMap();
         initClass();
-        getActivity().bindService(new Intent(getActivity(), MqttService.class), serviceConnection, BIND_AUTO_CREATE);
-        getActivity().startService(new Intent(getActivity(), MqttService.class));
+        activity.bindService(new Intent(activity, MqttService.class), serviceConnection, BIND_AUTO_CREATE);
+        activity.startService(new Intent(activity, MqttService.class));
         requestPermission();
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        activity = (MainActivity) context;
     }
 
     private void initView(View view) {
@@ -212,7 +269,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         btnHome = view.findViewById(R.id.btn_home);
         llNav = view.findViewById(R.id.ll_nav);
         llMark = view.findViewById(R.id.ll_mark);
-        llMethod = view.findViewById(R.id.ll_method);
         llFinish = view.findViewById(R.id.ll_finish);
         llHome = view.findViewById(R.id.ll_home);
         swNav = view.findViewById(R.id.sw_nav);
@@ -231,8 +287,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         seekBar = view.findViewById(R.id.seekbar);
         fam = view.findViewById(R.id.fam);
         tvShipCharge = view.findViewById(R.id.tv_shipcharge);
-        ll_method = view.findViewById(R.id.ll_method);
-        final SharedPreferences sharedPreferences = getActivity().getSharedPreferences("cleanship", MODE_PRIVATE);
+        toolbar = view.findViewById(R.id.toolbar);
+        llMethod = view.findViewById(R.id.ll_method);
+        final SharedPreferences sharedPreferences = activity.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -267,6 +324,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         view.findViewById(R.id.btn_reload).setOnClickListener(this);
         view.findViewById(R.id.btn_finish).setOnClickListener(this);
         view.findViewById(R.id.btn_stop_home).setOnClickListener(this);
+        tvToolbar.setOnClickListener(this);
         btnCtl.setOnClickListener(this);
         btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
@@ -298,15 +356,11 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         llMark.setOnTouchListener(onTouchListener);
         llMethod.setOnTouchListener(onTouchListener);
         llNav.setOnTouchListener(onTouchListener);
-        toolbarTitle = getActivity().getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("name", "") + " " + getResources().getString(R.string.app_name);
+        toolbarTitle = activity.getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("name", "") + " " + getResources().getString(R.string.app_name);
         tvToolbar.setText(toolbarTitle);
     }
 
     private void initClass() {
-        MainActivity activity = (MainActivity) getActivity();
-        if (activity == null) {
-            System.exit(0);
-        }
         mHandler = new MyHandler(this);
         dbHelper = new SQLiteDBHelper(activity);
         markers = new ArrayList<>();
@@ -329,10 +383,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private void initMap() {
         polylines = new ArrayList<>();
         markers = new ArrayList<>();
-        final MainActivity activity = (MainActivity) getActivity();
-        if (activity == null) {
-            System.exit(0);
-        }
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
@@ -468,13 +518,13 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         shipPointList = new ArrayList<>();
         shipPointList.add(new LatLng(0, 0));
         smoothMoveMarker = new SmoothMoveMarker(aMap);
-        smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(getActivity(), R.layout.ship, null)));
+        smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(activity, R.layout.ship, null)));
     }
 
     private void showLoadingView(String msg) {
         if (!loadingView.isShowing()) {
             state = UNREADY;
-            loadingView = new ProgressDialog(getActivity());
+            loadingView = new ProgressDialog(activity);
             loadingView.setTitle("提示");
             loadingView.setCanceledOnTouchOutside(false);
             loadingView.setCancelable(false);
@@ -496,7 +546,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         cv.put("TIME", time);
         cv.put("ROUTE", route);
         cv.put("NAME", address);
-        SharedPreferences.Editor editor = getActivity().getSharedPreferences("cleanship", MODE_PRIVATE).edit();
+        SharedPreferences.Editor editor = activity.getSharedPreferences("cleanship", MODE_PRIVATE).edit();
         if (database.insert(SQLiteDBHelper.TABLE_NAME, null, cv) == -1) {
             editor.putLong("route", routeID);
         } else {
@@ -515,7 +565,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         filter.addAction(MqttService.MQTT_ONCONNCET);
         filter.addAction(Intent.ACTION_BATTERY_CHANGED);
         filter.addAction(MyReceiver.ACTION_DATA_RECEIVED);
-        getActivity().registerReceiver(myReceiver, filter);
+        activity.registerReceiver(myReceiver, filter);
     }
 
     @Override
@@ -523,19 +573,19 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         super.onDestroy();
         mMapView.onDestroy();
         if (!mqttService.isConnected) {
-            getActivity().stopService(new Intent(getActivity(), MqttService.class));
+            activity.stopService(new Intent(activity, MqttService.class));
         } else {
             mqttService.startBackgroundThread(true);
         }
         state = UNREADY;
-        getActivity().unbindService(serviceConnection);
+        activity.unbindService(serviceConnection);
     }
 
     @Override
     public void onPause() {
         super.onPause();
         mMapView.onPause();
-        getActivity().unregisterReceiver(myReceiver);
+        activity.unregisterReceiver(myReceiver);
     }
 
     @Override
@@ -543,7 +593,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         super.onSaveInstanceState(outState);
         mMapView.onSaveInstanceState(outState);
     }
-
 
     private void loadRoute(@Nullable String id) {
         SQLiteDatabase database = dbHelper.getReadableDatabase();
@@ -596,7 +645,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
         switch (state) {
             case UNREADY:
-                Toasty.error(getActivity(), "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
+                Toasty.error(activity, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
                 btnConnect.setVisibility(View.VISIBLE);
                 preState = Integer.MAX_VALUE;
                 mqttService.close();
@@ -695,7 +744,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         // 但这种方法通用性太差。另一种方法是统一船发来的state和app的state。决定采用第二种。
         if (state != preState && state >= -5) {
             preState = state;
-            long id = getActivity().getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+            long id = activity.getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
             int tempState = UNREADY;
             swNav.setSelectedTab(0);
             switch (state) {
@@ -739,19 +788,20 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     @Override
     public void onClick(View view) {
         PopupWindow popupHistory;
+        PopupWindow shipListWindow;
         switch (view.getId()) {
             case R.id.btn_connect:
                 if (!loadingView.isShowing()) {
-                    mqttService.setDeviceID(getActivity().getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("id", null), 0);
+                    mqttService.setDeviceID(activity.getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("id", null), 0);
                     if (mqttService.DEVICE_ID == null) {
-                        Toasty.info(getActivity(), "请先扫码绑定数传电台", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(getActivity(), QRScanActivity.class));
+                        Toasty.info(activity, "请先扫码绑定数传电台", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(activity, QRScanActivity.class));
                         return;
                     }
-                    ConnectivityManager manager = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+                    ConnectivityManager manager = (ConnectivityManager) activity.getSystemService(Context.CONNECTIVITY_SERVICE);
                     NetworkInfo networkInfo = manager != null ? manager.getActiveNetworkInfo() : null;
                     if (networkInfo == null || !networkInfo.isAvailable()) {
-                        Toasty.error(getActivity(), "请检查网络连接！", Toast.LENGTH_LONG).show();
+                        Toasty.error(activity, "请检查网络连接！", Toast.LENGTH_LONG).show();
                     }
                     else {
                         showLoadingView("正在连接");
@@ -768,12 +818,12 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 fam.close(true);
                 break;
             case R.id.btn_bind:
-                startActivity(new Intent(getActivity(), QRScanActivity.class));
+                startActivity(new Intent(activity, QRScanActivity.class));
                 mqttService.close();
                 finish();
                 break;
             case R.id.btn_delete:
-                new AlertDialog.Builder(getActivity()).setTitle("提示")
+                new AlertDialog.Builder(activity).setTitle("提示")
                         .setMessage("是否要清除所有标记？")
                         .setNegativeButton("否", null)
                         .setPositiveButton("是", new DialogInterface.OnClickListener() {
@@ -821,7 +871,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         final String date = dateFormat.format(new Date(System.currentTimeMillis()));
                         saveRoute(date, stringBuilder.toString(), pos);
 //                            使QueryThread进入Wait
-                        loadingView = new ProgressDialog(getActivity());
+                        loadingView = new ProgressDialog(activity);
                         loadingView.setTitle("发送中");
                         loadingView.setCanceledOnTouchOutside(false);
                         loadingView.setCancelable(false);
@@ -846,8 +896,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             case R.id.btn_history:
                 btnManual.setTextColor(Color.BLACK);
                 btnHistory.setTextColor(getResources().getColor(R.color.toolbarBlue));
-                final View contentView = LayoutInflater.from(getActivity()).inflate(R.layout.popup_history, null);
-                final SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
+                View contentView = LayoutInflater.from(activity).inflate(R.layout.popup_history, null);
+                SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
                 popupHistory = new PopupWindow();
                 popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
                 popupHistory.setOutsideTouchable(true);
@@ -862,13 +912,13 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 });
                 loadHistory(recyclerView, popupHistory);
                 contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-                final int height = getResources().getDisplayMetrics().heightPixels / 2;
+                int height = getResources().getDisplayMetrics().heightPixels / 2;
                 if (contentView.getMeasuredHeight() > height) {
                     popupHistory.setHeight(height);
                 } else {
                     popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
                 }
-                popupHistory.showAsDropDown(ll_method);
+                popupHistory.showAsDropDown(llMethod);
                 break;
             case R.id.btn_abort:
                 writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
@@ -897,6 +947,31 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 fam.close(true);
                 writeSerialThreadPool.execute(new WriteSerialThread("$ORDER,7#", NONE, state));
                 break;
+            case R.id.tv_toolbar:
+                contentView = LayoutInflater.from(activity).inflate(R.layout.popup_shiplist, null);
+                recyclerView = contentView.findViewById(R.id.recyclerView);
+                shipListWindow = new PopupWindow();
+                shipListWindow.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+                shipListWindow.setOutsideTouchable(true);
+                shipListWindow.setContentView(contentView);
+                shipListWindow.setAnimationStyle(R.style.dismiss_anim);
+                loadShipList(recyclerView, shipListWindow);
+                contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+                height = getResources().getDisplayMetrics().heightPixels / 2;
+                if (contentView.getMeasuredHeight() > height) {
+                    shipListWindow.setHeight(height);
+                } else {
+                    shipListWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+                }
+                shipListWindow.showAsDropDown(toolbar);
+                shipListWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                    @Override
+                    public void onDismiss() {
+                        shipPopupWindowList = null;
+                        shipPopupWindowAdapter = null;
+                    }
+                });
+                break;
             default:
                 break;
         }
@@ -923,8 +998,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 .onDenied(new Action() {
                     @Override
                     public void onAction(List<String> permissions) {
-                        final SettingService settingService = AndPermission.permissionSetting(getActivity());
-                        new AlertDialog.Builder(getActivity())
+                        final SettingService settingService = AndPermission.permissionSetting(activity);
+                        new AlertDialog.Builder(activity)
                                 .setMessage("请赋予权限")
                                 .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                                     @Override
@@ -949,7 +1024,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         final PopupWindow popupWindow = new PopupWindow();
                         popupWindow.setWidth(ViewGroup.LayoutParams.WRAP_CONTENT);
                         popupWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
-                        View contentView = LayoutInflater.from(getActivity()).inflate(R.layout.permission_ask, null);
+                        View contentView = LayoutInflater.from(activity).inflate(R.layout.permission_ask, null);
                         contentView.findViewById(R.id.btn_next).setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
@@ -962,14 +1037,113 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         btnConnect.post(new Runnable() {
                             @Override
                             public void run() {
-                                if (!getActivity().isFinishing()) {
-                                    popupWindow.showAtLocation(getActivity().getWindow().getDecorView(), Gravity.CENTER, 0, 0);
+                                if (!activity.isFinishing()) {
+                                    popupWindow.showAtLocation(activity.getWindow().getDecorView(), Gravity.CENTER, 0, 0);
                                 }
                             }
                         });
                     }
                 })
                 .start();
+    }
+
+    private void loadShipList(SwipeMenuRecyclerView recyclerView, final PopupWindow shipListWindow) {
+        shipPopupWindowList = new ArrayList<>();
+        for (int i =  0; i < activity.userInfo.getTotalship(); i++) {
+            Map<String, String> map = new HashMap<>();
+            map.put("title", String.valueOf(i));
+            map.put("detail", ships.get(i).isOnline() ? "在线": "离线");
+            map.put("status", String.valueOf(ships.get(i).isOnline()));
+            shipPopupWindowList.add(map);
+        }
+        shipPopupWindowAdapter = new ShiplistAdapter(shipPopupWindowList);
+        shipPopupWindowAdapter.notifyDataSetChanged();
+        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
+        recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
+            @Override
+            public void onItemClick(View itemView, int position) {
+                shipListWindow.dismiss();
+                activity.selectShip = position;
+//                routeID = Long.parseLong(list.get(position).get("id"));
+//                loadRoute(list.get(position).get("id"));
+            }
+        });
+        recyclerView.setSwipeMenuCreator(new SwipeMenuCreator() {
+            @Override
+            public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
+                DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
+                SwipeMenuItem deleteItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
+                        .setImage(R.drawable.menu_delete).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
+                SwipeMenuItem renameItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
+                        .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
+                swipeRightMenu.addMenuItem(renameItem);
+                swipeRightMenu.addMenuItem(deleteItem);
+
+                SwipeMenuItem topItem = new SwipeMenuItem(activity).setWidth((int) (metrics.widthPixels * 0.2))
+                        .setImage(R.drawable.menu_top).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
+                swipeLeftMenu.addMenuItem(topItem);
+            }
+        });
+        recyclerView.setSwipeMenuItemClickListener(new SwipeMenuItemClickListener() {
+            @Override
+            public void onItemClick(SwipeMenuBridge menuBridge) {
+                menuBridge.closeMenu();
+                final int pos = menuBridge.getAdapterPosition();
+//                System.out.println(menuBridge.getDirection());
+                if (menuBridge.getDirection() > 0) {
+                    Map<String, String> map = new HashMap<>();
+                    map.put("id", shipPopupWindowList.get(pos).get("id"));
+                    map.put("title", shipPopupWindowList.get(pos).get("title"));
+                    map.put("detail", shipPopupWindowList.get(pos).get("detail"));
+                    map.put("top", String.valueOf(!Boolean.parseBoolean(shipPopupWindowList.get(pos).get("top"))));
+                    shipPopupWindowList.remove(pos);
+                    shipPopupWindowList.add(pos, map);
+                    shipPopupWindowAdapter.notifyItemChanged(pos);
+                    SQLiteDatabase database = dbHelper.getWritableDatabase();
+                    ContentValues values = new ContentValues();
+                    values.put("TOP", map.get("top"));
+                    database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
+                    database.close();
+                } else {
+                    if (menuBridge.getPosition() == 1) {
+                        Map<String, String> map = shipPopupWindowList.get(pos);
+                        String id = map.get("id");
+                        shipPopupWindowList.remove(pos);
+                        shipPopupWindowAdapter.notifyItemRemoved(pos);
+                        shipPopupWindowAdapter.notifyItemRangeChanged(pos, shipPopupWindowList.size() - pos);
+                        SQLiteDatabase database = dbHelper.getWritableDatabase();
+                        database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
+                        database.close();
+                    } else {
+                        final EditText etName = new EditText(activity);
+                        etName.setHint(shipPopupWindowList.get(pos).get("title"));
+                        new AlertDialog.Builder(activity)
+                                .setTitle("重命名路线")
+                                .setView(etName)
+                                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        Map<String, String> map = new HashMap<>();
+                                        map.put("id", shipPopupWindowList.get(pos).get("id"));
+                                        map.put("title", etName.getText().toString());
+                                        map.put("detail", shipPopupWindowList.get(pos).get("detail"));
+                                        map.put("top", shipPopupWindowList.get(pos).get("top"));
+                                        shipPopupWindowList.remove(shipPopupWindowList.get(pos));
+                                        shipPopupWindowList.add(pos, map);
+                                        shipPopupWindowAdapter.notifyDataSetChanged();
+                                        SQLiteDatabase database = dbHelper.getWritableDatabase();
+                                        ContentValues values = new ContentValues();
+                                        values.put("NAME", etName.getText().toString());
+                                        database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
+                                        database.close();
+                                    }
+                                })
+                                .show();
+                    }
+                }
+            }
+        });
+        recyclerView.setAdapter(shipPopupWindowAdapter);
     }
 
     private void loadHistory(final SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
@@ -1003,7 +1177,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         database.close();
         final SwipeRecyclerViewAdapter adapter = new SwipeRecyclerViewAdapter(list);
         adapter.notifyDataSetChanged();
-        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
             @Override
             public void onItemClick(View itemView, int position) {
@@ -1015,15 +1189,15 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         recyclerView.setSwipeMenuCreator(new SwipeMenuCreator() {
             @Override
             public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
-                DisplayMetrics metrics = getActivity().getResources().getDisplayMetrics();
-                SwipeMenuItem deleteItem = new SwipeMenuItem(getActivity()).setWidth((int)(metrics.widthPixels * 0.2))
+                DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
+                SwipeMenuItem deleteItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
                         .setImage(R.drawable.menu_delete).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
-                SwipeMenuItem renameItem = new SwipeMenuItem(getActivity()).setWidth((int)(metrics.widthPixels * 0.2))
+                SwipeMenuItem renameItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
                         .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
                 swipeRightMenu.addMenuItem(renameItem);
                 swipeRightMenu.addMenuItem(deleteItem);
 
-                SwipeMenuItem topItem = new SwipeMenuItem(getActivity()).setWidth((int) (metrics.widthPixels * 0.2))
+                SwipeMenuItem topItem = new SwipeMenuItem(activity).setWidth((int) (metrics.widthPixels * 0.2))
                         .setImage(R.drawable.menu_top).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
                 swipeLeftMenu.addMenuItem(topItem);
             }
@@ -1059,9 +1233,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
                         database.close();
                     } else {
-                        final EditText etName = new EditText(getActivity());
+                        final EditText etName = new EditText(activity);
                         etName.setHint(list.get(pos).get("title"));
-                        new AlertDialog.Builder(getActivity())
+                        new AlertDialog.Builder(activity)
                                 .setTitle("重命名路线")
                                 .setView(etName)
                                 .setPositiveButton("确定", new DialogInterface.OnClickListener() {
@@ -1090,6 +1264,10 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         recyclerView.setAdapter(adapter);
     }
 
+    public void setShips(ArrayList<Ship> ships){
+        this.ships = ships;
+    }
+
     public static class MyHandler extends Handler {
         WeakReference<MapFragment> mFragment;
 
@@ -1102,9 +1280,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             final MapFragment fragment = mFragment.get();
             switch (msg.what) {
                 case 1:
-                    WindowManager.LayoutParams lp = fragment.getActivity().getWindow().getAttributes();
+                    WindowManager.LayoutParams lp = fragment.activity.getWindow().getAttributes();
                     lp.alpha = (float) msg.obj;
-                    fragment.getActivity().getWindow().setAttributes(lp);
+                    fragment.activity.getWindow().setAttributes(lp);
                     break;
                 case 2:
                     ((PopupWindow) msg.obj).showAtLocation(fragment.mMapView, Gravity.CENTER, 0, 0);
@@ -1138,7 +1316,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     }
                     break;
                 case 9:
-                    Toasty.info(fragment.getActivity(), (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
+                    Toasty.info(fragment.activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
                     break;
                 case 10:
                     fragment.handleState((Integer) msg.obj);
@@ -1281,7 +1459,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                                     intent.putExtra("type", Integer.parseInt(strings[0]));
                                     intent.putExtra("data", strings[1]);
                                 }
-                                getActivity().sendBroadcast(intent);
+                                activity.sendBroadcast(intent);
                             } else {
                                 retryTimes++;
                                 if (retryTimes % 5 == 0) {
@@ -1459,6 +1637,4 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             }
         }
     }
-
-
 }
