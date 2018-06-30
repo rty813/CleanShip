@@ -93,6 +93,7 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuCreator;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
+import com.yanzhenjie.recyclerview.swipe.widget.DefaultItemDecoration;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -377,7 +378,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
-
     }
 
     private void initMap() {
@@ -1048,10 +1048,12 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     }
 
     private void loadShipList(SwipeMenuRecyclerView recyclerView, final PopupWindow shipListWindow) {
+        final SharedPreferences sharedPreferences = activity.getSharedPreferences("shipname", MODE_PRIVATE);
         shipPopupWindowList = new ArrayList<>();
         for (int i =  0; i < activity.userInfo.getTotalship(); i++) {
+            String shipName = sharedPreferences.getString(String.valueOf(i), String.valueOf(i));
             Map<String, String> map = new HashMap<>();
-            map.put("title", String.valueOf(i));
+            map.put("title", shipName);
             map.put("detail", ships.get(i).isOnline() ? "在线": "离线");
             map.put("status", String.valueOf(ships.get(i).isOnline()));
             shipPopupWindowList.add(map);
@@ -1064,24 +1066,16 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             public void onItemClick(View itemView, int position) {
                 shipListWindow.dismiss();
                 activity.selectShip = position;
-//                routeID = Long.parseLong(list.get(position).get("id"));
-//                loadRoute(list.get(position).get("id"));
             }
         });
+        recyclerView.addItemDecoration(new DefaultItemDecoration(0xBB1C1C1C));
         recyclerView.setSwipeMenuCreator(new SwipeMenuCreator() {
             @Override
             public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
                 DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
-                SwipeMenuItem deleteItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
-                        .setImage(R.drawable.menu_delete).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
                 SwipeMenuItem renameItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
                         .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
                 swipeRightMenu.addMenuItem(renameItem);
-                swipeRightMenu.addMenuItem(deleteItem);
-
-                SwipeMenuItem topItem = new SwipeMenuItem(activity).setWidth((int) (metrics.widthPixels * 0.2))
-                        .setImage(R.drawable.menu_top).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
-                swipeLeftMenu.addMenuItem(topItem);
             }
         });
         recyclerView.setSwipeMenuItemClickListener(new SwipeMenuItemClickListener() {
@@ -1089,8 +1083,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             public void onItemClick(SwipeMenuBridge menuBridge) {
                 menuBridge.closeMenu();
                 final int pos = menuBridge.getAdapterPosition();
-//                System.out.println(menuBridge.getDirection());
                 if (menuBridge.getDirection() > 0) {
+//                    置顶
                     Map<String, String> map = new HashMap<>();
                     map.put("id", shipPopupWindowList.get(pos).get("id"));
                     map.put("title", shipPopupWindowList.get(pos).get("title"));
@@ -1106,6 +1100,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     database.close();
                 } else {
                     if (menuBridge.getPosition() == 1) {
+//                        删除
                         Map<String, String> map = shipPopupWindowList.get(pos);
                         String id = map.get("id");
                         shipPopupWindowList.remove(pos);
@@ -1115,6 +1110,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
                         database.close();
                     } else {
+//                        重命名
                         final EditText etName = new EditText(activity);
                         etName.setHint(shipPopupWindowList.get(pos).get("title"));
                         new AlertDialog.Builder(activity)
@@ -1123,19 +1119,15 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                                 .setPositiveButton("确定", new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialogInterface, int i) {
-                                        Map<String, String> map = new HashMap<>();
-                                        map.put("id", shipPopupWindowList.get(pos).get("id"));
-                                        map.put("title", etName.getText().toString());
-                                        map.put("detail", shipPopupWindowList.get(pos).get("detail"));
-                                        map.put("top", shipPopupWindowList.get(pos).get("top"));
-                                        shipPopupWindowList.remove(shipPopupWindowList.get(pos));
-                                        shipPopupWindowList.add(pos, map);
-                                        shipPopupWindowAdapter.notifyDataSetChanged();
-                                        SQLiteDatabase database = dbHelper.getWritableDatabase();
-                                        ContentValues values = new ContentValues();
-                                        values.put("NAME", etName.getText().toString());
-                                        database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
-                                        database.close();
+                                        String name = etName.getText().toString();
+                                        if (name.equals("")) {
+                                            return;
+                                        }
+                                        shipPopupWindowList.get(pos).put("title", name);
+                                        shipPopupWindowAdapter.notifyItemChanged(pos);
+                                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                                        editor.putString(String.valueOf(pos), name);
+                                        editor.apply();
                                     }
                                 })
                                 .show();

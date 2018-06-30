@@ -32,7 +32,7 @@ public class ShiplistAdapter extends RecyclerView.Adapter {
         viewHolder.getTv_detail().setText(list.get(position).get("detail"));
         viewHolder.getTv_title().setText(list.get(position).get("title"));
         viewHolder.getIv_status().setImageResource(Boolean.parseBoolean(list.get(position).get("status")) ? R.drawable.round_green : R.drawable.round_red);
-//        viewHolder.getIv_Top().setVisibility(Boolean.parseBoolean(list.get(position).get("top")) ? View.VISIBLE : View.INVISIBLE);
+        viewHolder.getTv_title().setTextColor(Boolean.parseBoolean(list.get(position).get("status")) ? 0xFF000000 : 0xFF898989);
         viewHolder.itemView.setTag(position);
     }
 
