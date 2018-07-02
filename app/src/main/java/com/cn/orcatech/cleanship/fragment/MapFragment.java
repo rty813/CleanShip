@@ -67,6 +67,7 @@ import com.amap.api.services.geocoder.GeocodeSearch;
 import com.amap.api.services.geocoder.RegeocodeAddress;
 import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
+import com.cn.orcatech.cleanship.MyReceiver;
 import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.Ship;
 import com.cn.orcatech.cleanship.ShiplistAdapter;
@@ -74,7 +75,6 @@ import com.cn.orcatech.cleanship.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.activity.QRScanActivity;
 import com.cn.orcatech.cleanship.mqtt.MqttService;
-import com.cn.orcatech.cleanship.mqtt.MyReceiver;
 import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
 import com.cn.orcatech.cleanship.util.WriteSerialThreadFactory;
 import com.github.clans.fab.FloatingActionButton;
@@ -221,8 +221,25 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                             }
                         });
                     }
+                    if (ship_id != activity.selectShip) {
+                        return;
+                    }
+                    String data = message.toString();
+                    if (data.startsWith("$") && data.endsWith("#")) {
+                        data = data.replaceAll("#", "");
+                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
+                        if (!"".equals(data)) {
+                            String[] strings = data.split(";");
+                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                            if (strings.length == 2) {
+                                intent.putExtra("type", strings[0]);
+                                intent.putExtra("data", strings[1]);
+                            }
+                            activity.sendBroadcast(intent);
+                        }
+                    }
                 }
-                catch (Exception e){
+                catch (NumberFormatException e){
                     e.printStackTrace();
                 }
             }
@@ -1073,7 +1090,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             @Override
             public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
                 DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
-                SwipeMenuItem renameItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
+                SwipeMenuItem renameItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.1))
                         .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
                 swipeRightMenu.addMenuItem(renameItem);
             }
@@ -1083,56 +1100,27 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             public void onItemClick(SwipeMenuBridge menuBridge) {
                 menuBridge.closeMenu();
                 final int pos = menuBridge.getAdapterPosition();
-                if (menuBridge.getDirection() > 0) {
-//                    置顶
-                    Map<String, String> map = new HashMap<>();
-                    map.put("id", shipPopupWindowList.get(pos).get("id"));
-                    map.put("title", shipPopupWindowList.get(pos).get("title"));
-                    map.put("detail", shipPopupWindowList.get(pos).get("detail"));
-                    map.put("top", String.valueOf(!Boolean.parseBoolean(shipPopupWindowList.get(pos).get("top"))));
-                    shipPopupWindowList.remove(pos);
-                    shipPopupWindowList.add(pos, map);
-                    shipPopupWindowAdapter.notifyItemChanged(pos);
-                    SQLiteDatabase database = dbHelper.getWritableDatabase();
-                    ContentValues values = new ContentValues();
-                    values.put("TOP", map.get("top"));
-                    database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
-                    database.close();
-                } else {
-                    if (menuBridge.getPosition() == 1) {
-//                        删除
-                        Map<String, String> map = shipPopupWindowList.get(pos);
-                        String id = map.get("id");
-                        shipPopupWindowList.remove(pos);
-                        shipPopupWindowAdapter.notifyItemRemoved(pos);
-                        shipPopupWindowAdapter.notifyItemRangeChanged(pos, shipPopupWindowList.size() - pos);
-                        SQLiteDatabase database = dbHelper.getWritableDatabase();
-                        database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
-                        database.close();
-                    } else {
 //                        重命名
-                        final EditText etName = new EditText(activity);
-                        etName.setHint(shipPopupWindowList.get(pos).get("title"));
-                        new AlertDialog.Builder(activity)
-                                .setTitle("重命名路线")
-                                .setView(etName)
-                                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-                                        String name = etName.getText().toString();
-                                        if (name.equals("")) {
-                                            return;
-                                        }
-                                        shipPopupWindowList.get(pos).put("title", name);
-                                        shipPopupWindowAdapter.notifyItemChanged(pos);
-                                        SharedPreferences.Editor editor = sharedPreferences.edit();
-                                        editor.putString(String.valueOf(pos), name);
-                                        editor.apply();
-                                    }
-                                })
-                                .show();
-                    }
-                }
+                final EditText etName = new EditText(activity);
+                etName.setHint(shipPopupWindowList.get(pos).get("title"));
+                new AlertDialog.Builder(activity)
+                        .setTitle("重命名路线")
+                        .setView(etName)
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                String name = etName.getText().toString();
+                                if (name.equals("")) {
+                                    return;
+                                }
+                                shipPopupWindowList.get(pos).put("title", name);
+                                shipPopupWindowAdapter.notifyItemChanged(pos);
+                                SharedPreferences.Editor editor = sharedPreferences.edit();
+                                editor.putString(String.valueOf(pos), name);
+                                editor.apply();
+                            }
+                        })
+                        .show();
             }
         });
         recyclerView.setAdapter(shipPopupWindowAdapter);

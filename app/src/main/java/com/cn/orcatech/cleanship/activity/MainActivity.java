@@ -175,4 +175,8 @@ public class MainActivity extends CompatActivity {
         }
         return super.onKeyDown(keyCode, event);
     }
+
+    public MapFragment getMapFragment() {
+        return (MapFragment) fragmentList.get(0);
+    }
 }
