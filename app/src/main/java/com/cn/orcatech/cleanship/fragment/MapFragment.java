@@ -210,10 +210,20 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 String[] topics = topic.split("_");
                 try {
                     final int ship_id = Integer.parseInt(topics[2]);
-                    ships.get(ship_id).setOnline(true);
+                    String data = message.toString();
+                    String status;
+                    if (data.startsWith("#")) {
+                        status = "待机";
+                    }
+                    else if (data.startsWith("$")) {
+                        status = "在线";
+                    }
+                    else {
+                        status = "离线";
+                    }
+                    ships.get(ship_id).setStates(status);
                     if (shipPopupWindowList != null) {
-                        shipPopupWindowList.get(ship_id).put("detail", "在线");
-                        shipPopupWindowList.get(ship_id).put("status", "true");
+                        shipPopupWindowList.get(ship_id).put("status", status);
                         activity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
@@ -224,8 +234,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     if (ship_id != activity.selectShip) {
                         return;
                     }
-                    String data = message.toString();
-                    if (data.startsWith("$") && data.endsWith("#")) {
+                    if ((data.startsWith("$") || data.startsWith("#")) && data.endsWith("#")) {
                         data = data.replaceAll("#", "");
                         data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                         if (!"".equals(data)) {
@@ -1071,8 +1080,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             String shipName = sharedPreferences.getString(String.valueOf(i), String.valueOf(i));
             Map<String, String> map = new HashMap<>();
             map.put("title", shipName);
-            map.put("detail", ships.get(i).isOnline() ? "在线": "离线");
-            map.put("status", String.valueOf(ships.get(i).isOnline()));
+            map.put("detail", ships.get(i).getStatus());
+            map.put("status", ships.get(i).getStatus());
             shipPopupWindowList.add(map);
         }
         shipPopupWindowAdapter = new ShiplistAdapter(shipPopupWindowList);
@@ -1081,8 +1090,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
             @Override
             public void onItemClick(View itemView, int position) {
-                shipListWindow.dismiss();
+                tvToolbar.setText(shipPopupWindowList.get(position).get("title"));
                 activity.selectShip = position;
+                shipListWindow.dismiss();
             }
         });
         recyclerView.addItemDecoration(new DefaultItemDecoration(0xBB1C1C1C));

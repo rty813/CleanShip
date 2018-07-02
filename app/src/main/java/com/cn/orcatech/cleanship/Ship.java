@@ -1,17 +1,17 @@
 package com.cn.orcatech.cleanship;
 
 public class Ship {
-    private boolean online = false;
+    private String states = "离线";
     private double lat;
     private double lng;
     private int battery;
 
-    public boolean isOnline() {
-        return online;
+    public String getStatus() {
+        return states;
     }
 
-    public void setOnline(boolean online) {
-        this.online = online;
+    public void setStates(String states) {
+        this.states = states;
     }
 
     public double getLat() {
