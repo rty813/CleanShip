@@ -32,15 +32,15 @@ public class ShiplistAdapter extends RecyclerView.Adapter {
         viewHolder.getTv_detail().setText(list.get(position).get("detail"));
         viewHolder.getTv_title().setText(list.get(position).get("title"));
         switch (list.get(position).get("status")) {
-            case "在线":
+            case "1":
                 viewHolder.getIv_status().setImageResource(R.drawable.round_green);
                 viewHolder.getTv_title().setTextColor(0xFF000000);
                 break;
-            case "离线":
+            case "-1":
                 viewHolder.getIv_status().setImageResource(R.drawable.round_red);
                 viewHolder.getTv_title().setTextColor(0xFF898989);
                 break;
-            case "待机":
+            case "0":
                 viewHolder.getIv_status().setImageResource(R.drawable.round_orange);
                 viewHolder.getTv_title().setTextColor(0xFF000000);
                 break;

@@ -1,16 +1,16 @@
 package com.cn.orcatech.cleanship;
 
 public class Ship {
-    private String states = "离线";
+    private int states = -1;
     private double lat;
     private double lng;
     private int battery;
 
-    public String getStatus() {
+    public int getStatus() {
         return states;
     }
 
-    public void setStates(String states) {
+    public void setStates(int states) {
         this.states = states;
     }
 

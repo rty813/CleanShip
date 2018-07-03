@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.os.BatteryManager;
 import android.widget.Toast;
 
-import com.amap.api.maps.model.LatLng;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.fragment.MapFragment;
 
@@ -51,21 +50,21 @@ public class MyReceiver extends BroadcastReceiver {
                     case 0:
                         double lat = Double.parseDouble(datas[0]);
                         double lng = Double.parseDouble(datas[1]);
-                        LatLng latLng = mMapFragment.getShipPointList().get(mMapFragment.getShipPointList().size() - 1);
-                        if ((lat < 0 || lat > 55 || lng < 70 || lng > 136)
-                                || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
-                            if (mMapFragment.getShipPointList().size() != 1) {
-                                return;
-                            }
-                        }
-                        mMapFragment.getShipPointList().add(new LatLng(lat, lng));
-                        mMapFragment.move();
+//                        LatLng latLng = mMapFragment.getShipPointLists().get(mMapFragment.getShipPointLists().size() - 1);
+//                        if ((lat < 0 || lat > 55 || lng < 70 || lng > 136)
+//                                || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
+//                            if (mMapFragment.getShipPointLists().size() != 1) {
+//                                return;
+//                            }
+//                        }
+//                        mMapFragment.getShipPointLists().add(new LatLng(lat, lng));
+//                        mMapFragment.move();
                         break;
                     case 7:
                         mMapFragment.handleState(Integer.parseInt(datas[0]));
                         break;
                     case 9:
-                        mMapFragment.setShipCharge(Integer.parseInt(data));
+                        mMapFragment.setBattery(Integer.parseInt(data));
                         break;
                     default:
                         break;

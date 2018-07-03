@@ -121,11 +121,12 @@ public class MainActivity extends CompatActivity {
         hasLogin = true;
         ((UserInfoFragment)fragmentList.get(3)).setUserinfo(userInfo);
         MapFragment mapFragment = (MapFragment) fragmentList.get(0);
-        ships = new ArrayList<>();
-        for (int i = 0; i < userInfo.getTotalship(); i++) {
-            ships.add(new Ship());
-        }
-        mapFragment.setShips(ships);
+//        ships = new ArrayList<>();
+//        for (int i = 0; i < userInfo.getTotalship(); i++) {
+//            ships.add(new Ship());
+//        }
+//        mapFragment.setShips(ships);
+        mapFragment.initClass(userInfo.getTotalship());
         if (fragmentList.get(2).isVisible()) {
             fm.beginTransaction()
                     .hide(fragmentList.get(2))

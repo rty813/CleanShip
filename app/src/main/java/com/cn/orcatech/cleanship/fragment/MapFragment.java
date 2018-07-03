@@ -11,7 +11,6 @@ import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
@@ -45,28 +44,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
-import com.amap.api.maps.AMapUtils;
 import com.amap.api.maps.CameraUpdate;
 import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.MapView;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
-import com.amap.api.maps.model.CameraPosition;
 import com.amap.api.maps.model.Circle;
 import com.amap.api.maps.model.CircleOptions;
 import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.LatLngBounds;
 import com.amap.api.maps.model.Marker;
-import com.amap.api.maps.model.MarkerOptions;
 import com.amap.api.maps.model.MyLocationStyle;
 import com.amap.api.maps.model.Polyline;
 import com.amap.api.maps.model.PolylineOptions;
 import com.amap.api.maps.utils.overlay.SmoothMoveMarker;
-import com.amap.api.services.core.LatLonPoint;
-import com.amap.api.services.geocoder.GeocodeResult;
-import com.amap.api.services.geocoder.GeocodeSearch;
-import com.amap.api.services.geocoder.RegeocodeAddress;
-import com.amap.api.services.geocoder.RegeocodeQuery;
-import com.amap.api.services.geocoder.RegeocodeResult;
 import com.cn.orcatech.cleanship.MyReceiver;
 import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.Ship;
@@ -153,9 +143,10 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private MapView mMapView;
     private AMap aMap;
     private boolean markEnable = false;
-    private ArrayList<Marker> markers;
-    private ArrayList<Polyline> polylines;
-    private ArrayList<Polyline> trace;
+    private ArrayList<ArrayList<Marker>> markerLists;
+    private ArrayList<ArrayList<Polyline>> polylineLists;
+    private ArrayList<ArrayList<Polyline>> traceLists;
+    private int[] colors;
     private Circle limitCircle;
     private String startPosition;
     private MyReceiver myReceiver;
@@ -170,9 +161,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private LinearLayout llMethod;
     private LinearLayout llHome;
     private SwitchMultiButton swNav;
-    private ArrayList<LatLng> shipPointList;
-    private ArrayList<LatLng> aimPointList;
-    private SmoothMoveMarker smoothMoveMarker;
+    private ArrayList<ArrayList<LatLng>> shipPointLists;
+    private ArrayList<SmoothMoveMarker> smoothMoveMarkers;
     private ProgressDialog loadingView;
     private int state;
     private long routeID = -1;
@@ -188,7 +178,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private FloatingActionButton btnCtl;
     private Button btnEnable;
     private TextView tvFinish;
-    private TextView tvShipCharge;
+    private TextView tvBattery;
     private TextView tvToolbar;
     private TextView tvDate;
     private TextView tvCircle;
@@ -208,45 +198,52 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             if (message != null) {
                 Log.d(TAG, "messageArrived, topic: " + topic + "; message: " + new String(message.getPayload()));
                 String[] topics = topic.split("_");
+//                数据格式为 $status;state;battery;lat,lng#
                 try {
-                    final int ship_id = Integer.parseInt(topics[2]);
-                    String data = message.toString();
-                    String status;
-                    if (data.startsWith("#")) {
-                        status = "待机";
-                    }
-                    else if (data.startsWith("$")) {
-                        status = "在线";
-                    }
-                    else {
-                        status = "离线";
-                    }
-                    ships.get(ship_id).setStates(status);
-                    if (shipPopupWindowList != null) {
-                        shipPopupWindowList.get(ship_id).put("status", status);
-                        activity.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                shipPopupWindowAdapter.notifyItemChanged(ship_id);
-                            }
-                        });
-                    }
-                    if (ship_id != activity.selectShip) {
+                    int ship_id = Integer.parseInt(topics[2]);
+                    if (ship_id > activity.userInfo.getTotalship() - 1) {
                         return;
                     }
-                    if ((data.startsWith("$") || data.startsWith("#")) && data.endsWith("#")) {
+                    String data = message.toString();
+                    if (data.startsWith("$") && data.endsWith("#")) {
                         data = data.replaceAll("#", "");
                         data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                         if (!"".equals(data)) {
                             String[] strings = data.split(";");
-                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                            if (strings.length == 2) {
-                                intent.putExtra("type", strings[0]);
-                                intent.putExtra("data", strings[1]);
+                            if (strings.length < 4) {
+                                return;
                             }
+                            Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+                            intent.putExtra("shipid", ship_id);
+                            intent.putExtra("status", strings[0]);
+                            intent.putExtra("state", strings[1]);
+                            intent.putExtra("battery", strings[2]);
+                            intent.putExtra("latlng", strings[3]);
                             activity.sendBroadcast(intent);
                         }
                     }
+//                    if (data.startsWith("#")) {
+//                        status = "待机";
+//                    }
+//                    else if (data.startsWith("$")) {
+//                        status = "在线";
+//                    }
+//                    else {
+//                        status = "离线";
+//                    }
+//                    ships .get(ship_id).setStates(status);
+//                    if (shipPopupWindowList != null) {
+//                        shipPopupWindowList.get(ship_id).put("status", status);
+//                        activity.runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                shipPopupWindowAdapter.notifyItemChanged(ship_id);
+//                            }
+//                        });
+//                    }
+//                    if (ship_id != activity.selectShip) {
+//                        return;
+//                    }
                 }
                 catch (NumberFormatException e){
                     e.printStackTrace();
@@ -279,10 +276,25 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         mMapView.onCreate(savedInstanceState);
         initView(view);
         initMap();
-        initClass();
+        initClass(0);
+        initColor();
         activity.bindService(new Intent(activity, MqttService.class), serviceConnection, BIND_AUTO_CREATE);
         activity.startService(new Intent(activity, MqttService.class));
         requestPermission();
+    }
+
+    private void initColor() {
+        colors = new int[10];
+        colors[0] = 0xFFFF0000;
+        colors[1] = 0xFFFFA200;
+        colors[2] = 0xFFD0FF00;
+        colors[3] = 0xFF37FF00;
+        colors[4] = 0xFF00FF9D;
+        colors[5] = 0xFF00D4FF;
+        colors[6] = 0xFF0033FF;
+        colors[7] = 0xFF6A00FF;
+        colors[8] = 0xFFE100FF;
+        colors[9] = 0xFFFF0080;
     }
 
     @Override
@@ -313,7 +325,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         btnCtl = view.findViewById(R.id.btn_ctl);
         seekBar = view.findViewById(R.id.seekbar);
         fam = view.findViewById(R.id.fam);
-        tvShipCharge = view.findViewById(R.id.tv_shipcharge);
+        tvBattery = view.findViewById(R.id.tv_shipcharge);
         toolbar = view.findViewById(R.id.toolbar);
         llMethod = view.findViewById(R.id.ll_method);
         final SharedPreferences sharedPreferences = activity.getSharedPreferences("cleanship", MODE_PRIVATE);
@@ -387,147 +399,156 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         tvToolbar.setText(toolbarTitle);
     }
 
-    private void initClass() {
+    public void initClass(int totalship) {
+        shipPointLists = new ArrayList<>(totalship);
+        polylineLists = new ArrayList<>(totalship);
+        traceLists = new ArrayList<>(totalship);
+        markerLists = new ArrayList<>(totalship);
+        smoothMoveMarkers = new ArrayList<>();
+        ships = new ArrayList<>();
+        for (int i = 0; i < totalship; i++) {
+            ships.add(new Ship());
+            shipPointLists.add(new ArrayList<LatLng>());
+            polylineLists.add(new ArrayList<Polyline>());
+            traceLists.add(new ArrayList<Polyline>());
+            markerLists.add(new ArrayList<Marker>());
+            shipPointLists.get(i).add(new LatLng(0, 0));
+            smoothMoveMarkers.add(new SmoothMoveMarker(aMap));
+            smoothMoveMarkers.get(i).setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(activity, R.layout.ship, null)));
+        }
         mHandler = new MyHandler(this);
         dbHelper = new SQLiteDBHelper(activity);
-        markers = new ArrayList<>();
-        polylines = new ArrayList<>();
-        trace = new ArrayList<>();
-        aimPointList = new ArrayList<>();
         loadingView = new ProgressDialog(activity);
         loadingView.setMessage("发送中");
         loadingView.setTitle("提示");
         loadingView.setCanceledOnTouchOutside(false);
         loadingView.setCancelable(false);
         loadingView.setIcon(R.mipmap.ic_launcher);
-        initSmoothMove();
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
     }
 
     private void initMap() {
-        polylines = new ArrayList<>();
-        markers = new ArrayList<>();
         if (aMap == null) {
             aMap = mMapView.getMap();
         }
         aMap.getUiSettings().setCompassEnabled(false);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setZoomControlsEnabled(false);
-        aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
-            @Override
-            public boolean onMarkerClick(Marker marker) {
-                if (marker.isInfoWindowShown()) {
-                    marker.hideInfoWindow();
-                } else {
-                    marker.showInfoWindow();
-                }
-                if ((markEnable) && (markers.size() > 1) && ("1".equals(marker.getTitle())) && (!"1".equals(markers.get(markers.size() - 1).getTitle()))) {
-                    marker.hideInfoWindow();
-                    LatLng latLng = markers.get(markers.size() - 1).getPosition();
-                    MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
-                    markerOptions.anchor(0.5f, 0.5f);
-                    markerOptions.setFlat(true);
-                    markerOptions.draggable(true);
-                    markers.add(aMap.addMarker(markerOptions));
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(14).color(Color.parseColor("#0B76CE"))));
-                }
-                return true;
-            }
-        });
-        aMap.setOnMarkerDragListener(new AMap.OnMarkerDragListener() {
-            private int index;
-
-            @Override
-            public void onMarkerDragStart(Marker marker) {
-                for (index = 0; index < markers.size(); index++) {
-                    if (markers.get(index).hashCode() == marker.hashCode()) {
-                        break;
-                    }
-                }
-            }
-
-            @Override
-            public void onMarkerDrag(Marker marker) {
-                LatLng latLng = marker.getPosition();
-                marker.setSnippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
-                if (markers.size() > 1) {
-                    PolylineOptions options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE"));
-                    if (index == 0) {
-                        options.add(latLng, markers.get(1).getPosition());
-                        polylines.get(0).setOptions(options);
-                    } else if (index == markers.size() - 1) {
-                        options.add(markers.get(markers.size() - 2).getPosition(), latLng);
-                        polylines.get(polylines.size() - 1).setOptions(options);
-                    } else {
-                        options.add(markers.get(index - 1).getPosition(), latLng);
-                        polylines.get(index - 1).setOptions(options);
-                        options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE")).add(latLng, markers.get(index + 1).getPosition());
-                        polylines.get(index).setOptions(options);
-                    }
-                }
-            }
-
-            @Override
-            public void onMarkerDragEnd(Marker marker) {
-            }
-        });
-        aMap.setOnMapClickListener(new AMap.OnMapClickListener() {
-            @Override
-            public void onMapClick(LatLng latLng) {
-                if (!markEnable) {
-                    return;
-                }
-                if (AMapUtils.calculateLineDistance(latLng, limitCircle.getCenter()) > CTL_RADIUS) {
-                    Toasty.warning(activity, "超出遥控范围", Toast.LENGTH_SHORT).show();
-                }
-
-                MarkerOptions markerOptions = new MarkerOptions().position(latLng);
-                markerOptions.title(String.valueOf(markers.size() + 1));
-                markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
-                markerOptions.anchor(0.5f, 0.5f);
-                markerOptions.setFlat(true);
-                markerOptions.draggable(true);
-
-                System.out.println(latLng.toString());
-                if (markers.size() > 0) {
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
-                    LatLng lastLatlng = markers.get(markers.size() - 1).getPosition();
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, lastLatlng).width(14)
-                            .color(Color.parseColor("#0B76CE"))));
-                } else {
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
-                    GeocodeSearch geocodeSearch = new GeocodeSearch(activity);
-                    geocodeSearch.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
-                        @Override
-                        public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int i) {
-                            if (i == 1000) {
-                                RegeocodeAddress address = regeocodeResult.getRegeocodeAddress();
-                                startPosition = address.getProvince();
-                                if (!address.getProvince().equals(address.getCity())) {
-                                    startPosition += " " + address.getCity();
-                                }
-                                startPosition += " " + address.getDistrict();
-                                if (address.getPois().size() != 0) {
-                                    startPosition = startPosition + " " + address.getPois().get(0);
-                                }
-//                                System.out.println(startPosition);
-                            }
-                        }
-
-                        @Override
-                        public void onGeocodeSearched(GeocodeResult geocodeResult, int i) {
-
-                        }
-                    });
-                    RegeocodeQuery query = new RegeocodeQuery(new LatLonPoint(latLng.latitude, latLng.longitude), 1000, GeocodeSearch.AMAP);
-                    geocodeSearch.getFromLocationAsyn(query);
-                }
-                markers.add(aMap.addMarker(markerOptions));
-            }
-        });
+//        aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
+//            @Override
+//            public boolean onMarkerClick(Marker marker) {
+//                if (marker.isInfoWindowShown()) {
+//                    marker.hideInfoWindow();
+//                } else {
+//                    marker.showInfoWindow();
+//                }
+//                if ((markEnable) && (markerLists.size() > 1) && ("1".equals(marker.getTitle())) && (!"1".equals(markerLists.get(markerLists.size() - 1).getTitle()))) {
+//                    marker.hideInfoWindow();
+//                    LatLng latLng = markerLists.get(markerLists.size() - 1).getPosition();
+//                    MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
+//                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+//                    markerOptions.anchor(0.5f, 0.5f);
+//                    markerOptions.setFlat(true);
+//                    markerOptions.draggable(true);
+//                    markerLists.add(aMap.addMarker(markerOptions));
+//                    polylineLists.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(14).color(Color.parseColor("#0B76CE"))));
+//                }
+//                return true;
+//            }
+//        });
+//        aMap.setOnMarkerDragListener(new AMap.OnMarkerDragListener() {
+//            private int index;
+//
+//            @Override
+//            public void onMarkerDragStart(Marker marker) {
+//                for (index = 0; index < markerLists.size(); index++) {
+//                    if (markerLists.get(index).hashCode() == marker.hashCode()) {
+//                        break;
+//                    }
+//                }
+//            }
+//
+//            @Override
+//            public void onMarkerDrag(Marker marker) {
+//                LatLng latLng = marker.getPosition();
+//                marker.setSnippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
+//                if (markerLists.size() > 1) {
+//                    PolylineOptions options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE"));
+//                    if (index == 0) {
+//                        options.add(latLng, markerLists.get(1).getPosition());
+//                        polylineLists.get(0).setOptions(options);
+//                    } else if (index == markerLists.size() - 1) {
+//                        options.add(markerLists.get(markerLists.size() - 2).getPosition(), latLng);
+//                        polylineLists.get(polylineLists.size() - 1).setOptions(options);
+//                    } else {
+//                        options.add(markerLists.get(index - 1).getPosition(), latLng);
+//                        polylineLists.get(index - 1).setOptions(options);
+//                        options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE")).add(latLng, markerLists.get(index + 1).getPosition());
+//                        polylineLists.get(index).setOptions(options);
+//                    }
+//                }
+//            }
+//
+//            @Override
+//            public void onMarkerDragEnd(Marker marker) {
+//            }
+//        });
+//        aMap.setOnMapClickListener(new AMap.OnMapClickListener() {
+//            @Override
+//            public void onMapClick(LatLng latLng) {
+//                if (!markEnable) {
+//                    return;
+//                }
+//                if (AMapUtils.calculateLineDistance(latLng, limitCircle.getCenter()) > CTL_RADIUS) {
+//                    Toasty.warning(activity, "超出遥控范围", Toast.LENGTH_SHORT).show();
+//                }
+//
+//                MarkerOptions markerOptions = new MarkerOptions().position(latLng);
+//                markerOptions.title(String.valueOf(markerLists.size() + 1));
+//                markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
+//                markerOptions.anchor(0.5f, 0.5f);
+//                markerOptions.setFlat(true);
+//                markerOptions.draggable(true);
+//
+//                System.out.println(latLng.toString());
+//                if (markerLists.size() > 0) {
+//                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+//                    LatLng lastLatlng = markerLists.get(markerLists.size() - 1).getPosition();
+//                    polylineLists.add(aMap.addPolyline(new PolylineOptions().add(latLng, lastLatlng).width(14)
+//                            .color(Color.parseColor("#0B76CE"))));
+//                } else {
+//                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
+//                    GeocodeSearch geocodeSearch = new GeocodeSearch(activity);
+//                    geocodeSearch.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
+//                        @Override
+//                        public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int i) {
+//                            if (i == 1000) {
+//                                RegeocodeAddress address = regeocodeResult.getRegeocodeAddress();
+//                                startPosition = address.getProvince();
+//                                if (!address.getProvince().equals(address.getCity())) {
+//                                    startPosition += " " + address.getCity();
+//                                }
+//                                startPosition += " " + address.getDistrict();
+//                                if (address.getPois().size() != 0) {
+//                                    startPosition = startPosition + " " + address.getPois().get(0);
+//                                }
+////                                System.out.println(startPosition);
+//                            }
+//                        }
+//
+//                        @Override
+//                        public void onGeocodeSearched(GeocodeResult geocodeResult, int i) {
+//
+//                        }
+//                    });
+//                    RegeocodeQuery query = new RegeocodeQuery(new LatLonPoint(latLng.latitude, latLng.longitude), 1000, GeocodeSearch.AMAP);
+//                    geocodeSearch.getFromLocationAsyn(query);
+//                }
+//                markerLists.add(aMap.addMarker(markerOptions));
+//            }
+//        });
         aMap.setOnMyLocationChangeListener(new AMap.OnMyLocationChangeListener() {
             @Override
             public void onMyLocationChange(Location location) {
@@ -538,13 +559,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         .radius(CTL_RADIUS).strokeColor(Color.RED).strokeWidth(8).fillColor(Color.argb(20, 1, 1, 1)));
             }
         });
-    }
-
-    private void initSmoothMove() {
-        shipPointList = new ArrayList<>();
-        shipPointList.add(new LatLng(0, 0));
-        smoothMoveMarker = new SmoothMoveMarker(aMap);
-        smoothMoveMarker.setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(activity, R.layout.ship, null)));
     }
 
     private void showLoadingView(String msg) {
@@ -620,46 +634,46 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         mMapView.onSaveInstanceState(outState);
     }
 
-    private void loadRoute(@Nullable String id) {
-        SQLiteDatabase database = dbHelper.getReadableDatabase();
-        resetMap();
-        Cursor cursor;
-        if (id != null) {
-            cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, "ID=?", new String[]{id}, null, null, null);
-            cursor.moveToFirst();
-        } else {
-            cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null, null, null, null);
-            cursor.moveToLast();
-        }
-        if (cursor.getCount() > 0) {
-            String route = cursor.getString(cursor.getColumnIndex("ROUTE"));
-            String[] markers_str = route.split(";");
-            for (int i = 0; i < markers_str.length; i++) {
-                String[] location = markers_str[i].split(",");
-                LatLng latLng = new LatLng(Double.parseDouble(location[0]), Double.parseDouble(location[1]));
-                if (i == 0) {
-                    CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
-                    aMap.animateCamera(cameraUpdate);
-                }
-                MarkerOptions markerOptions = new MarkerOptions().position(latLng);
-                markerOptions.title(String.valueOf(markers.size() + 1));
-                markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
-                markerOptions.anchor(0.5f, 0.5f);
-                markerOptions.draggable(true);
-                markerOptions.setFlat(true);
-                if (markers.size() > 0) {
-                    LatLng lastLatlng = markers.get(markers.size() - 1).getPosition();
-                    polylines.add(aMap.addPolyline(new PolylineOptions().add(latLng, lastLatlng).width(14).color(Color.parseColor("#0B76CE"))));
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
-                } else {
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
-                }
-                markers.add(aMap.addMarker(markerOptions));
-            }
-        }
-        cursor.close();
-        database.close();
-    }
+//    private void loadRoute(@Nullable String id) {
+//        SQLiteDatabase database = dbHelper.getReadableDatabase();
+//        resetMap();
+//        Cursor cursor;
+//        if (id != null) {
+//            cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, "ID=?", new String[]{id}, null, null, null);
+//            cursor.moveToFirst();
+//        } else {
+//            cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null, null, null, null);
+//            cursor.moveToLast();
+//        }
+//        if (cursor.getCount() > 0) {
+//            String route = cursor.getString(cursor.getColumnIndex("ROUTE"));
+//            String[] markers_str = route.split(";");
+//            for (int i = 0; i < markers_str.length; i++) {
+//                String[] location = markers_str[i].split(",");
+//                LatLng latLng = new LatLng(Double.parseDouble(location[0]), Double.parseDouble(location[1]));
+//                if (i == 0) {
+//                    CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
+//                    aMap.animateCamera(cameraUpdate);
+//                }
+//                MarkerOptions markerOptions = new MarkerOptions().position(latLng);
+//                markerOptions.title(String.valueOf(markerLists.size() + 1));
+//                markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
+//                markerOptions.anchor(0.5f, 0.5f);
+//                markerOptions.draggable(true);
+//                markerOptions.setFlat(true);
+//                if (markerLists.size() > 0) {
+//                    LatLng lastLatlng = markerLists.get(markerLists.size() - 1).getPosition();
+//                    polylineLists.add(aMap.addPolyline(new PolylineOptions().add(latLng, lastLatlng).width(14).color(Color.parseColor("#0B76CE"))));
+//                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+//                } else {
+//                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
+//                }
+//                markerLists.add(aMap.addMarker(markerOptions));
+//            }
+//        }
+//        cursor.close();
+//        database.close();
+//    }
 
     private void morph(int state) {
         if (state != NONE) {
@@ -676,7 +690,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 preState = Integer.MAX_VALUE;
                 mqttService.close();
                 resetMap();
-                tvShipCharge.setVisibility(View.INVISIBLE);
+                tvBattery.setVisibility(View.INVISIBLE);
                 fam.hideMenu(false);
                 break;
             case READY:
@@ -723,44 +737,47 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         llHome.setVisibility(View.GONE);
         btnHome.setVisibility(View.GONE);
         btnConnect.setVisibility(View.GONE);
-        tvShipCharge.setVisibility(View.VISIBLE);
+        tvBattery.setVisibility(View.VISIBLE);
     }
 
     private void resetMap() {
         aMap.clear(true);
-        shipPointList.removeAll(shipPointList);
-        shipPointList.add(new LatLng(0, 0));
-        aimPointList.removeAll(aimPointList);
-        markers.removeAll(markers);
-        polylines.removeAll(polylines);
-        trace.removeAll(trace);
-        initSmoothMove();
+        for (int i = 0; i < activity.userInfo.getTotalship(); i++) {
+            shipPointLists.get(i).removeAll(shipPointLists.get(i));
+            shipPointLists.get(i).add(new LatLng(0, 0));
+            markerLists.get(i).removeAll(markerLists.get(i));
+            polylineLists.get(i).removeAll(polylineLists.get(i));
+            traceLists.get(i).removeAll(traceLists.get(i));
+//          initSmoothMove();
+        }
     }
 
-    public void setShipCharge(int shipCharge) {
-        tvShipCharge.setText(String.format(Locale.getDefault(), "剩余电量：%d%%", shipCharge));
+    public void setBattery(int battery) {
+        tvBattery.setText(String.format(Locale.getDefault(), "剩余电量：%d%%", battery));
     }
 
-    public ArrayList<LatLng> getShipPointList() {
-        return shipPointList;
+    public ArrayList<LatLng> getShipPointLists(int id) {
+        return shipPointLists.get(id);
     }
 
-    public void move() {
-        if (shipPointList.size() == 2) {
-            LatLngBounds bounds = new LatLngBounds(shipPointList.get(1), shipPointList.get(shipPointList.size() - 1));
+    public void move(int shipid) {
+        ArrayList<LatLng> shipPoints = shipPointLists.get(shipid);
+        if (shipPoints.size() == 2) {
+            LatLngBounds bounds = new LatLngBounds(shipPoints.get(1), shipPoints.get(shipPoints.size() - 1));
             aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
             CameraUpdate mCameraUpdate = CameraUpdateFactory.zoomTo(15);
             aMap.moveCamera(mCameraUpdate);
         } else {
-            List<LatLng> subList = shipPointList.subList(shipPointList.size() - 2, shipPointList.size());
+            List<LatLng> subList = shipPoints.subList(shipPoints.size() - 2, shipPoints.size());
+            SmoothMoveMarker smoothMoveMarker = smoothMoveMarkers.get(shipid);
             smoothMoveMarker.setPoints(subList);
             smoothMoveMarker.setTotalDuration(1);
             smoothMoveMarker.startSmoothMove();
             smoothMoveMarker.getMarker().setInfoWindowEnable(false);
             smoothMoveMarker.getMarker().setFlat(true);
             smoothMoveMarker.getMarker().setAnchor(0.5f, 0.5f);
-            trace.add(aMap.addPolyline(new PolylineOptions().add(shipPointList.get(shipPointList.size() - 2),
-                    shipPointList.get(shipPointList.size() - 1)).width(7).color(Color.parseColor("#FFE418"))));
+            traceLists.get(shipid).add(aMap.addPolyline(new PolylineOptions().add(shipPoints.get(shipPoints.size() - 2),
+                    shipPoints.get(shipPoints.size() - 1)).width(7).color(colors[shipid])));
         }
     }
 
@@ -803,7 +820,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             }
             if (tempState != this.state) {
                 if (state != -5 && state != 0) {
-                    loadRoute(id == -1 ? null : String.valueOf(id));
+//                    loadRoute(id == -1 ? null : String.valueOf(id));
                 }
                 this.state = UNREADY;
                 mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
@@ -815,6 +832,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     public void onClick(View view) {
         PopupWindow popupHistory;
         PopupWindow shipListWindow;
+        ArrayList<Marker> markers = activity.selectShip == -1 ? null : markerLists.get(activity.selectShip);
+        ArrayList<Polyline> polylines = activity.selectShip == -1 ? null : polylineLists.get(activity.selectShip);
+        ArrayList<Polyline> traces = activity.selectShip == -1 ? null : traceLists.get(activity.selectShip);
         switch (view.getId()) {
             case R.id.btn_connect:
                 if (!loadingView.isShowing()) {
@@ -885,10 +905,10 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             case R.id.btn_go:
                 if (state == READY) {
                     if (markers.size() > 0) {
-                        for (Polyline line : trace) {
+                        for (Polyline line : traces) {
                             line.remove();
                         }
-                        trace.removeAll(trace);
+                        traces.removeAll(traces);
                         StringBuilder stringBuilder = new StringBuilder();
                         for (Marker marker : markers) {
                             stringBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
@@ -906,9 +926,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         loadingView.setIcon(R.mipmap.ic_launcher);
                         loadingView.show();
                         String data = swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#";
-                        new MyAsyncTask(this, new WriteSerialThread(data, GONE, READY), date).execute();
+                        new MyAsyncTask(this, activity.selectShip, new WriteSerialThread(data, GONE, READY), date).execute();
                     } else {
-                        loadRoute(null);
+//                        loadRoute(null);
                     }
                 }
                 break;
@@ -1080,8 +1100,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             String shipName = sharedPreferences.getString(String.valueOf(i), String.valueOf(i));
             Map<String, String> map = new HashMap<>();
             map.put("title", shipName);
-            map.put("detail", ships.get(i).getStatus());
-            map.put("status", ships.get(i).getStatus());
+            map.put("detail", String.valueOf(ships.get(i).getStatus()));
+            map.put("status", String.valueOf(ships.get(i).getStatus()));
             shipPopupWindowList.add(map);
         }
         shipPopupWindowAdapter = new ShiplistAdapter(shipPopupWindowList);
@@ -1173,7 +1193,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             public void onItemClick(View itemView, int position) {
                 popupHistory.dismiss();
                 routeID = Long.parseLong(list.get(position).get("id"));
-                loadRoute(list.get(position).get("id"));
+//                loadRoute(list.get(position).get("id"));
             }
         });
         recyclerView.setSwipeMenuCreator(new SwipeMenuCreator() {
@@ -1258,6 +1278,18 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         this.ships = ships;
     }
 
+    public ArrayList<Ship> getShips() {
+        return ships;
+    }
+
+    public void updateShiplist(int pos, int status) {
+        if (shipPopupWindowAdapter != null) {
+            shipPopupWindowList.get(pos).put("status", String.valueOf(status));
+            shipPopupWindowList.get(pos).put("detail", String.valueOf(status));
+            shipPopupWindowAdapter.notifyItemChanged(pos);
+        }
+    }
+
     public static class MyHandler extends Handler {
         WeakReference<MapFragment> mFragment;
 
@@ -1331,21 +1363,23 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     }
 
     private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
+        private final int shipid;
         private String date;
         private WeakReference<MapFragment> fragment;
         private WriteSerialThread writeSerialThread;
 
-        MyAsyncTask(MapFragment fragment, WriteSerialThread writeSerialThread, String date) {
+        MyAsyncTask(MapFragment fragment, int shipid, WriteSerialThread writeSerialThread, String date) {
             this.fragment = new WeakReference<>(fragment);
             this.writeSerialThread = writeSerialThread;
             this.date = date;
+            this.shipid = shipid;
             fragment.state = UNREADY;
         }
 
         @Override
         protected Void doInBackground(Void... voids) {
             MapFragment fragment = this.fragment.get();
-            ArrayList<Marker> markers = fragment.markers;
+            ArrayList<Marker> markers = fragment.markerLists.get(shipid);
             if (markers.size() > 1) {
                 try {
                     StringBuilder stringBuilder = new StringBuilder();

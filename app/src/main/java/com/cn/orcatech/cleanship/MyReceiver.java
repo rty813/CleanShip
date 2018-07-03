@@ -40,40 +40,75 @@ public class MyReceiver extends BroadcastReceiver {
                 }
             }
         } else if (intent.getAction().equals(ACTION_DATA_RECEIVED)) {
-            String data = intent.getStringExtra("data");
-            if (data == null) {
-                return;
-            }
-            String[] datas = data.split(",");
-//        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前速度
             try {
-                int type = Integer.parseInt(intent.getStringExtra("type"));
-                switch (type) {
-                    case 0:
-                        double lat = Double.parseDouble(datas[0]);
-                        double lng = Double.parseDouble(datas[1]);
-                        LatLng latLng = mMapFragment.getShipPointList().get(mMapFragment.getShipPointList().size() - 1);
-                        if ((lat < 0 || lat > 55 || lng < 70 || lng > 136)
-                                || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
-                            if (mMapFragment.getShipPointList().size() != 1) {
-                                return;
-                            }
-                        }
-                        mMapFragment.getShipPointList().add(new LatLng(lat, lng));
-                        mMapFragment.move();
-                        break;
-                    case 7:
-                        mMapFragment.handleState(Integer.parseInt(datas[0]));
-                        break;
-                    case 9:
-                        mMapFragment.setShipCharge(Integer.parseInt(data));
-                        break;
-                    default:
-                        break;
+                int shipid = intent.getIntExtra("shipid", -1);
+                int status = Integer.parseInt(intent.getStringExtra("status"));
+                int state = Integer.parseInt(intent.getStringExtra("state"));
+                int battery = Integer.parseInt(intent.getStringExtra("battery"));
+                String[] latlng = intent.getStringExtra("latlng").split(",");
+                double lat = Double.parseDouble(latlng[0]);
+                double lng = Double.parseDouble(latlng[1]);
+//                更新Status
+                mMapFragment.getShips().get(shipid).setStates(status);
+                mMapFragment.updateShiplist(shipid, status);
+
+//                更新state
+                mMapFragment.handleState(state);
+
+//                更新battery
+                mMapFragment.setBattery(battery);
+
+//                更新坐标
+                LatLng latLng = mMapFragment.getShipPointLists(shipid).get(mMapFragment.getShipPointLists(shipid).size() - 1);
+                if ((lat < 0 || lat > 55 || lng < 70 || lng > 136)
+                        || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
+                    if (mMapFragment.getShipPointLists(shipid).size() != 1) {
+                        return;
+                    }
                 }
-            } catch (Exception e) {
+                mMapFragment.getShipPointLists(shipid).add(new LatLng(lat, lng));
+                mMapFragment.move(shipid);
+
+
+            } catch (NumberFormatException e) {
                 e.printStackTrace();
             }
         }
+//        } else if (intent.getAction().equals(ACTION_DATA_RECEIVED)) {
+//            String data = intent.getStringExtra("data");
+//            if (data == null) {
+//                return;
+//            }
+//            String[] datas = data.split(",");
+////        0=>当前经纬度   1=>目标经纬度    2=>陀螺仪方向角   3=>目标方向角    4=>当前速度
+//            try {
+//                int type = Integer.parseInt(intent.getStringExtra("type"));
+//                switch (type) {
+//                    case 0:
+//                        double lat = Double.parseDouble(datas[0]);
+//                        double lng = Double.parseDouble(datas[1]);
+//                        LatLng latLng = mMapFragment.getShipPointLists().get(mMapFragment.getShipPointLists().size() - 1);
+//                        if ((lat < 0 || lat > 55 || lng < 70 || lng > 136)
+//                                || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
+//                            if (mMapFragment.getShipPointLists().size() != 1) {
+//                                return;
+//                            }
+//                        }
+//                        mMapFragment.getShipPointLists().add(new LatLng(lat, lng));
+//                        mMapFragment.move();
+//                        break;
+//                    case 7:
+//                        mMapFragment.handleState(Integer.parseInt(datas[0]));
+//                        break;
+//                    case 9:
+//                        mMapFragment.setBattery(Integer.parseInt(data));
+//                        break;
+//                    default:
+//                        break;
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+
     }
 }
