@@ -197,8 +197,13 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         public void messageArrived(String topic, MqttMessage message) {
             if (message != null) {
                 Log.d(TAG, "messageArrived, topic: " + topic + "; message: " + new String(message.getPayload()));
+                if (topic.equals("test1")) {
+                    String str[] = message.toString().split(";");
+                    DataFragment.setBtnText();
+                    return;
+                }
                 String[] topics = topic.split("_");
-//                数据格式为 $status;state;battery;lat,lng#
+//                数据格式为 $state;battery;lat,lng#
                 try {
                     int ship_id = Integer.parseInt(topics[2]);
                     if (ship_id > activity.userInfo.getTotalship() - 1) {
@@ -210,15 +215,14 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                         if (!"".equals(data)) {
                             String[] strings = data.split(";");
-                            if (strings.length < 4) {
+                            if (strings.length < 3) {
                                 return;
                             }
                             Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
                             intent.putExtra("shipid", ship_id);
-                            intent.putExtra("status", strings[0]);
-                            intent.putExtra("state", strings[1]);
-                            intent.putExtra("battery", strings[2]);
-                            intent.putExtra("latlng", strings[3]);
+                            intent.putExtra("state", strings[0]);
+                            intent.putExtra("battery", strings[1]);
+                            intent.putExtra("latlng", strings[2]);
                             activity.sendBroadcast(intent);
                         }
                     }
@@ -231,7 +235,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 //                    else {
 //                        status = "离线";
 //                    }
-//                    ships .get(ship_id).setStates(status);
+//                    ships .get(ship_id).setStatus(status);
 //                    if (shipPopupWindowList != null) {
 //                        shipPopupWindowList.get(ship_id).put("status", status);
 //                        activity.runOnUiThread(new Runnable() {
@@ -262,6 +266,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             activity.logout();
         }
     };
+
+    // 正数=循环模式第几圈且正在运行 0=刚上电啥都没干 -1=连线模式运行中 -2=循环模式暂停 -3=连线模式暂停 -4=连线模式结束 -5=返航 -10=待机 -11=关机
 
     @Nullable
     @Override
@@ -785,46 +791,53 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         // 有一个想法。目前，如果用prestate，会出现Bug，即如果点了会使App状态改变的按钮，
         // 而prestate不变，此时会导致状态错误。解决方法有两种，一种是在点击按钮的时候更改prestate，
         // 但这种方法通用性太差。另一种方法是统一船发来的state和app的state。决定采用第二种。
-        if (state != preState && state >= -5) {
-            preState = state;
-            long id = activity.getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
-            int tempState = UNREADY;
-            swNav.setSelectedTab(0);
-            switch (state) {
-                case 0:
-                    tempState = READY;
-                    break;
-                case -1:
-                    tempState = GONE;
-                    break;
-                case -2:
-                    swNav.setSelectedTab(1);
-                    tempState = PAUSE;
-                    break;
-                case -3:
-                    tempState = PAUSE;
-                    break;
-                case -4:
-                    tempState = FINISH;
-                    break;
-                case -5:
-                    tempState = HOMING;
-                    break;
-                default:
-                    break;
-            }
-            if (state > 0) {
-                tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
-                swNav.setSelectedTab(1);
+//        long id = activity.getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+        int tempState = UNREADY;
+        swNav.setSelectedTab(0);
+        switch (state) {
+            case 0:
+//                开机初始状态
+                tempState = READY;
+                break;
+            case -1:
+//                连线模式运行中
                 tempState = GONE;
-            }
-            if (tempState != this.state) {
-                if (state != -5 && state != 0) {
+                break;
+            case -2:
+//                循环模式暂停
+                swNav.setSelectedTab(1);
+                tempState = PAUSE;
+                break;
+            case -3:
+//                连线模式暂停
+                tempState = PAUSE;
+                break;
+            case -4:
+//                跑完了
+                tempState = FINISH;
+                break;
+            case -5:
+//                返航
+                tempState = HOMING;
+                break;
+            case -10:
+//                待机
+
+                break;
+            default:
+                break;
+        }
+        if (state > 0) {
+            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
+            swNav.setSelectedTab(1);
+            tempState = GONE;
+        }
+        if (tempState != this.state) {
+            if (state != -5 && state != 0) {
 //                    loadRoute(id == -1 ? null : String.valueOf(id));
-                }
-                this.state = UNREADY;
-                mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
             }
+            this.state = UNREADY;
+            mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
         }
     }
 
@@ -1100,7 +1113,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             String shipName = sharedPreferences.getString(String.valueOf(i), String.valueOf(i));
             Map<String, String> map = new HashMap<>();
             map.put("title", shipName);
-            map.put("detail", String.valueOf(ships.get(i).getStatus()));
+            map.put("detail", String.valueOf(ships.get(i).getState()));
             map.put("status", String.valueOf(ships.get(i).getStatus()));
             shipPopupWindowList.add(map);
         }
@@ -1111,6 +1124,10 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             @Override
             public void onItemClick(View itemView, int position) {
                 tvToolbar.setText(shipPopupWindowList.get(position).get("title"));
+                if (activity.selectShip == -1 ||
+                        (ships.get(activity.selectShip).getState() != ships.get(position).getState())) {
+                    newHandleState(ships.get(position).getState());
+                }
                 activity.selectShip = position;
                 shipListWindow.dismiss();
             }
@@ -1287,6 +1304,77 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             shipPopupWindowList.get(pos).put("status", String.valueOf(status));
             shipPopupWindowList.get(pos).put("detail", String.valueOf(status));
             shipPopupWindowAdapter.notifyItemChanged(pos);
+        }
+    }
+
+    public void newHandleState(int state) {
+        swNav.setSelectedTab(0);
+        this.markEnable = false;
+        btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
+        tvToolbar.setText(toolbarTitle);
+        hideAll();
+        switch (state) {
+            case 0:
+//                开机初始状态
+                llMark.setVisibility(View.VISIBLE);
+                llMethod.setVisibility(View.VISIBLE);
+                btnHome.setVisibility(View.VISIBLE);
+                fam.showMenu(true);
+                break;
+            case -1:
+//                连线模式运行中
+                btnGoStop.setText("暂停");
+                btnGoStop.setCompoundDrawables(null, picPause, null, null);
+                llNav.setVisibility(View.VISIBLE);
+                tvCircle.setVisibility(View.GONE);
+                fam.showMenu(true);
+                break;
+            case -2:
+//                循环模式暂停
+                swNav.setSelectedTab(1);
+                btnGoStop.setText("开始");
+                btnGoStop.setCompoundDrawables(null, picStart, null, null);
+                llNav.setVisibility(View.VISIBLE);
+                tvCircle.setVisibility(View.VISIBLE);
+                fam.showMenu(true);
+                break;
+            case -3:
+//                连线模式暂停
+                btnGoStop.setText("开始");
+                btnGoStop.setCompoundDrawables(null, picStart, null, null);
+                llNav.setVisibility(View.VISIBLE);
+                tvCircle.setVisibility(View.GONE);
+                fam.showMenu(true);
+                break;
+            case -4:
+//                跑完了
+                llFinish.setVisibility(View.VISIBLE);
+                writeSerialThreadPool.execute(new QueryTimeDisThread());
+                fam.showMenu(true);
+                break;
+            case -5:
+//                返航
+                llHome.setVisibility(View.VISIBLE);
+                fam.showMenu(true);
+                break;
+            case -10:
+//                待机
+                btnConnect.setVisibility(View.VISIBLE);
+                break;
+            case -11:
+//                关机
+                break;
+            default:
+                break;
+        }
+        if (state > 0) {
+            swNav.setSelectedTab(1);
+            btnGoStop.setText("暂停");
+            btnGoStop.setCompoundDrawables(null, picPause, null, null);
+            llNav.setVisibility(View.VISIBLE);
+            tvCircle.setVisibility(View.VISIBLE);
+            fam.showMenu(true);
+            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
         }
     }
 

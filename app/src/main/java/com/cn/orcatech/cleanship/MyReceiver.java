@@ -42,23 +42,38 @@ public class MyReceiver extends BroadcastReceiver {
         } else if (intent.getAction().equals(ACTION_DATA_RECEIVED)) {
             try {
                 int shipid = intent.getIntExtra("shipid", -1);
-                int status = Integer.parseInt(intent.getStringExtra("status"));
                 int state = Integer.parseInt(intent.getStringExtra("state"));
                 int battery = Integer.parseInt(intent.getStringExtra("battery"));
                 String[] latlng = intent.getStringExtra("latlng").split(",");
                 double lat = Double.parseDouble(latlng[0]);
                 double lng = Double.parseDouble(latlng[1]);
-//                更新Status
-                mMapFragment.getShips().get(shipid).setStates(status);
-                mMapFragment.updateShiplist(shipid, status);
-
+                int status;
+                if (state == -10) {
+                    status = 0;
+                }
+                else if (state == -11) {
+                    status = -1;
+                }
+                else {
+                    status = 1;
+                }
 //                更新state
-                mMapFragment.handleState(state);
+                if (state != mMapFragment.getShips().get(shipid).getPreState()) {
+                    mMapFragment.getShips().get(shipid).setPreState(mMapFragment.getShips().get(shipid).getState());
+                    mMapFragment.getShips().get(shipid).setState(state);
+                    mMapFragment.updateShiplist(shipid, status);
+                    if (shipid == activity.selectShip) {
+                        mMapFragment.newHandleState(state);
+                    }
+                }
 
 //                更新battery
+                mMapFragment.getShips().get(shipid).setBattery(battery);
                 mMapFragment.setBattery(battery);
 
 //                更新坐标
+                mMapFragment.getShips().get(shipid).setLat(lat);
+                mMapFragment.getShips().get(shipid).setLng(lng);
                 LatLng latLng = mMapFragment.getShipPointLists(shipid).get(mMapFragment.getShipPointLists(shipid).size() - 1);
                 if ((lat < 0 || lat > 55 || lng < 70 || lng > 136)
                         || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
