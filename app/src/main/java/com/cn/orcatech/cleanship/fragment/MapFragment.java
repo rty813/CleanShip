@@ -1,5 +1,6 @@
 package com.cn.orcatech.cleanship.fragment;
 
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.ComponentName;
 import android.content.ContentValues;
@@ -448,65 +449,67 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         aMap.getUiSettings().setCompassEnabled(false);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setZoomControlsEnabled(false);
-//        aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
-//            @Override
-//            public boolean onMarkerClick(Marker marker) {
-//                if (marker.isInfoWindowShown()) {
-//                    marker.hideInfoWindow();
-//                } else {
-//                    marker.showInfoWindow();
-//                }
-//                if ((markEnable) && (markerLists.size() > 1) && ("1".equals(marker.getTitle())) && (!"1".equals(markerLists.get(markerLists.size() - 1).getTitle()))) {
-//                    marker.hideInfoWindow();
-//                    LatLng latLng = markerLists.get(markerLists.size() - 1).getPosition();
-//                    MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
-//                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
-//                    markerOptions.anchor(0.5f, 0.5f);
-//                    markerOptions.setFlat(true);
-//                    markerOptions.draggable(true);
-//                    markerLists.add(aMap.addMarker(markerOptions));
-//                    polylineLists.add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(14).color(Color.parseColor("#0B76CE"))));
-//                }
-//                return true;
-//            }
-//        });
-//        aMap.setOnMarkerDragListener(new AMap.OnMarkerDragListener() {
-//            private int index;
-//
-//            @Override
-//            public void onMarkerDragStart(Marker marker) {
-//                for (index = 0; index < markerLists.size(); index++) {
-//                    if (markerLists.get(index).hashCode() == marker.hashCode()) {
-//                        break;
-//                    }
-//                }
-//            }
-//
-//            @Override
-//            public void onMarkerDrag(Marker marker) {
-//                LatLng latLng = marker.getPosition();
-//                marker.setSnippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
-//                if (markerLists.size() > 1) {
-//                    PolylineOptions options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE"));
-//                    if (index == 0) {
-//                        options.add(latLng, markerLists.get(1).getPosition());
-//                        polylineLists.get(0).setOptions(options);
-//                    } else if (index == markerLists.size() - 1) {
-//                        options.add(markerLists.get(markerLists.size() - 2).getPosition(), latLng);
-//                        polylineLists.get(polylineLists.size() - 1).setOptions(options);
-//                    } else {
-//                        options.add(markerLists.get(index - 1).getPosition(), latLng);
-//                        polylineLists.get(index - 1).setOptions(options);
-//                        options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE")).add(latLng, markerLists.get(index + 1).getPosition());
-//                        polylineLists.get(index).setOptions(options);
-//                    }
-//                }
-//            }
-//
-//            @Override
-//            public void onMarkerDragEnd(Marker marker) {
-//            }
-//        });
+        aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                if (marker.isInfoWindowShown()) {
+                    marker.hideInfoWindow();
+                } else {
+                    marker.showInfoWindow();
+                }
+                if ((markEnable) && (markerLists.size() > 1) && ("1".equals(marker.getTitle())) && (!"1".equals(markerLists.get(activity.selectShip).get(markerLists.size() - 1).getTitle()))) {
+                    marker.hideInfoWindow();
+                    LatLng latLng = markerLists.get(activity.selectShip).get(markerLists.get(activity.selectShip).size() - 1).getPosition();
+                    MarkerOptions markerOptions = new MarkerOptions().position(marker.getPosition());
+                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
+                    markerOptions.anchor(0.5f, 0.5f);
+                    markerOptions.setFlat(true);
+                    markerOptions.draggable(true);
+                    markerLists.get(activity.selectShip).add(aMap.addMarker(markerOptions));
+                    polylineLists.get(activity.selectShip).add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(14).color(Color.parseColor("#0B76CE"))));
+                }
+                return true;
+            }
+        });
+        aMap.setOnMarkerDragListener(new AMap.OnMarkerDragListener() {
+            private int index;
+
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+                for (index = 0; index < markerLists.size(); index++) {
+                    if (markerLists.get(activity.selectShip).get(index).hashCode() == marker.hashCode()) {
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public void onMarkerDrag(Marker marker) {
+                ArrayList<Marker> markers = markerLists.get(activity.selectShip);
+                ArrayList<Polyline> polylines = polylineLists.get(activity.selectShip);
+                LatLng latLng = marker.getPosition();
+                marker.setSnippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
+                if (markerLists.size() > 1) {
+                    PolylineOptions options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE"));
+                    if (index == 0) {
+                        options.add(latLng, markers.get(1).getPosition());
+                        polylines.get(0).setOptions(options);
+                    } else if (index == markerLists.size() - 1) {
+                        options.add(markers.get(markerLists.size() - 2).getPosition(), latLng);
+                        polylines.get(polylines.size() - 1).setOptions(options);
+                    } else {
+                        options.add(markers.get(index - 1).getPosition(), latLng);
+                        polylines.get(index - 1).setOptions(options);
+                        options = new PolylineOptions().width(10).color(Color.parseColor("#0B76CE")).add(latLng, markers.get(index + 1).getPosition());
+                        polylines.get(index).setOptions(options);
+                    }
+                }
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+            }
+        });
         aMap.setOnMapClickListener(new AMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
@@ -518,7 +521,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 }
 
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
-                markerOptions.title(String.valueOf(markerLists.size() + 1));
+                markerOptions.title(String.valueOf(markerLists.get(activity.selectShip).size() + 1));
                 markerOptions.snippet(String.format(Locale.getDefault(), "纬度：%.6f\n经度：%.6f", latLng.latitude, latLng.longitude));
                 markerOptions.anchor(0.5f, 0.5f);
                 markerOptions.setFlat(true);
@@ -753,15 +756,20 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     }
 
     private void resetMap() {
-        aMap.clear(true);
-        for (int i = 0; i < activity.userInfo.getTotalship(); i++) {
-            shipPointLists.get(i).removeAll(shipPointLists.get(i));
-            shipPointLists.get(i).add(new LatLng(0, 0));
-            markerLists.get(i).removeAll(markerLists.get(i));
-            polylineLists.get(i).removeAll(polylineLists.get(i));
-            traceLists.get(i).removeAll(traceLists.get(i));
-//          initSmoothMove();
+        for (Marker marker : markerLists.get(activity.selectShip)) {
+            marker.remove();
         }
+        for (Polyline polyline : polylineLists.get(activity.selectShip)) {
+            polyline.remove();
+        }
+        for (Polyline polyline : traceLists.get(activity.selectShip)) {
+            polyline.remove();
+        }
+        shipPointLists.get(activity.selectShip).removeAll(shipPointLists.get(activity.selectShip));
+        shipPointLists.get(activity.selectShip).add(new LatLng(0, 0));
+        markerLists.get(activity.selectShip).removeAll(markerLists.get(activity.selectShip));
+        polylineLists.get(activity.selectShip).removeAll(polylineLists.get(activity.selectShip));
+        traceLists.get(activity.selectShip).removeAll(traceLists.get(activity.selectShip));
     }
 
     public void setBattery(int battery) {
@@ -901,25 +909,25 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     btnEnable.setCompoundDrawables(null, markEnable ? picMarkEnable : picMarkDisable, null, null);
                     break;
                 case R.id.btn_go:
-                        if (markers.size() > 0) {
-                            for (Polyline line : traces) {
-                                line.remove();
-                            }
-                            traces.removeAll(traces);
-                            StringBuilder hisBuilder = new StringBuilder();
-                            StringBuilder sendBuilder = new StringBuilder();
-                            for (Marker marker : markers) {
-                                hisBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
-                                sendBuilder.append(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#\r\n", marker.getPosition().latitude, marker.getPosition().longitude));
-                            }
-                            sendBuilder.append(swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#");
-                            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
-                            final String date = dateFormat.format(new Date(System.currentTimeMillis()));
-                            saveRoute(date, hisBuilder.toString(), pos);
-                            mqttClient.publish(topic, sendBuilder.toString().getBytes(), 1, false);
-                        } else {
-//                        loadRoute(null);
+                    if (markers.size() > 0) {
+                        for (Polyline line : traces) {
+                            line.remove();
                         }
+                        traces.removeAll(traces);
+                        StringBuilder hisBuilder = new StringBuilder();
+                        StringBuilder sendBuilder = new StringBuilder();
+                        for (Marker marker : markers) {
+                            hisBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
+                            sendBuilder.append(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#\r\n", marker.getPosition().latitude, marker.getPosition().longitude));
+                        }
+                        sendBuilder.append(swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#");
+                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
+                        final String date = dateFormat.format(new Date(System.currentTimeMillis()));
+                        saveRoute(date, hisBuilder.toString(), pos);
+                        mqttClient.publish(topic, sendBuilder.toString().getBytes(), 1, false);
+                    } else {
+//                        loadRoute(null);
+                    }
                     break;
                 case R.id.btn_vel:
                     btnGoStop.setVisibility(View.GONE);
@@ -1110,11 +1118,14 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         shipPopupWindowAdapter.notifyDataSetChanged();
         recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
+            @SuppressLint("SetTextI18n")
             @Override
             public void onItemClick(View itemView, int position) {
                 tvToolbar.setText(shipPopupWindowList.get(position).get("title"));
                 if (activity.selectShip == -1 ||
                         (ships.get(activity.selectShip).getState() != ships.get(position).getState())) {
+                    loadAll(activity.selectShip, position);
+                    tvBattery.setText("剩余电量：" + ships.get(position).getBattery() + "%");
                     newHandleState(ships.get(position).getState());
                 }
                 activity.selectShip = position;
@@ -1160,6 +1171,31 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             }
         });
         recyclerView.setAdapter(shipPopupWindowAdapter);
+    }
+
+    private void loadAll(int oldid, int id) {
+        if (oldid != -1) {
+            for (Marker marker : markerLists.get(oldid)) {
+                marker.setVisible(false);
+            }
+            for (Polyline polyline : polylineLists.get(oldid)) {
+                polyline.setVisible(false);
+            }
+            for (Polyline polyline : traceLists.get(oldid)) {
+                polyline.setVisible(false);
+            }
+        }
+
+        for (Marker marker : markerLists.get(id)) {
+            marker.setVisible(true);
+        }
+        for (Polyline polyline : polylineLists.get(id)) {
+            polyline.setVisible(true);
+        }
+        for (Polyline polyline : traceLists.get(id)) {
+            polyline.setVisible(true);
+        }
+
     }
 
     private void loadHistory(final SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
@@ -1279,10 +1315,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         });
         recyclerView.setAdapter(adapter);
     }
-
-//    public void setShips(ArrayList<Ship> ships){
-//        this.ships = ships;
-//    }
 
     public ArrayList<Ship> getShips() {
         return ships;
