@@ -303,7 +303,7 @@ public class MqttActivity extends AppCompatActivity implements View.OnClickListe
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
 
-        btnConnect = findViewById(R.id.btn_connect);
+        btnConnect = findViewById(R.id.btn_poweron);
         btnHome = findViewById(R.id.btn_home);
         llNav = findViewById(R.id.ll_nav);
         llMark = findViewById(R.id.ll_mark);
@@ -532,7 +532,7 @@ public class MqttActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
         PopupWindow popupHistory;
         switch (view.getId()) {
-            case R.id.btn_connect:
+            case R.id.btn_poweron:
                 if (!loadingView.isShowing()) {
                     mqttService.setDeviceID(getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("id", null), 0);
                     if (mqttService.DEVICE_ID == null) {

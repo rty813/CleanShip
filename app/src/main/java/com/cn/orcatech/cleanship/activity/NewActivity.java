@@ -198,7 +198,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         @Override
         public void onClick(View view) {
             switch (view.getId()) {
-                case R.id.btn_connect:
+                case R.id.btn_poweron:
                     if (!loadingView.isShowing()) {
                         CoreService.DEVICE_ADDRESS = getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("addr", null);
                         if (CoreService.DEVICE_ADDRESS == null) {
@@ -384,7 +384,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
         mMapView = findViewById(R.id.mapview);
         mMapView.onCreate(savedInstanceState);
 
-        btnConnect = findViewById(R.id.btn_connect);
+        btnConnect = findViewById(R.id.btn_poweron);
         btnHome = findViewById(R.id.btn_home);
         llNav = findViewById(R.id.ll_nav);
         llMark = findViewById(R.id.ll_mark);

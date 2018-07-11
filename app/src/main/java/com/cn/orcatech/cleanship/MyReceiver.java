@@ -58,8 +58,8 @@ public class MyReceiver extends BroadcastReceiver {
                     status = 1;
                 }
 //                更新state
-                if (state != mMapFragment.getShips().get(shipid).getPreState()) {
-                    mMapFragment.getShips().get(shipid).setPreState(mMapFragment.getShips().get(shipid).getState());
+                if (state != mMapFragment.getShips().get(shipid).getState()) {
+//                    mMapFragment.getShips().get(shipid).setPreState(mMapFragment.getShips().get(shipid).getState());
                     mMapFragment.getShips().get(shipid).setState(state);
                     mMapFragment.updateShiplist(shipid, status);
                     if (shipid == activity.selectShip) {

@@ -91,14 +91,14 @@
         </LinearLayout>
 
         <Button
-            android:id="@+id/btn_connect"
+            android:id="@+id/btn_poweron"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal|bottom"
             android:layout_margin="10dp"
             android:background="@color/velGray"
             android:padding="15dp"
-            android:text="@string/btn_connect"
+            android:text="@string/btn_poweron"
             android:textColor="@color/mb_white"
             android:textSize="20sp" />
 

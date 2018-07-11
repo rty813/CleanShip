@@ -8,7 +8,7 @@
     <string name="raw_data">原始数据：</string>
     <string name="gps_num">当前卫星数量：</string>
     <string name="ble_not_supported">当前系统不支持BLE！</string>
-    <string name="btn_connect">开启小蓝船</string>
+    <string name="btn_poweron">开启小蓝船</string>
     <string name="lable_shortcut_static_search_long">图传</string>
     <string name="lable_shortcut_static_search_short">图传</string>
 
