@@ -2,13 +2,11 @@ package com.cn.orcatech.cleanship.fragment;
 
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
-import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -16,11 +14,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
@@ -34,7 +28,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -97,13 +90,7 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
-import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.lang.ref.WeakReference;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -120,35 +107,14 @@ import java.util.regex.Matcher;
 import es.dmoral.toasty.Toasty;
 import lib.kingja.switchbutton.SwitchMultiButton;
 
-import static android.content.Context.BIND_AUTO_CREATE;
 import static android.content.Context.MODE_PRIVATE;
-import static com.cn.orcatech.cleanship.activity.QRScanActivity.DEVICE_INFO;
 
 public class MapFragment extends NoFragment implements View.OnClickListener {
-    private static final int READY = 1;
-    private static final int UNREADY = 0;
-    private static final int GONE = 2;
-    private static final int NONE = -1;
-    private static final int HOMING = 5;
-    private static final int FINISH = 6;
-    private static final int PAUSE = 4;
     private static final String TAG = "MapFragment";
     public static SQLiteDBHelper dbHelper;
     private final float CTL_RADIUS = 2000;
-    public MyHandler mHandler;
-    private MqttService mqttService;
-    private ServiceConnection serviceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            mqttService = ((MqttService.MyBinder) iBinder).getService();
-            mqttService.startBackgroundThread(false);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            Log.e("err", "disconnected");
-        }
-    };
+    public MqttClient mqttClient;
+    //    public MyHandler mHandler;
     private MapView mMapView;
     private AMap aMap;
     private boolean markEnable = false;
@@ -173,7 +139,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private ArrayList<ArrayList<LatLng>> shipPointLists;
     private ArrayList<SmoothMoveMarker> smoothMoveMarkers;
     private ProgressDialog loadingView;
-    private int state;
     private long routeID = -1;
     private String pos = null;
     private Button btnHome;
@@ -191,16 +156,11 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private TextView tvToolbar;
     private TextView tvDate;
     private TextView tvCircle;
-    private int preState = Integer.MAX_VALUE;
     private ExecutorService writeSerialThreadPool;
     private FloatingActionMenu fam;
     private String toolbarTitle;
     private Toolbar toolbar;
     private MainActivity activity;
-    public MqttClient mqttClient;
-    private ArrayList<Ship> ships;
-    private ArrayList<Map<String, String>> shipPopupWindowList;
-    private ShiplistAdapter shipPopupWindowAdapter;
     public MqttCallback mqttCallBack = new MqttCallback() {
         @Override
         public void messageArrived(String topic, MqttMessage message) {
@@ -275,7 +235,10 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             activity.logout();
         }
     };
-
+    private ArrayList<Ship> ships;
+    private ArrayList<Map<String, String>> shipPopupWindowList;
+    private ShiplistAdapter shipPopupWindowAdapter;
+    private String topicSend = "";
 
     @Nullable
     @Override
@@ -292,8 +255,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         initMap();
         initClass(0);
         initColor();
-        activity.bindService(new Intent(activity, MqttService.class), serviceConnection, BIND_AUTO_CREATE);
-        activity.startService(new Intent(activity, MqttService.class));
+//        activity.bindService(new Intent(activity, MqttService.class), serviceConnection, BIND_AUTO_CREATE);
+//        activity.startService(new Intent(activity, MqttService.class));
         requestPermission();
     }
 
@@ -363,8 +326,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 btnAbort.setVisibility(View.VISIBLE);
                 seekBar.setVisibility(View.GONE);
                 sharedPreferences.edit().putInt("seekbar", seekBar.getProgress()).apply();
-                writeSerialThreadPool.execute(new WriteSerialThread(String.format(Locale.getDefault(),
-                        "$ORDER,6,%d#", 1400 + seekBar.getProgress()), GONE, state));
+                publishMessage(String.format(Locale.getDefault(), "$ORDER,6,%d#", 1400 + seekBar.getProgress()));
             }
         });
 
@@ -408,7 +370,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         llMark.setOnTouchListener(onTouchListener);
         llMethod.setOnTouchListener(onTouchListener);
         llNav.setOnTouchListener(onTouchListener);
-        toolbarTitle = activity.getSharedPreferences(DEVICE_INFO, MODE_PRIVATE).getString("name", "") + " " + getResources().getString(R.string.app_name);
+        toolbarTitle = getResources().getString(R.string.app_name);
         tvToolbar.setText(toolbarTitle);
     }
 
@@ -429,7 +391,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             smoothMoveMarkers.add(new SmoothMoveMarker(aMap));
             smoothMoveMarkers.get(i).setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(activity, R.layout.ship, null)));
         }
-        mHandler = new MyHandler(this);
+//        mHandler = new MyHandler(this);
         dbHelper = new SQLiteDBHelper(activity);
         loadingView = new ProgressDialog(activity);
         loadingView.setMessage("发送中");
@@ -437,7 +399,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         loadingView.setCanceledOnTouchOutside(false);
         loadingView.setCancelable(false);
         loadingView.setIcon(R.mipmap.ic_launcher);
-        state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
     }
@@ -578,7 +539,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 
     private void showLoadingView(String msg) {
         if (!loadingView.isShowing()) {
-            state = UNREADY;
             loadingView = new ProgressDialog(activity);
             loadingView.setTitle("提示");
             loadingView.setCanceledOnTouchOutside(false);
@@ -587,12 +547,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             loadingView.setMessage(msg);
             loadingView.show();
         }
-    }
-
-    public void onConnected() {
-        mqttService.isConnected = true;
-        new Thread(new QueryThread()).start();
-        new Thread(new QueryStateTread()).start();
     }
 
     private void saveRoute(String time, String route, String address) {
@@ -627,13 +581,13 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     public void onDestroy() {
         super.onDestroy();
         mMapView.onDestroy();
-        if (!mqttService.isConnected) {
-            activity.stopService(new Intent(activity, MqttService.class));
-        } else {
-            mqttService.startBackgroundThread(true);
-        }
-        state = UNREADY;
-        activity.unbindService(serviceConnection);
+//        if (!mqttService.isConnected) {
+//            activity.stopService(new Intent(activity, MqttService.class));
+//        } else {
+//            mqttService.startBackgroundThread(true);
+//        }
+//        state = UNREADY;
+//        activity.unbindService(serviceConnection);
     }
 
     @Override
@@ -690,59 +644,59 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 //        database.close();
 //    }
 
-    private void morph(int state) {
-        if (state != NONE) {
-            this.state = state;
-            this.markEnable = false;
-            btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
-            tvToolbar.setText(toolbarTitle);
-            hideAll();
-        }
-        switch (state) {
-            case UNREADY:
-                Toasty.error(activity, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
-                btnPoweron.setVisibility(View.VISIBLE);
-                preState = Integer.MAX_VALUE;
-                mqttService.close();
-                resetMap();
-                tvBattery.setVisibility(View.INVISIBLE);
-                fam.hideMenu(false);
-                break;
-            case READY:
-                llMark.setVisibility(View.VISIBLE);
-                llMethod.setVisibility(View.VISIBLE);
-                btnHome.setVisibility(View.VISIBLE);
-                fam.showMenu(true);
-                break;
-            case GONE:
-                btnGoStop.setText("暂停");
-                btnGoStop.setCompoundDrawables(null, picPause, null, null);
-                llNav.setVisibility(View.VISIBLE);
-                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
-                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-                fam.showMenu(true);
-                break;
-            case PAUSE:
-                btnGoStop.setText("开始");
-                btnGoStop.setCompoundDrawables(null, picStart, null, null);
-                llNav.setVisibility(View.VISIBLE);
-                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
-                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-                fam.showMenu(true);
-                break;
-            case HOMING:
-                llHome.setVisibility(View.VISIBLE);
-                fam.showMenu(true);
-                break;
-            case FINISH:
-                llFinish.setVisibility(View.VISIBLE);
-                writeSerialThreadPool.execute(new QueryTimeDisThread());
-                fam.showMenu(true);
-                break;
-            default:
-                break;
-        }
-    }
+//    private void morph(int state) {
+//        if (state != NONE) {
+//            this.state = state;
+//            this.markEnable = false;
+//            btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
+//            tvToolbar.setText(toolbarTitle);
+//            hideAll();
+//        }
+//        switch (state) {
+//            case UNREADY:
+//                Toasty.error(activity, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
+//                btnPoweron.setVisibility(View.VISIBLE);
+//                preState = Integer.MAX_VALUE;
+//                mqttService.close();
+//                resetMap();
+//                tvBattery.setVisibility(View.INVISIBLE);
+//                fam.hideMenu(false);
+//                break;
+//            case READY:
+//                llMark.setVisibility(View.VISIBLE);
+//                llMethod.setVisibility(View.VISIBLE);
+//                btnHome.setVisibility(View.VISIBLE);
+//                fam.showMenu(true);
+//                break;
+//            case GONE:
+//                btnGoStop.setText("暂停");
+//                btnGoStop.setCompoundDrawables(null, picPause, null, null);
+//                llNav.setVisibility(View.VISIBLE);
+//                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
+//                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+//                fam.showMenu(true);
+//                break;
+//            case PAUSE:
+//                btnGoStop.setText("开始");
+//                btnGoStop.setCompoundDrawables(null, picStart, null, null);
+//                llNav.setVisibility(View.VISIBLE);
+//                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
+//                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+//                fam.showMenu(true);
+//                break;
+//            case HOMING:
+//                llHome.setVisibility(View.VISIBLE);
+//                fam.showMenu(true);
+//                break;
+//            case FINISH:
+//                llFinish.setVisibility(View.VISIBLE);
+//                writeSerialThreadPool.execute(new QueryTimeDisThread());
+//                fam.showMenu(true);
+//                break;
+//            default:
+//                break;
+//        }
+//    }
 
     private void hideAll() {
         llMark.setVisibility(View.GONE);
@@ -801,59 +755,59 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-    public void handleState(int state) {
-        // 有一个想法。目前，如果用prestate，会出现Bug，即如果点了会使App状态改变的按钮，
-        // 而prestate不变，此时会导致状态错误。解决方法有两种，一种是在点击按钮的时候更改prestate，
-        // 但这种方法通用性太差。另一种方法是统一船发来的state和app的state。决定采用第二种。
-//        long id = activity.getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
-        int tempState = UNREADY;
-        swNav.setSelectedTab(0);
-        switch (state) {
-            case 0:
-//                开机初始状态
-                tempState = READY;
-                break;
-            case -1:
-//                连线模式运行中
-                tempState = GONE;
-                break;
-            case -2:
-//                循环模式暂停
-                swNav.setSelectedTab(1);
-                tempState = PAUSE;
-                break;
-            case -3:
-//                连线模式暂停
-                tempState = PAUSE;
-                break;
-            case -4:
-//                跑完了
-                tempState = FINISH;
-                break;
-            case -5:
-//                返航
-                tempState = HOMING;
-                break;
-            case -10:
-//                待机
-
-                break;
-            default:
-                break;
-        }
-        if (state > 0) {
-            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
-            swNav.setSelectedTab(1);
-            tempState = GONE;
-        }
-        if (tempState != this.state) {
-            if (state != -5 && state != 0) {
-//                    loadRoute(id == -1 ? null : String.valueOf(id));
-            }
-            this.state = UNREADY;
-            mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
-        }
-    }
+//    public void handleState(int state) {
+//        // 有一个想法。目前，如果用prestate，会出现Bug，即如果点了会使App状态改变的按钮，
+//        // 而prestate不变，此时会导致状态错误。解决方法有两种，一种是在点击按钮的时候更改prestate，
+//        // 但这种方法通用性太差。另一种方法是统一船发来的state和app的state。决定采用第二种。
+////        long id = activity.getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+//        int tempState = UNREADY;
+//        swNav.setSelectedTab(0);
+//        switch (state) {
+//            case 0:
+////                开机初始状态
+//                tempState = READY;
+//                break;
+//            case -1:
+////                连线模式运行中
+//                tempState = GONE;
+//                break;
+//            case -2:
+////                循环模式暂停
+//                swNav.setSelectedTab(1);
+//                tempState = PAUSE;
+//                break;
+//            case -3:
+////                连线模式暂停
+//                tempState = PAUSE;
+//                break;
+//            case -4:
+////                跑完了
+//                tempState = FINISH;
+//                break;
+//            case -5:
+////                返航
+//                tempState = HOMING;
+//                break;
+//            case -10:
+////                待机
+//
+//                break;
+//            default:
+//                break;
+//        }
+//        if (state > 0) {
+//            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
+//            swNav.setSelectedTab(1);
+//            tempState = GONE;
+//        }
+//        if (tempState != this.state) {
+//            if (state != -5 && state != 0) {
+////                    loadRoute(id == -1 ? null : String.valueOf(id));
+//            }
+//            this.state = UNREADY;
+//            mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
+//        }
+//    }
 
     @Override
     public void onClick(View view) {
@@ -862,174 +816,160 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         ArrayList<Marker> markers = activity.selectShip == -1 ? null : markerLists.get(activity.selectShip);
         ArrayList<Polyline> polylines = activity.selectShip == -1 ? null : polylineLists.get(activity.selectShip);
         ArrayList<Polyline> traces = activity.selectShip == -1 ? null : traceLists.get(activity.selectShip);
-        String topic = String.format(Locale.getDefault(), "APP2SHIP_%d_%d", activity.userInfo.getShip_id(), activity.selectShip);
-        try {
-            switch (view.getId()) {
-                case R.id.btn_poweron:
-                    mqttClient.publish(topic, "$poweron#".getBytes(), 1, false);
-                    break;
-                case R.id.btn_changemap:
-                    if (aMap.getMapType() == AMap.MAP_TYPE_NORMAL) {
-                        aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
-                    } else {
-                        aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+        switch (view.getId()) {
+            case R.id.btn_poweron:
+                publishMessage("$poweron#");
+                break;
+            case R.id.btn_changemap:
+                if (aMap.getMapType() == AMap.MAP_TYPE_NORMAL) {
+                    aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
+                } else {
+                    aMap.setMapType(AMap.MAP_TYPE_NORMAL);
+                }
+                fam.close(true);
+                break;
+            case R.id.btn_delete:
+                new AlertDialog.Builder(activity).setTitle("提示")
+                        .setMessage("是否要清除所有标记？")
+                        .setNegativeButton("否", null)
+                        .setPositiveButton("是", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                resetMap();
+                            }
+                        })
+                        .show();
+                break;
+            case R.id.btn_cancel:
+                if (markers.size() > 0) {
+                    Marker marker = markers.get(markers.size() - 1);
+                    marker.hideInfoWindow();
+                    markers.get(markers.size() - 1).destroy();
+                    markers.remove(markers.size() - 1);
+                    if (polylines.size() > 0) {
+                        polylines.get(polylines.size() - 1).remove();
+                        polylines.remove(polylines.size() - 1);
                     }
-                    fam.close(true);
-                    break;
-                case R.id.btn_delete:
-                    new AlertDialog.Builder(activity).setTitle("提示")
-                            .setMessage("是否要清除所有标记？")
-                            .setNegativeButton("否", null)
-                            .setPositiveButton("是", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    resetMap();
-                                }
-                            })
-                            .show();
-                    break;
-                case R.id.btn_cancel:
-                    if (markers.size() > 0) {
-                        Marker marker = markers.get(markers.size() - 1);
-                        marker.hideInfoWindow();
-                        markers.get(markers.size() - 1).destroy();
-                        markers.remove(markers.size() - 1);
-                        if (polylines.size() > 0) {
-                            polylines.get(polylines.size() - 1).remove();
-                            polylines.remove(polylines.size() - 1);
-                        }
+                }
+                break;
+            case R.id.btn_home:
+            case R.id.btn_home2:
+                publishMessage("$ORDER,2#");
+                break;
+            case R.id.btn_enable:
+                markEnable = !markEnable;
+                btnEnable.setCompoundDrawables(null, markEnable ? picMarkEnable : picMarkDisable, null, null);
+                break;
+            case R.id.btn_go:
+                if (markers.size() > 0) {
+                    for (Polyline line : traces) {
+                        line.remove();
                     }
-                    break;
-                case R.id.btn_home:
-                case R.id.btn_home2:
-                    mqttClient.publish(topic, "$ORDER,2#".getBytes(), 1, false);
-                    break;
-                case R.id.btn_enable:
-                    markEnable = !markEnable;
-                    btnEnable.setCompoundDrawables(null, markEnable ? picMarkEnable : picMarkDisable, null, null);
-                    break;
-                case R.id.btn_go:
-                    if (markers.size() > 0) {
-                        for (Polyline line : traces) {
-                            line.remove();
-                        }
-                        traces.removeAll(traces);
-                        StringBuilder hisBuilder = new StringBuilder();
-                        StringBuilder sendBuilder = new StringBuilder();
-                        for (Marker marker : markers) {
-                            hisBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
-                            sendBuilder.append(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#\r\n", marker.getPosition().latitude, marker.getPosition().longitude));
-                        }
-                        sendBuilder.append(swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#");
-                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
-                        final String date = dateFormat.format(new Date(System.currentTimeMillis()));
-                        saveRoute(date, hisBuilder.toString(), pos);
-                        mqttClient.publish(topic, sendBuilder.toString().getBytes(), 1, false);
-                    } else {
+                    traces.removeAll(traces);
+                    StringBuilder hisBuilder = new StringBuilder();
+                    StringBuilder sendBuilder = new StringBuilder();
+                    for (Marker marker : markers) {
+                        hisBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
+                        sendBuilder.append(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#\r\n", marker.getPosition().latitude, marker.getPosition().longitude));
+                    }
+                    sendBuilder.append(swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#");
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
+                    final String date = dateFormat.format(new Date(System.currentTimeMillis()));
+                    saveRoute(date, hisBuilder.toString(), pos);
+                    publishMessage(sendBuilder.toString());
+                } else {
 //                        loadRoute(null);
+                }
+                break;
+            case R.id.btn_vel:
+                btnGoStop.setVisibility(View.GONE);
+                btnAbort.setVisibility(View.GONE);
+                btnHome2.setVisibility(View.GONE);
+                btnVel.setVisibility(View.GONE);
+                seekBar.setVisibility(View.VISIBLE);
+                break;
+            case R.id.btn_history:
+                btnManual.setTextColor(Color.BLACK);
+                btnHistory.setTextColor(getResources().getColor(R.color.toolbarBlue));
+                View contentView = LayoutInflater.from(activity).inflate(R.layout.popup_history, null);
+                SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
+                popupHistory = new PopupWindow();
+                popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+                popupHistory.setOutsideTouchable(true);
+                popupHistory.setContentView(contentView);
+                popupHistory.setAnimationStyle(R.style.dismiss_anim);
+                popupHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                    @Override
+                    public void onDismiss() {
+                        btnHistory.setTextColor(Color.BLACK);
+                        btnManual.setTextColor(getResources().getColor(R.color.toolbarBlue));
                     }
-                    break;
-                case R.id.btn_vel:
-                    btnGoStop.setVisibility(View.GONE);
-                    btnAbort.setVisibility(View.GONE);
-                    btnHome2.setVisibility(View.GONE);
-                    btnVel.setVisibility(View.GONE);
-                    seekBar.setVisibility(View.VISIBLE);
-                    break;
-                case R.id.btn_history:
-                    btnManual.setTextColor(Color.BLACK);
-                    btnHistory.setTextColor(getResources().getColor(R.color.toolbarBlue));
-                    View contentView = LayoutInflater.from(activity).inflate(R.layout.popup_history, null);
-                    SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
-                    popupHistory = new PopupWindow();
-                    popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
-                    popupHistory.setOutsideTouchable(true);
-                    popupHistory.setContentView(contentView);
-                    popupHistory.setAnimationStyle(R.style.dismiss_anim);
-                    popupHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
-                        @Override
-                        public void onDismiss() {
-                            btnHistory.setTextColor(Color.BLACK);
-                            btnManual.setTextColor(getResources().getColor(R.color.toolbarBlue));
-                        }
-                    });
-                    loadHistory(recyclerView, popupHistory);
-                    contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-                    int height = getResources().getDisplayMetrics().heightPixels / 2;
-                    if (contentView.getMeasuredHeight() > height) {
-                        popupHistory.setHeight(height);
-                    } else {
-                        popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
-                    }
-                    popupHistory.showAsDropDown(llMethod);
-                    break;
-                case R.id.btn_abort:
-                    mqttClient.publish(topic, "$CLEAR#".getBytes(), 1, false);
-//                    writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
-                    break;
-                case R.id.btn_gostop:
-                    int temp = ships.get(activity.selectShip).getState();
-                    if (temp == -3 || temp == -2) {
-                        mqttClient.publish(topic, "$GO#".getBytes(), 1, false);
-//                        writeSerialThreadPool.execute(new WriteSerialThread("$GO#", GONE, state));
-                    } else if (temp == -1 || temp > 0) {
-                        mqttClient.publish(topic, "$STOP#".getBytes(), 1, false);
-//                        writeSerialThreadPool.execute(new WriteSerialThread("$STOP#", PAUSE, state));
-                    }
-                    break;
-                case R.id.btn_stop_home:
-                    mqttClient.publish(topic, "$CLEAR#".getBytes(), 1, false);
-//                    writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
-                    break;
-                case R.id.btn_finish:
-                    mqttClient.publish(topic, "$CLEAR#".getBytes(), 1, false);
-//                    writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
-                    resetMap();
-                    break;
-                case R.id.btn_reload:
-                    mqttClient.publish(topic, "$CLEAR#".getBytes(), 1, false);
-//                    writeSerialThreadPool.execute(new WriteSerialThread("$CLEAR#", READY, state));
+                });
+                loadHistory(recyclerView, popupHistory);
+                contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+                int height = getResources().getDisplayMetrics().heightPixels / 2;
+                if (contentView.getMeasuredHeight() > height) {
+                    popupHistory.setHeight(height);
+                } else {
+                    popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+                }
+                popupHistory.showAsDropDown(llMethod);
+                break;
+            case R.id.btn_abort:
+                publishMessage("$CLEAR#");
+                break;
+            case R.id.btn_gostop:
+                int temp = ships.get(activity.selectShip).getState();
+                if (temp == -3 || temp == -2) {
+                    publishMessage("$GO#");
+                } else if (temp == -1 || temp > 0) {
+                    publishMessage("$STOP#");
+                }
+                break;
+            case R.id.btn_stop_home:
+                publishMessage("$CLEAR#");
+                break;
+            case R.id.btn_finish:
+                publishMessage("$CLEAR#");
+                resetMap();
+                break;
+            case R.id.btn_reload:
+                publishMessage("$CLEAR#");
 //                    resetMap();
 //                    long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
 //                    loadRoute(id == -1 ? null : String.valueOf(id));
-                    break;
-                case R.id.btn_ctl:
-                    fam.close(true);
-                    mqttClient.publish(topic, "$ORDER,7#".getBytes(), 1, false);
-//                    writeSerialThreadPool.execute(new WriteSerialThread("$ORDER,7#", NONE, state));
-                    break;
-                case R.id.tv_toolbar:
-                    contentView = LayoutInflater.from(activity).inflate(R.layout.popup_shiplist, null);
-                    recyclerView = contentView.findViewById(R.id.recyclerView);
-                    shipListWindow = new PopupWindow();
-                    shipListWindow.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
-                    shipListWindow.setOutsideTouchable(true);
-                    shipListWindow.setContentView(contentView);
-                    shipListWindow.setAnimationStyle(R.style.dismiss_anim);
-                    loadShipList(recyclerView, shipListWindow);
-                    contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-                    height = getResources().getDisplayMetrics().heightPixels / 2;
-                    if (contentView.getMeasuredHeight() > height) {
-                        shipListWindow.setHeight(height);
-                    } else {
-                        shipListWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+                break;
+            case R.id.btn_ctl:
+                fam.close(true);
+                publishMessage("$ORDER,7#");
+                break;
+            case R.id.tv_toolbar:
+                contentView = LayoutInflater.from(activity).inflate(R.layout.popup_shiplist, null);
+                recyclerView = contentView.findViewById(R.id.recyclerView);
+                shipListWindow = new PopupWindow();
+                shipListWindow.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+                shipListWindow.setOutsideTouchable(true);
+                shipListWindow.setContentView(contentView);
+                shipListWindow.setAnimationStyle(R.style.dismiss_anim);
+                loadShipList(recyclerView, shipListWindow);
+                contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+                height = getResources().getDisplayMetrics().heightPixels / 2;
+                if (contentView.getMeasuredHeight() > height) {
+                    shipListWindow.setHeight(height);
+                } else {
+                    shipListWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+                }
+                shipListWindow.showAsDropDown(toolbar);
+                shipListWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                    @Override
+                    public void onDismiss() {
+                        shipPopupWindowList = null;
+                        shipPopupWindowAdapter = null;
                     }
-                    shipListWindow.showAsDropDown(toolbar);
-                    shipListWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
-                        @Override
-                        public void onDismiss() {
-                            shipPopupWindowList = null;
-                            shipPopupWindowAdapter = null;
-                        }
-                    });
-                    break;
-                default:
-                    break;
-            }
-        } catch (MqttPersistenceException e) {
-            e.printStackTrace();
-        } catch (MqttException e) {
-            e.printStackTrace();
+                });
+                break;
+            default:
+                break;
         }
     }
 
@@ -1121,14 +1061,20 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             @SuppressLint("SetTextI18n")
             @Override
             public void onItemClick(View itemView, int position) {
-                tvToolbar.setText(shipPopupWindowList.get(position).get("title"));
-                if (activity.selectShip == -1 ||
-                        (ships.get(activity.selectShip).getState() != ships.get(position).getState())) {
-                    loadAll(activity.selectShip, position);
-                    tvBattery.setText("剩余电量：" + ships.get(position).getBattery() + "%");
-                    newHandleState(ships.get(position).getState());
+                if (position == 0) {
+                    tvToolbar.setText("欧卡小蓝船");
+                    loadAllShip(true);
+                    newHandleState(-11);
+                    tvBattery.setVisibility(View.INVISIBLE);
                 }
-                activity.selectShip = position;
+                else {
+                    tvToolbar.setText(shipPopupWindowList.get(position - 1).get("title"));
+                    newHandleState(ships.get(position - 1).getState());
+                    loadOneShip(activity.selectShip, position - 1);
+                    tvBattery.setText("剩余电量：" + ships.get(position - 1).getBattery() + "%");
+                }
+                activity.selectShip = position - 1;
+                topicSend = String.format(Locale.getDefault(), "APP2SHIP_%d_%d", activity.userInfo.getShip_id(), position - 1);
                 shipListWindow.dismiss();
             }
         });
@@ -1173,7 +1119,21 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         recyclerView.setAdapter(shipPopupWindowAdapter);
     }
 
-    private void loadAll(int oldid, int id) {
+    private void loadAllShip(boolean visiable) {
+        for (int i = 0; i < activity.userInfo.getTotalship(); i++) {
+            for (Marker marker : markerLists.get(i)) {
+                marker.setVisible(visiable);
+            }
+            for (Polyline polyline : polylineLists.get(i)) {
+                polyline.setVisible(visiable);
+            }
+            for (Polyline polyline : traceLists.get(i)) {
+                polyline.setVisible(visiable);
+            }
+        }
+    }
+
+    private void loadOneShip(int oldid, int id) {
         if (oldid != -1) {
             for (Marker marker : markerLists.get(oldid)) {
                 marker.setVisible(false);
@@ -1184,6 +1144,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             for (Polyline polyline : traceLists.get(oldid)) {
                 polyline.setVisible(false);
             }
+        }
+        else {
+            loadAllShip(false);
         }
 
         for (Marker marker : markerLists.get(id)) {
@@ -1324,7 +1287,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         if (shipPopupWindowAdapter != null) {
             shipPopupWindowList.get(pos).put("status", String.valueOf(status));
             shipPopupWindowList.get(pos).put("detail", String.valueOf(status));
-            shipPopupWindowAdapter.notifyItemChanged(pos);
+            shipPopupWindowAdapter.notifyItemChanged(pos + 1);
         }
     }
 
@@ -1369,7 +1332,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             case -4:
 //                跑完了
                 llFinish.setVisibility(View.VISIBLE);
-                writeSerialThreadPool.execute(new QueryTimeDisThread());
                 fam.showMenu(true);
                 break;
             case -5:
@@ -1398,375 +1360,383 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-    public static class MyHandler extends Handler {
-        WeakReference<MapFragment> mFragment;
-
-        MyHandler(MapFragment fragment) {
-            mFragment = new WeakReference<>(fragment);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            final MapFragment fragment = mFragment.get();
-            switch (msg.what) {
-                case 1:
-                    WindowManager.LayoutParams lp = fragment.activity.getWindow().getAttributes();
-                    lp.alpha = (float) msg.obj;
-                    fragment.activity.getWindow().setAttributes(lp);
-                    break;
-                case 2:
-                    ((PopupWindow) msg.obj).showAtLocation(fragment.mMapView, Gravity.CENTER, 0, 0);
-                    break;
-                case 3:
-                    if (fragment.loadingView.isShowing()) {
-                        fragment.loadingView.dismiss();
-                    }
-                    fragment.morph(UNREADY);
-                    break;
-                case 4:
-                    break;
-                case 5:
-                    Log.d("非法数据", (String) msg.obj);
-                    break;
-                case 6:
-                    if (fragment.loadingView.isShowing()) {
-                        fragment.loadingView.dismiss();
-                    }
-                    break;
-                case 7:
-//                    btn_start.setEnabled(true);
-                    break;
-                case 8:
-                    if (fragment.loadingView.isShowing()) {
-                        fragment.loadingView.dismiss();
-                    }
-                    synchronized (fragment.mqttService) {
-                        fragment.morph((Integer) msg.obj);
-                        fragment.mqttService.notify();
-                    }
-                    break;
-                case 9:
-                    Toasty.info(fragment.activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
-                    break;
-                case 10:
-                    fragment.handleState((Integer) msg.obj);
-                    break;
-                case 11:
-                    if (fragment.loadingView.isShowing()) {
-                        fragment.loadingView.dismiss();
-                    }
-                    fragment.tvFinish.setText(String.format(Locale.getDefault(),
-                            "此次航行用时%d小时%d分，大约行走%d米", msg.arg1 / 60, msg.arg1 % 60, msg.arg2));
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault());
-                    fragment.tvDate.setText(dateFormat.format(new Date(System.currentTimeMillis())));
-                    synchronized (fragment.mqttService) {
-                        fragment.state = FINISH;
-                        fragment.mqttService.notify();
-                    }
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
+    private void publishMessage(String data) {
+        try {
+            mqttClient.publish(topicSend, (data + "\r\n").getBytes(), 1, false);
+        } catch (MqttException e) {
+            e.printStackTrace();
         }
     }
 
-    private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
-        private final int shipid;
-        private String date;
-        private WeakReference<MapFragment> fragment;
-        private WriteSerialThread writeSerialThread;
-
-        MyAsyncTask(MapFragment fragment, int shipid, WriteSerialThread writeSerialThread, String date) {
-            this.fragment = new WeakReference<>(fragment);
-            this.writeSerialThread = writeSerialThread;
-            this.date = date;
-            this.shipid = shipid;
-            fragment.state = UNREADY;
-        }
-
-        @Override
-        protected Void doInBackground(Void... voids) {
-            MapFragment fragment = this.fragment.get();
-            ArrayList<Marker> markers = fragment.markerLists.get(shipid);
-            if (markers.size() > 1) {
-                try {
-                    StringBuilder stringBuilder = new StringBuilder();
-                    int i;
-                    for (i = 0; i < markers.size() - 1; i++) {
-                        Marker marker = markers.get(i);
-                        stringBuilder.append(String.format(Locale.getDefault(), "[%.6f,%.6f],", marker.getPosition().longitude, marker.getPosition().latitude));
-                    }
-                    stringBuilder.append(String.format(Locale.getDefault(), "[%.6f,%.6f]", markers.get(i).getPosition().longitude, markers.get(i).getPosition().latitude));
-                    byte[] data = ("latlng=" + stringBuilder.toString() + "&addr=" + fragment.startPosition + "&date=" + date.replace(" ", "+")).getBytes();
-                    URL url = new URL("http://orca-tech.cn/app/benenv/data_collect.php");
-                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                    connection.setRequestMethod("POST");
-                    connection.setConnectTimeout(5000);
-                    connection.setRequestProperty("Content-Length", data.length + "");
-                    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                    connection.setRequestProperty("charset", "utf-8");
-                    connection.setDoOutput(true);
-                    OutputStream outputStream = connection.getOutputStream();
-                    outputStream.write(data);
-                    int responseCode = connection.getResponseCode();
-                    if (responseCode == 200) {
-                        Log.d("data_collect", "ok");
-                    } else {
-                        Log.d("data_collect", "err");
-                    }
-                    outputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (!fragment.mqttService.isConnected) {
-                return null;
-            }
-            fragment.mqttService.writeData("$CLEAR#", 1000);
-            for (int i = 0; i < markers.size(); i++) {
-                double latitude = markers.get(i).getPosition().latitude;
-                double longitude = markers.get(i).getPosition().longitude;
-                if (!(fragment.swNav.getSelectedTab() == 1 && i == markers.size() - 1
-                        && latitude == markers.get(0).getPosition().latitude
-                        && longitude == markers.get(0).getPosition().longitude)) {
-                    if (!fragment.mqttService.isConnected) {
-                        return null;
-                    }
-                    fragment.mqttService.writeData(String.format(Locale.getDefault(),
-                            "$GNGGA,%.6f,%.6f#", latitude, longitude), 1000);
-                    publishProgress(i + 1);
-                }
-            }
-            return null;
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            fragment.get().loadingView.setProgress(values[0]);
-            super.onProgressUpdate(values);
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            if (fragment.get().mqttService.isConnected) {
-                fragment.get().writeSerialThreadPool.execute(writeSerialThread);
-            }
-            super.onPostExecute(aVoid);
-        }
-    }
-
-    private class QueryThread implements Runnable {
-        @Override
-        public void run() {
-            synchronized (mqttService) {
-                int type = 0;
-                long retryTimes = 0;
-                while (!mqttService.notificationEnable) {
-                    String data = null;
-                    try {
-                        if (state == UNREADY) {
-                            mqttService.wait();
-                        }
-                        mqttService.writeData(String.format(Locale.getDefault(),
-                                "$QUERY,%d#", (type == 0 ? 9 : (type % 5 == 0 ? 7 : 0))), 10);
-                        data = mqttService.readData(false);
-                        type = (type + 1) % 50;
-                        for (int timeGap = 0; timeGap < 50 && !mqttService.notificationEnable && state != UNREADY; timeGap++) {
-                            Thread.sleep(10);
-                        }
-                        if (mqttService.notificationEnable) {
-                            break;
-                        }
-                        if (state == UNREADY) {
-                            continue;
-                        }
-                        if (data.startsWith("$") && data.endsWith("#")) {
-                            data = data.replaceAll("#", "");
-                            data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-                            if (!"".equals(data)) {
-                                retryTimes = 0;
-                                String[] strings = data.split(";");
-                                Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-                                if (strings.length == 2) {
-                                    intent.putExtra("type", Integer.parseInt(strings[0]));
-                                    intent.putExtra("data", strings[1]);
-                                }
-                                activity.sendBroadcast(intent);
-                            } else {
-                                retryTimes++;
-                                if (retryTimes % 5 == 0) {
-                                    mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-                                }
-                            }
-                        } else {
-                            retryTimes++;
-                            if (retryTimes % 5 == 0) {
-                                mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-                            }
-                        }
-                    } catch (NumberFormatException | InterruptedException e) {
-                        mHandler.sendMessage(mHandler.obtainMessage(5, data));
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-    }
-
-    private class QueryStateTread implements Runnable {
-
-        QueryStateTread() {
-            loadingView.setMessage("正在获取船状态");
-        }
-
-        @Override
-        public void run() {
-            int retryTimes = 0;
-            try {
-                do {
-                    if (!mqttService.isConnected) {
-                        mHandler.sendEmptyMessage(6);
-                        break;
-                    }
-                    retryTimes++;
-                    if (retryTimes == 3) {
-                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-                    }
-                    if (retryTimes == 6) {
-                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-                        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
-                        break;
-                    }
-                    mqttService.writeData("$QUERY,7#", 10);
-                    Thread.sleep(300);
-                    String data = mqttService.readData(false);
-                    if (!data.startsWith("$") || !data.endsWith("#")) {
-                        continue;
-                    } else {
-                        data = data.replaceAll("#", "");
-                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-                    }
-                    if (!"".equals(data)) {
-                        String[] strings = data.split(";");
-                        if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
-                            mHandler.sendMessage(mHandler.obtainMessage(10, Integer.parseInt(strings[1])));
-                            break;
-                        }
-                    }
-                } while (true);
-            } catch (NumberFormatException | InterruptedException | ArrayIndexOutOfBoundsException e) {
-                mHandler.sendMessage(mHandler.obtainMessage(9, "查询失败"));
-                mHandler.sendMessage(mHandler.obtainMessage(8, READY));
-                e.printStackTrace();
-            } finally {
-                mHandler.sendEmptyMessage(7);
-            }
-        }
-    }
-
-    private class WriteSerialThread implements Runnable {
-        private final String mData;
-        private final int mState;
-        private final int mPreState;
-
-        WriteSerialThread(String data, int state, int preState) {
-            mData = data;
-            mState = state;
-            mPreState = preState;
-            showLoadingView("正在发送");
-        }
-
-        @Override
-        public void run() {
-            int retryTimes = 0;
-            try {
-                do {
-                    if (!mqttService.isConnected) {
-                        mHandler.sendEmptyMessage(6);
-                        break;
-                    }
-                    mqttService.writeData(mData, 10);
-                    Thread.sleep(1000);
-                    String data = mqttService.readData(false);
-                    Log.i("writeSerialPort", data);
-                    if (data.contains(mData)) {
-                        if (mState == NONE) {
-                            state = mPreState;
-                            mHandler.sendEmptyMessage(6);
-                            synchronized (mqttService) {
-                                mqttService.notify();
-                            }
-                        } else {
-                            mHandler.sendMessage(mHandler.obtainMessage(8, mState));
-                        }
-                        break;
-                    }
-                    retryTimes++;
-                    if (retryTimes == 2) {
-                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-                    }
-                    if (retryTimes == 4) {
-                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-                        state = mPreState;
-                        mHandler.sendEmptyMessage(6);
-                        synchronized (mqttService) {
-                            mqttService.notify();
-                        }
-                        break;
-                    }
-                } while (true);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                mHandler.sendEmptyMessage(3);
-            } finally {
-                mHandler.sendEmptyMessage(7);
-            }
-        }
-    }
-
-    private class QueryTimeDisThread implements Runnable {
-        QueryTimeDisThread() {
-            loadingView.dismiss();
-            showLoadingView("正在查询航时航程");
-        }
-
-        @Override
-        public void run() {
-            int retryTimes = 0;
-            try {
-                do {
-                    retryTimes++;
-                    if (retryTimes == 3) {
-                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-                    }
-                    if (retryTimes == 6 || !mqttService.isConnected) {
-                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-                        mHandler.sendMessage(mHandler.obtainMessage(11, 0, 0));
-                        break;
-                    }
-                    mqttService.writeData("$QUERY,8#", 10);
-                    Thread.sleep(300);
-                    String data = mqttService.readData(false);
-                    if (!data.startsWith("$") || !data.endsWith("#")) {
-                        continue;
-                    } else {
-                        data = data.replaceAll("#", "");
-                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-                    }
-                    if (!"".equals(data)) {
-                        String[] strings = data.split(";");
-                        if (strings.length == 2 && Integer.parseInt(strings[0]) == 8) {
-                            strings = strings[1].split(",");
-                            int time = (int) Math.round(Integer.parseInt(strings[0]) * 0.4 / 60);
-                            int dis = Integer.parseInt(strings[1]);
-                            mHandler.sendMessage(mHandler.obtainMessage(11, time, dis));
-                            break;
-                        }
-                    }
-                } while (true);
-            } catch (NumberFormatException | InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+//    public static class MyHandler extends Handler {
+//        WeakReference<MapFragment> mFragment;
+//
+//        MyHandler(MapFragment fragment) {
+//            mFragment = new WeakReference<>(fragment);
+//        }
+//
+//        @Override
+//        public void handleMessage(Message msg) {
+//            final MapFragment fragment = mFragment.get();
+//            switch (msg.what) {
+//                case 1:
+//                    WindowManager.LayoutParams lp = fragment.activity.getWindow().getAttributes();
+//                    lp.alpha = (float) msg.obj;
+//                    fragment.activity.getWindow().setAttributes(lp);
+//                    break;
+//                case 2:
+//                    ((PopupWindow) msg.obj).showAtLocation(fragment.mMapView, Gravity.CENTER, 0, 0);
+//                    break;
+//                case 3:
+//                    if (fragment.loadingView.isShowing()) {
+//                        fragment.loadingView.dismiss();
+//                    }
+//                    fragment.morph(UNREADY);
+//                    break;
+//                case 4:
+//                    break;
+//                case 5:
+//                    Log.d("非法数据", (String) msg.obj);
+//                    break;
+//                case 6:
+//                    if (fragment.loadingView.isShowing()) {
+//                        fragment.loadingView.dismiss();
+//                    }
+//                    break;
+//                case 7:
+////                    btn_start.setEnabled(true);
+//                    break;
+//                case 8:
+//                    if (fragment.loadingView.isShowing()) {
+//                        fragment.loadingView.dismiss();
+//                    }
+//                    synchronized (fragment.mqttService) {
+//                        fragment.morph((Integer) msg.obj);
+//                        fragment.mqttService.notify();
+//                    }
+//                    break;
+//                case 9:
+//                    Toasty.info(fragment.activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
+//                    break;
+//                case 10:
+//                    fragment.handleState((Integer) msg.obj);
+//                    break;
+//                case 11:
+//                    if (fragment.loadingView.isShowing()) {
+//                        fragment.loadingView.dismiss();
+//                    }
+//                    fragment.tvFinish.setText(String.format(Locale.getDefault(),
+//                            "此次航行用时%d小时%d分，大约行走%d米", msg.arg1 / 60, msg.arg1 % 60, msg.arg2));
+//                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault());
+//                    fragment.tvDate.setText(dateFormat.format(new Date(System.currentTimeMillis())));
+//                    synchronized (fragment.mqttService) {
+//                        fragment.state = FINISH;
+//                        fragment.mqttService.notify();
+//                    }
+//                    break;
+//                default:
+//                    super.handleMessage(msg);
+//            }
+//        }
+//    }
+//
+//    private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
+//        private final int shipid;
+//        private String date;
+//        private WeakReference<MapFragment> fragment;
+//        private WriteSerialThread writeSerialThread;
+//
+//        MyAsyncTask(MapFragment fragment, int shipid, WriteSerialThread writeSerialThread, String date) {
+//            this.fragment = new WeakReference<>(fragment);
+//            this.writeSerialThread = writeSerialThread;
+//            this.date = date;
+//            this.shipid = shipid;
+//            fragment.state = UNREADY;
+//        }
+//
+//        @Override
+//        protected Void doInBackground(Void... voids) {
+//            MapFragment fragment = this.fragment.get();
+//            ArrayList<Marker> markers = fragment.markerLists.get(shipid);
+//            if (markers.size() > 1) {
+//                try {
+//                    StringBuilder stringBuilder = new StringBuilder();
+//                    int i;
+//                    for (i = 0; i < markers.size() - 1; i++) {
+//                        Marker marker = markers.get(i);
+//                        stringBuilder.append(String.format(Locale.getDefault(), "[%.6f,%.6f],", marker.getPosition().longitude, marker.getPosition().latitude));
+//                    }
+//                    stringBuilder.append(String.format(Locale.getDefault(), "[%.6f,%.6f]", markers.get(i).getPosition().longitude, markers.get(i).getPosition().latitude));
+//                    byte[] data = ("latlng=" + stringBuilder.toString() + "&addr=" + fragment.startPosition + "&date=" + date.replace(" ", "+")).getBytes();
+//                    URL url = new URL("http://orca-tech.cn/app/benenv/data_collect.php");
+//                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+//                    connection.setRequestMethod("POST");
+//                    connection.setConnectTimeout(5000);
+//                    connection.setRequestProperty("Content-Length", data.length + "");
+//                    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+//                    connection.setRequestProperty("charset", "utf-8");
+//                    connection.setDoOutput(true);
+//                    OutputStream outputStream = connection.getOutputStream();
+//                    outputStream.write(data);
+//                    int responseCode = connection.getResponseCode();
+//                    if (responseCode == 200) {
+//                        Log.d("data_collect", "ok");
+//                    } else {
+//                        Log.d("data_collect", "err");
+//                    }
+//                    outputStream.close();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//            if (!fragment.mqttService.isConnected) {
+//                return null;
+//            }
+//            fragment.mqttService.writeData("$CLEAR#", 1000);
+//            for (int i = 0; i < markers.size(); i++) {
+//                double latitude = markers.get(i).getPosition().latitude;
+//                double longitude = markers.get(i).getPosition().longitude;
+//                if (!(fragment.swNav.getSelectedTab() == 1 && i == markers.size() - 1
+//                        && latitude == markers.get(0).getPosition().latitude
+//                        && longitude == markers.get(0).getPosition().longitude)) {
+//                    if (!fragment.mqttService.isConnected) {
+//                        return null;
+//                    }
+//                    fragment.mqttService.writeData(String.format(Locale.getDefault(),
+//                            "$GNGGA,%.6f,%.6f#", latitude, longitude), 1000);
+//                    publishProgress(i + 1);
+//                }
+//            }
+//            return null;
+//        }
+//
+//        @Override
+//        protected void onProgressUpdate(Integer... values) {
+//            fragment.get().loadingView.setProgress(values[0]);
+//            super.onProgressUpdate(values);
+//        }
+//
+//        @Override
+//        protected void onPostExecute(Void aVoid) {
+//            if (fragment.get().mqttService.isConnected) {
+//                fragment.get().writeSerialThreadPool.execute(writeSerialThread);
+//            }
+//            super.onPostExecute(aVoid);
+//        }
+//    }
+//
+//    private class QueryThread implements Runnable {
+//        @Override
+//        public void run() {
+//            synchronized (mqttService) {
+//                int type = 0;
+//                long retryTimes = 0;
+//                while (!mqttService.notificationEnable) {
+//                    String data = null;
+//                    try {
+//                        if (state == UNREADY) {
+//                            mqttService.wait();
+//                        }
+//                        mqttService.writeData(String.format(Locale.getDefault(),
+//                                "$QUERY,%d#", (type == 0 ? 9 : (type % 5 == 0 ? 7 : 0))), 10);
+//                        data = mqttService.readData(false);
+//                        type = (type + 1) % 50;
+//                        for (int timeGap = 0; timeGap < 50 && !mqttService.notificationEnable && state != UNREADY; timeGap++) {
+//                            Thread.sleep(10);
+//                        }
+//                        if (mqttService.notificationEnable) {
+//                            break;
+//                        }
+//                        if (state == UNREADY) {
+//                            continue;
+//                        }
+//                        if (data.startsWith("$") && data.endsWith("#")) {
+//                            data = data.replaceAll("#", "");
+//                            data = data.replaceAll(Matcher.quoteReplacement("$"), "");
+//                            if (!"".equals(data)) {
+//                                retryTimes = 0;
+//                                String[] strings = data.split(";");
+//                                Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
+//                                if (strings.length == 2) {
+//                                    intent.putExtra("type", Integer.parseInt(strings[0]));
+//                                    intent.putExtra("data", strings[1]);
+//                                }
+//                                activity.sendBroadcast(intent);
+//                            } else {
+//                                retryTimes++;
+//                                if (retryTimes % 5 == 0) {
+//                                    mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+//                                }
+//                            }
+//                        } else {
+//                            retryTimes++;
+//                            if (retryTimes % 5 == 0) {
+//                                mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+//                            }
+//                        }
+//                    } catch (NumberFormatException | InterruptedException e) {
+//                        mHandler.sendMessage(mHandler.obtainMessage(5, data));
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//    private class QueryStateTread implements Runnable {
+//
+//        QueryStateTread() {
+//            loadingView.setMessage("正在获取船状态");
+//        }
+//
+//        @Override
+//        public void run() {
+//            int retryTimes = 0;
+//            try {
+//                do {
+//                    if (!mqttService.isConnected) {
+//                        mHandler.sendEmptyMessage(6);
+//                        break;
+//                    }
+//                    retryTimes++;
+//                    if (retryTimes == 3) {
+//                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+//                    }
+//                    if (retryTimes == 6) {
+//                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
+//                        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+//                        break;
+//                    }
+//                    mqttService.writeData("$QUERY,7#", 10);
+//                    Thread.sleep(300);
+//                    String data = mqttService.readData(false);
+//                    if (!data.startsWith("$") || !data.endsWith("#")) {
+//                        continue;
+//                    } else {
+//                        data = data.replaceAll("#", "");
+//                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
+//                    }
+//                    if (!"".equals(data)) {
+//                        String[] strings = data.split(";");
+//                        if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
+//                            mHandler.sendMessage(mHandler.obtainMessage(10, Integer.parseInt(strings[1])));
+//                            break;
+//                        }
+//                    }
+//                } while (true);
+//            } catch (NumberFormatException | InterruptedException | ArrayIndexOutOfBoundsException e) {
+//                mHandler.sendMessage(mHandler.obtainMessage(9, "查询失败"));
+//                mHandler.sendMessage(mHandler.obtainMessage(8, READY));
+//                e.printStackTrace();
+//            } finally {
+//                mHandler.sendEmptyMessage(7);
+//            }
+//        }
+//    }
+//
+//    private class WriteSerialThread implements Runnable {
+//        private final String mData;
+//        private final int mState;
+//        private final int mPreState;
+//
+//        WriteSerialThread(String data, int state, int preState) {
+//            mData = data;
+//            mState = state;
+//            mPreState = preState;
+//            showLoadingView("正在发送");
+//        }
+//
+//        @Override
+//        public void run() {
+//            int retryTimes = 0;
+//            try {
+//                do {
+//                    if (!mqttService.isConnected) {
+//                        mHandler.sendEmptyMessage(6);
+//                        break;
+//                    }
+//                    mqttService.writeData(mData, 10);
+//                    Thread.sleep(1000);
+//                    String data = mqttService.readData(false);
+//                    Log.i("writeSerialPort", data);
+//                    if (data.contains(mData)) {
+//                        if (mState == NONE) {
+//                            state = mPreState;
+//                            mHandler.sendEmptyMessage(6);
+//                            synchronized (mqttService) {
+//                                mqttService.notify();
+//                            }
+//                        } else {
+//                            mHandler.sendMessage(mHandler.obtainMessage(8, mState));
+//                        }
+//                        break;
+//                    }
+//                    retryTimes++;
+//                    if (retryTimes == 2) {
+//                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+//                    }
+//                    if (retryTimes == 4) {
+//                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
+//                        state = mPreState;
+//                        mHandler.sendEmptyMessage(6);
+//                        synchronized (mqttService) {
+//                            mqttService.notify();
+//                        }
+//                        break;
+//                    }
+//                } while (true);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//                mHandler.sendEmptyMessage(3);
+//            } finally {
+//                mHandler.sendEmptyMessage(7);
+//            }
+//        }
+//    }
+//
+//    private class QueryTimeDisThread implements Runnable {
+//        QueryTimeDisThread() {
+//            loadingView.dismiss();
+//            showLoadingView("正在查询航时航程");
+//        }
+//
+//        @Override
+//        public void run() {
+//            int retryTimes = 0;
+//            try {
+//                do {
+//                    retryTimes++;
+//                    if (retryTimes == 3) {
+//                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
+//                    }
+//                    if (retryTimes == 6 || !mqttService.isConnected) {
+//                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
+//                        mHandler.sendMessage(mHandler.obtainMessage(11, 0, 0));
+//                        break;
+//                    }
+//                    mqttService.writeData("$QUERY,8#", 10);
+//                    Thread.sleep(300);
+//                    String data = mqttService.readData(false);
+//                    if (!data.startsWith("$") || !data.endsWith("#")) {
+//                        continue;
+//                    } else {
+//                        data = data.replaceAll("#", "");
+//                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
+//                    }
+//                    if (!"".equals(data)) {
+//                        String[] strings = data.split(";");
+//                        if (strings.length == 2 && Integer.parseInt(strings[0]) == 8) {
+//                            strings = strings[1].split(",");
+//                            int time = (int) Math.round(Integer.parseInt(strings[0]) * 0.4 / 60);
+//                            int dis = Integer.parseInt(strings[1]);
+//                            mHandler.sendMessage(mHandler.obtainMessage(11, time, dis));
+//                            break;
+//                        }
+//                    }
+//                } while (true);
+//            } catch (NumberFormatException | InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//    }
 }

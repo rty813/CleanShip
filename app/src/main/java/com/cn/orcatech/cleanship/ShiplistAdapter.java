@@ -29,30 +29,37 @@ public class ShiplistAdapter extends RecyclerView.Adapter {
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         MyViewHolder viewHolder = (MyViewHolder) holder;
-        viewHolder.getTv_detail().setText(list.get(position).get("detail"));
-        viewHolder.getTv_title().setText(list.get(position).get("title"));
-        switch (list.get(position).get("status")) {
-            case "1":
-                viewHolder.getIv_status().setImageResource(R.drawable.round_green);
-                viewHolder.getTv_title().setTextColor(0xFF000000);
-                break;
-            case "-1":
-                viewHolder.getIv_status().setImageResource(R.drawable.round_red);
-                viewHolder.getTv_title().setTextColor(0xFF898989);
-                break;
-            case "0":
-                viewHolder.getIv_status().setImageResource(R.drawable.round_orange);
-                viewHolder.getTv_title().setTextColor(0xFF000000);
-                break;
-            default:
-                break;
+        if (position == 0) {
+            viewHolder.getTv_title().setText("显示全部");
+            viewHolder.getTv_detail().setVisibility(View.GONE);
+            viewHolder.getIv_status().setVisibility(View.GONE);
+        }
+        else {
+            viewHolder.getTv_detail().setText(list.get(position - 1).get("detail"));
+            viewHolder.getTv_title().setText(list.get(position - 1).get("title"));
+            switch (list.get(position - 1).get("status")) {
+                case "1":
+                    viewHolder.getIv_status().setImageResource(R.drawable.round_green);
+                    viewHolder.getTv_title().setTextColor(0xFF000000);
+                    break;
+                case "-1":
+                    viewHolder.getIv_status().setImageResource(R.drawable.round_red);
+                    viewHolder.getTv_title().setTextColor(0xFF898989);
+                    break;
+                case "0":
+                    viewHolder.getIv_status().setImageResource(R.drawable.round_orange);
+                    viewHolder.getTv_title().setTextColor(0xFF000000);
+                    break;
+                default:
+                    break;
+            }
         }
         viewHolder.itemView.setTag(position);
     }
 
     @Override
     public int getItemCount() {
-        return list == null ? 0 : list.size();
+        return list == null ? 1 : list.size() + 1;
     }
 
     private class MyViewHolder extends RecyclerView.ViewHolder {

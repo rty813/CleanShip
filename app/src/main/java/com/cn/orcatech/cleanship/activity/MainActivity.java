@@ -11,7 +11,6 @@ import android.widget.Toast;
 import com.ashokvarma.bottomnavigation.BottomNavigationBar;
 import com.ashokvarma.bottomnavigation.BottomNavigationItem;
 import com.cn.orcatech.cleanship.R;
-import com.cn.orcatech.cleanship.Ship;
 import com.cn.orcatech.cleanship.UserInfo;
 import com.cn.orcatech.cleanship.fragment.DataFragment;
 import com.cn.orcatech.cleanship.fragment.LoginFragment;
@@ -41,7 +40,6 @@ public class MainActivity extends CompatActivity {
     private static final String MY_APP_KEY = "5451778422606";
     private static final String CHANNEL = "SELF";
     private long mExitTime = 0;
-    public ArrayList<Ship> ships;
     public int selectShip = -1;
 
     @Override

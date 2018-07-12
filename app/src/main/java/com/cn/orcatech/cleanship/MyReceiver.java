@@ -74,16 +74,11 @@ public class MyReceiver extends BroadcastReceiver {
 //                更新坐标
                 mMapFragment.getShips().get(shipid).setLat(lat);
                 mMapFragment.getShips().get(shipid).setLng(lng);
-                LatLng latLng = mMapFragment.getShipPointLists(shipid).get(mMapFragment.getShipPointLists(shipid).size() - 1);
-                if ((lat < 0 || lat > 55 || lng < 70 || lng > 136)
-                        || (Math.abs(lat - latLng.latitude) > 0.01) || (Math.abs(lng - latLng.longitude) > 0.01)) {
-                    if (mMapFragment.getShipPointLists(shipid).size() != 1) {
-                        return;
-                    }
+                if (lat < 0 || lat > 55 || lng < 70 || lng > 136) {
+                    return;
                 }
                 mMapFragment.getShipPointLists(shipid).add(new LatLng(lat, lng));
                 mMapFragment.move(shipid);
-
 
             } catch (NumberFormatException e) {
                 e.printStackTrace();
