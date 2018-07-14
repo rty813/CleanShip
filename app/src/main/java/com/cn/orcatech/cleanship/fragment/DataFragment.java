@@ -19,6 +19,8 @@ public class DataFragment extends NoFragment {
     private static Button btnTest;
     private static long time1;
     private static long time2;
+    private static double ave = 0;
+    private static long n = 0;
 
     @Nullable
     @Override
@@ -47,6 +49,8 @@ public class DataFragment extends NoFragment {
 
     public static void setBtnText() {
         time2 = System.currentTimeMillis();
-        btnTest.setText(String.valueOf(time2 - time1));
+        n++;
+        ave = (ave * (n - 1) + (time2 - time1)) / n;
+        btnTest.setText(String.valueOf(time2 - time1) + "\r\n平均：" + String.valueOf(ave));
     }
 }

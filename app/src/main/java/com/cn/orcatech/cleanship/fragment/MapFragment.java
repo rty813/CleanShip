@@ -15,6 +15,8 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
@@ -91,6 +93,7 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -114,7 +117,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     public static SQLiteDBHelper dbHelper;
     private final float CTL_RADIUS = 2000;
     public MqttClient mqttClient;
-    //    public MyHandler mHandler;
+    public MyHandler mHandler;
     private MapView mMapView;
     private AMap aMap;
     private boolean markEnable = false;
@@ -156,7 +159,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private TextView tvToolbar;
     private TextView tvDate;
     private TextView tvCircle;
-    private ExecutorService writeSerialThreadPool;
+    private ExecutorService mqttSendThreadPool;
     private FloatingActionMenu fam;
     private String toolbarTitle;
     private Toolbar toolbar;
@@ -391,7 +394,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             smoothMoveMarkers.add(new SmoothMoveMarker(aMap));
             smoothMoveMarkers.get(i).setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(activity, R.layout.ship, null)));
         }
-//        mHandler = new MyHandler(this);
+        mHandler = new MyHandler(this);
         dbHelper = new SQLiteDBHelper(activity);
         loadingView = new ProgressDialog(activity);
         loadingView.setMessage("发送中");
@@ -399,7 +402,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         loadingView.setCanceledOnTouchOutside(false);
         loadingView.setCancelable(false);
         loadingView.setIcon(R.mipmap.ic_launcher);
-        writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
+        mqttSendThreadPool = new ThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
     }
 
@@ -690,7 +693,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 //                break;
 //            case FINISH:
 //                llFinish.setVisibility(View.VISIBLE);
-//                writeSerialThreadPool.execute(new QueryTimeDisThread());
+//                mqttSendThreadPool.execute(new QueryTimeDisThread());
 //                fam.showMenu(true);
 //                break;
 //            default:
@@ -818,7 +821,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         ArrayList<Polyline> traces = activity.selectShip == -1 ? null : traceLists.get(activity.selectShip);
         switch (view.getId()) {
             case R.id.btn_poweron:
-                publishMessage("$poweron#");
+                publishMessage("$poweron#", 0, "正在开机");
                 break;
             case R.id.btn_changemap:
                 if (aMap.getMapType() == AMap.MAP_TYPE_NORMAL) {
@@ -854,7 +857,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 break;
             case R.id.btn_home:
             case R.id.btn_home2:
-                publishMessage("$ORDER,2#");
+                publishMessage("$ORDER,2#", -5);
                 break;
             case R.id.btn_enable:
                 markEnable = !markEnable;
@@ -876,7 +879,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
                     final String date = dateFormat.format(new Date(System.currentTimeMillis()));
                     saveRoute(date, hisBuilder.toString(), pos);
-                    publishMessage(sendBuilder.toString());
+                    publishMessage(sendBuilder.toString(), swNav.getSelectedTab() == 0 ? 1 : -1);
                 } else {
 //                        loadRoute(null);
                 }
@@ -916,7 +919,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 popupHistory.showAsDropDown(llMethod);
                 break;
             case R.id.btn_abort:
-                publishMessage("$CLEAR#");
+                publishMessage("$CLEAR#", 0);
                 break;
             case R.id.btn_gostop:
                 int temp = ships.get(activity.selectShip).getState();
@@ -927,14 +930,14 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 }
                 break;
             case R.id.btn_stop_home:
-                publishMessage("$CLEAR#");
+                publishMessage("$CLEAR#", 0);
                 break;
             case R.id.btn_finish:
-                publishMessage("$CLEAR#");
+                publishMessage("$CLEAR#", 0);
                 resetMap();
                 break;
             case R.id.btn_reload:
-                publishMessage("$CLEAR#");
+                publishMessage("$CLEAR#", 0);
 //                    resetMap();
 //                    long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
 //                    loadRoute(id == -1 ? null : String.valueOf(id));
@@ -1368,375 +1371,66 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-//    public static class MyHandler extends Handler {
-//        WeakReference<MapFragment> mFragment;
-//
-//        MyHandler(MapFragment fragment) {
-//            mFragment = new WeakReference<>(fragment);
-//        }
-//
-//        @Override
-//        public void handleMessage(Message msg) {
-//            final MapFragment fragment = mFragment.get();
-//            switch (msg.what) {
-//                case 1:
-//                    WindowManager.LayoutParams lp = fragment.activity.getWindow().getAttributes();
-//                    lp.alpha = (float) msg.obj;
-//                    fragment.activity.getWindow().setAttributes(lp);
-//                    break;
-//                case 2:
-//                    ((PopupWindow) msg.obj).showAtLocation(fragment.mMapView, Gravity.CENTER, 0, 0);
-//                    break;
-//                case 3:
-//                    if (fragment.loadingView.isShowing()) {
-//                        fragment.loadingView.dismiss();
-//                    }
-//                    fragment.morph(UNREADY);
-//                    break;
-//                case 4:
-//                    break;
-//                case 5:
-//                    Log.d("非法数据", (String) msg.obj);
-//                    break;
-//                case 6:
-//                    if (fragment.loadingView.isShowing()) {
-//                        fragment.loadingView.dismiss();
-//                    }
-//                    break;
-//                case 7:
-////                    btn_start.setEnabled(true);
-//                    break;
-//                case 8:
-//                    if (fragment.loadingView.isShowing()) {
-//                        fragment.loadingView.dismiss();
-//                    }
-//                    synchronized (fragment.mqttService) {
-//                        fragment.morph((Integer) msg.obj);
-//                        fragment.mqttService.notify();
-//                    }
-//                    break;
-//                case 9:
-//                    Toasty.info(fragment.activity, (CharSequence) msg.obj, Toast.LENGTH_SHORT).show();
-//                    break;
-//                case 10:
-//                    fragment.handleState((Integer) msg.obj);
-//                    break;
-//                case 11:
-//                    if (fragment.loadingView.isShowing()) {
-//                        fragment.loadingView.dismiss();
-//                    }
-//                    fragment.tvFinish.setText(String.format(Locale.getDefault(),
-//                            "此次航行用时%d小时%d分，大约行走%d米", msg.arg1 / 60, msg.arg1 % 60, msg.arg2));
-//                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault());
-//                    fragment.tvDate.setText(dateFormat.format(new Date(System.currentTimeMillis())));
-//                    synchronized (fragment.mqttService) {
-//                        fragment.state = FINISH;
-//                        fragment.mqttService.notify();
-//                    }
-//                    break;
-//                default:
-//                    super.handleMessage(msg);
-//            }
-//        }
-//    }
-//
-//    private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
-//        private final int shipid;
-//        private String date;
-//        private WeakReference<MapFragment> fragment;
-//        private WriteSerialThread writeSerialThread;
-//
-//        MyAsyncTask(MapFragment fragment, int shipid, WriteSerialThread writeSerialThread, String date) {
-//            this.fragment = new WeakReference<>(fragment);
-//            this.writeSerialThread = writeSerialThread;
-//            this.date = date;
-//            this.shipid = shipid;
-//            fragment.state = UNREADY;
-//        }
-//
-//        @Override
-//        protected Void doInBackground(Void... voids) {
-//            MapFragment fragment = this.fragment.get();
-//            ArrayList<Marker> markers = fragment.markerLists.get(shipid);
-//            if (markers.size() > 1) {
-//                try {
-//                    StringBuilder stringBuilder = new StringBuilder();
-//                    int i;
-//                    for (i = 0; i < markers.size() - 1; i++) {
-//                        Marker marker = markers.get(i);
-//                        stringBuilder.append(String.format(Locale.getDefault(), "[%.6f,%.6f],", marker.getPosition().longitude, marker.getPosition().latitude));
-//                    }
-//                    stringBuilder.append(String.format(Locale.getDefault(), "[%.6f,%.6f]", markers.get(i).getPosition().longitude, markers.get(i).getPosition().latitude));
-//                    byte[] data = ("latlng=" + stringBuilder.toString() + "&addr=" + fragment.startPosition + "&date=" + date.replace(" ", "+")).getBytes();
-//                    URL url = new URL("http://orca-tech.cn/app/benenv/data_collect.php");
-//                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-//                    connection.setRequestMethod("POST");
-//                    connection.setConnectTimeout(5000);
-//                    connection.setRequestProperty("Content-Length", data.length + "");
-//                    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-//                    connection.setRequestProperty("charset", "utf-8");
-//                    connection.setDoOutput(true);
-//                    OutputStream outputStream = connection.getOutputStream();
-//                    outputStream.write(data);
-//                    int responseCode = connection.getResponseCode();
-//                    if (responseCode == 200) {
-//                        Log.d("data_collect", "ok");
-//                    } else {
-//                        Log.d("data_collect", "err");
-//                    }
-//                    outputStream.close();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//            if (!fragment.mqttService.isConnected) {
-//                return null;
-//            }
-//            fragment.mqttService.writeData("$CLEAR#", 1000);
-//            for (int i = 0; i < markers.size(); i++) {
-//                double latitude = markers.get(i).getPosition().latitude;
-//                double longitude = markers.get(i).getPosition().longitude;
-//                if (!(fragment.swNav.getSelectedTab() == 1 && i == markers.size() - 1
-//                        && latitude == markers.get(0).getPosition().latitude
-//                        && longitude == markers.get(0).getPosition().longitude)) {
-//                    if (!fragment.mqttService.isConnected) {
-//                        return null;
-//                    }
-//                    fragment.mqttService.writeData(String.format(Locale.getDefault(),
-//                            "$GNGGA,%.6f,%.6f#", latitude, longitude), 1000);
-//                    publishProgress(i + 1);
-//                }
-//            }
-//            return null;
-//        }
-//
-//        @Override
-//        protected void onProgressUpdate(Integer... values) {
-//            fragment.get().loadingView.setProgress(values[0]);
-//            super.onProgressUpdate(values);
-//        }
-//
-//        @Override
-//        protected void onPostExecute(Void aVoid) {
-//            if (fragment.get().mqttService.isConnected) {
-//                fragment.get().writeSerialThreadPool.execute(writeSerialThread);
-//            }
-//            super.onPostExecute(aVoid);
-//        }
-//    }
-//
-//    private class QueryThread implements Runnable {
-//        @Override
-//        public void run() {
-//            synchronized (mqttService) {
-//                int type = 0;
-//                long retryTimes = 0;
-//                while (!mqttService.notificationEnable) {
-//                    String data = null;
-//                    try {
-//                        if (state == UNREADY) {
-//                            mqttService.wait();
-//                        }
-//                        mqttService.writeData(String.format(Locale.getDefault(),
-//                                "$QUERY,%d#", (type == 0 ? 9 : (type % 5 == 0 ? 7 : 0))), 10);
-//                        data = mqttService.readData(false);
-//                        type = (type + 1) % 50;
-//                        for (int timeGap = 0; timeGap < 50 && !mqttService.notificationEnable && state != UNREADY; timeGap++) {
-//                            Thread.sleep(10);
-//                        }
-//                        if (mqttService.notificationEnable) {
-//                            break;
-//                        }
-//                        if (state == UNREADY) {
-//                            continue;
-//                        }
-//                        if (data.startsWith("$") && data.endsWith("#")) {
-//                            data = data.replaceAll("#", "");
-//                            data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-//                            if (!"".equals(data)) {
-//                                retryTimes = 0;
-//                                String[] strings = data.split(";");
-//                                Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
-//                                if (strings.length == 2) {
-//                                    intent.putExtra("type", Integer.parseInt(strings[0]));
-//                                    intent.putExtra("data", strings[1]);
-//                                }
-//                                activity.sendBroadcast(intent);
-//                            } else {
-//                                retryTimes++;
-//                                if (retryTimes % 5 == 0) {
-//                                    mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-//                                }
-//                            }
-//                        } else {
-//                            retryTimes++;
-//                            if (retryTimes % 5 == 0) {
-//                                mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-//                            }
-//                        }
-//                    } catch (NumberFormatException | InterruptedException e) {
-//                        mHandler.sendMessage(mHandler.obtainMessage(5, data));
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-//        }
-//    }
-//
-//    private class QueryStateTread implements Runnable {
-//
-//        QueryStateTread() {
-//            loadingView.setMessage("正在获取船状态");
-//        }
-//
-//        @Override
-//        public void run() {
-//            int retryTimes = 0;
-//            try {
-//                do {
-//                    if (!mqttService.isConnected) {
-//                        mHandler.sendEmptyMessage(6);
-//                        break;
-//                    }
-//                    retryTimes++;
-//                    if (retryTimes == 3) {
-//                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-//                    }
-//                    if (retryTimes == 6) {
-//                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-//                        mHandler.sendMessage(mHandler.obtainMessage(8, READY));
-//                        break;
-//                    }
-//                    mqttService.writeData("$QUERY,7#", 10);
-//                    Thread.sleep(300);
-//                    String data = mqttService.readData(false);
-//                    if (!data.startsWith("$") || !data.endsWith("#")) {
-//                        continue;
-//                    } else {
-//                        data = data.replaceAll("#", "");
-//                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-//                    }
-//                    if (!"".equals(data)) {
-//                        String[] strings = data.split(";");
-//                        if (strings.length == 2 && Integer.parseInt(strings[0]) == 7) {
-//                            mHandler.sendMessage(mHandler.obtainMessage(10, Integer.parseInt(strings[1])));
-//                            break;
-//                        }
-//                    }
-//                } while (true);
-//            } catch (NumberFormatException | InterruptedException | ArrayIndexOutOfBoundsException e) {
-//                mHandler.sendMessage(mHandler.obtainMessage(9, "查询失败"));
-//                mHandler.sendMessage(mHandler.obtainMessage(8, READY));
-//                e.printStackTrace();
-//            } finally {
-//                mHandler.sendEmptyMessage(7);
-//            }
-//        }
-//    }
-//
-//    private class WriteSerialThread implements Runnable {
-//        private final String mData;
-//        private final int mState;
-//        private final int mPreState;
-//
-//        WriteSerialThread(String data, int state, int preState) {
-//            mData = data;
-//            mState = state;
-//            mPreState = preState;
-//            showLoadingView("正在发送");
-//        }
-//
-//        @Override
-//        public void run() {
-//            int retryTimes = 0;
-//            try {
-//                do {
-//                    if (!mqttService.isConnected) {
-//                        mHandler.sendEmptyMessage(6);
-//                        break;
-//                    }
-//                    mqttService.writeData(mData, 10);
-//                    Thread.sleep(1000);
-//                    String data = mqttService.readData(false);
-//                    Log.i("writeSerialPort", data);
-//                    if (data.contains(mData)) {
-//                        if (mState == NONE) {
-//                            state = mPreState;
-//                            mHandler.sendEmptyMessage(6);
-//                            synchronized (mqttService) {
-//                                mqttService.notify();
-//                            }
-//                        } else {
-//                            mHandler.sendMessage(mHandler.obtainMessage(8, mState));
-//                        }
-//                        break;
-//                    }
-//                    retryTimes++;
-//                    if (retryTimes == 2) {
-//                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-//                    }
-//                    if (retryTimes == 4) {
-//                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-//                        state = mPreState;
-//                        mHandler.sendEmptyMessage(6);
-//                        synchronized (mqttService) {
-//                            mqttService.notify();
-//                        }
-//                        break;
-//                    }
-//                } while (true);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//                mHandler.sendEmptyMessage(3);
-//            } finally {
-//                mHandler.sendEmptyMessage(7);
-//            }
-//        }
-//    }
-//
-//    private class QueryTimeDisThread implements Runnable {
-//        QueryTimeDisThread() {
-//            loadingView.dismiss();
-//            showLoadingView("正在查询航时航程");
-//        }
-//
-//        @Override
-//        public void run() {
-//            int retryTimes = 0;
-//            try {
-//                do {
-//                    retryTimes++;
-//                    if (retryTimes == 3) {
-//                        mHandler.sendMessage(mHandler.obtainMessage(9, "信号质量差"));
-//                    }
-//                    if (retryTimes == 6 || !mqttService.isConnected) {
-//                        mHandler.sendMessage(mHandler.obtainMessage(9, "发送失败"));
-//                        mHandler.sendMessage(mHandler.obtainMessage(11, 0, 0));
-//                        break;
-//                    }
-//                    mqttService.writeData("$QUERY,8#", 10);
-//                    Thread.sleep(300);
-//                    String data = mqttService.readData(false);
-//                    if (!data.startsWith("$") || !data.endsWith("#")) {
-//                        continue;
-//                    } else {
-//                        data = data.replaceAll("#", "");
-//                        data = data.replaceAll(Matcher.quoteReplacement("$"), "");
-//                    }
-//                    if (!"".equals(data)) {
-//                        String[] strings = data.split(";");
-//                        if (strings.length == 2 && Integer.parseInt(strings[0]) == 8) {
-//                            strings = strings[1].split(",");
-//                            int time = (int) Math.round(Integer.parseInt(strings[0]) * 0.4 / 60);
-//                            int dis = Integer.parseInt(strings[1]);
-//                            mHandler.sendMessage(mHandler.obtainMessage(11, time, dis));
-//                            break;
-//                        }
-//                    }
-//                } while (true);
-//            } catch (NumberFormatException | InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//        }
-//    }
+    private void publishMessage(String data, int toState) {
+        publishMessage(data, toState, "正在发送");
+    }
+
+    private void publishMessage(String data, final int toState, String hint) {
+        showLoadingView(hint);
+        publishMessage(data);
+        mqttSendThreadPool.execute(new mqttSendThread(data, toState));
+    }
+
+    private class mqttSendThread implements Runnable {
+        private String data;
+        private int toState;
+
+        mqttSendThread(String data, int toState) {
+            this.data = data;
+            this.toState = toState;
+        }
+
+        @Override
+        public void run() {
+            int count = 0;
+            while(ships.get(activity.selectShip).getState() != toState) {
+                count++;
+                if (count > 5) {
+                    loadingView.dismiss();
+                    mHandler.sendMessage(mHandler.obtainMessage(0, "发送失败"));
+                    return;
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            loadingView.dismiss();
+        }
+    }
+
+    public static class MyHandler extends Handler {
+        WeakReference<MapFragment> mFragment;
+
+        MyHandler(MapFragment fragment) {
+            mFragment = new WeakReference<>(fragment);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            MapFragment mapFragment = mFragment.get();
+            MainActivity activity = (MainActivity) mapFragment.getActivity();
+            if (activity == null) {
+                return;
+            }
+            switch (msg.what) {
+                case 0:
+                    Toasty.info(activity, (String) msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
 }
