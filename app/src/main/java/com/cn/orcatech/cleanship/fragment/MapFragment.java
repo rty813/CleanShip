@@ -39,7 +39,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
-import com.amap.api.maps.AMapUtils;
 import com.amap.api.maps.CameraUpdate;
 import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.MapView;
@@ -68,7 +67,7 @@ import com.cn.orcatech.cleanship.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.mqtt.MqttService;
 import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
-import com.cn.orcatech.cleanship.util.WriteSerialThreadFactory;
+import com.cn.orcatech.cleanship.util.WriteThreadFactory;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.yanzhenjie.fragment.NoFragment;
@@ -170,11 +169,24 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             if (message != null) {
                 Log.d(TAG, "messageArrived, topic: " + topic + "; message: " + new String(message.getPayload()));
                 if (topic.equals("test1")) {
-                    String str[] = message.toString().split(";");
                     DataFragment.setBtnText();
                     return;
                 }
-                String[] topics = topic.split("_");
+                if (message.toString().contains("ACK1")) {
+                    mHandler.sendMessage(mHandler.obtainMessage(1, "发送成功"));
+                    if (loadingView.isShowing()) {
+                        loadingView.dismiss();
+                    }
+                    return;
+                }
+                else if (message.toString().contains("ACK0")) {
+                    mHandler.sendMessage(mHandler.obtainMessage(2, "发送失败"));
+                    if (loadingView.isShowing()) {
+                        loadingView.dismiss();
+                    }
+                    return;
+                }
+                String[] topics = topic.split("/");
 //                数据格式为 $state;battery;lat,lng#
                 try {
                     int ship_id = Integer.parseInt(topics[2]);
@@ -403,7 +415,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         loadingView.setCancelable(false);
         loadingView.setIcon(R.mipmap.ic_launcher);
         mqttSendThreadPool = new ThreadPoolExecutor(1, 1, 0L,
-                TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
+                TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteThreadFactory());
     }
 
     private void initMap() {
@@ -479,9 +491,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             public void onMapClick(LatLng latLng) {
                 if (!markEnable) {
                     return;
-                }
-                if (AMapUtils.calculateLineDistance(latLng, limitCircle.getCenter()) > CTL_RADIUS) {
-                    Toasty.warning(activity, "超出遥控范围", Toast.LENGTH_SHORT).show();
                 }
 
                 MarkerOptions markerOptions = new MarkerOptions().position(latLng);
@@ -816,12 +825,12 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     public void onClick(View view) {
         PopupWindow popupHistory;
         PopupWindow shipListWindow;
-        ArrayList<Marker> markers = activity.selectShip == -1 ? null : markerLists.get(activity.selectShip);
+        final ArrayList<Marker> markers = activity.selectShip == -1 ? null : markerLists.get(activity.selectShip);
         ArrayList<Polyline> polylines = activity.selectShip == -1 ? null : polylineLists.get(activity.selectShip);
         ArrayList<Polyline> traces = activity.selectShip == -1 ? null : traceLists.get(activity.selectShip);
         switch (view.getId()) {
             case R.id.btn_poweron:
-                publishMessage("$poweron#", 0, "正在开机");
+                publishMessageForResult("$poweron#", "正在开机");
                 break;
             case R.id.btn_changemap:
                 if (aMap.getMapType() == AMap.MAP_TYPE_NORMAL) {
@@ -857,7 +866,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 break;
             case R.id.btn_home:
             case R.id.btn_home2:
-                publishMessage("$ORDER,2#", -5);
+                publishMessageForResult("$ORDER,2#");
                 break;
             case R.id.btn_enable:
                 markEnable = !markEnable;
@@ -869,17 +878,17 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         line.remove();
                     }
                     traces.removeAll(traces);
-                    StringBuilder hisBuilder = new StringBuilder();
-                    StringBuilder sendBuilder = new StringBuilder();
+                    final StringBuilder hisBuilder = new StringBuilder();
+                    showLoadingView("正在发送");
                     for (Marker marker : markers) {
                         hisBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
-                        sendBuilder.append(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#\r\n", marker.getPosition().latitude, marker.getPosition().longitude));
+                        publishMessage(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#", marker.getPosition().latitude, marker.getPosition().longitude));
+
                     }
-                    sendBuilder.append(swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#");
+                    publishMessageForResult(swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#");
                     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
                     final String date = dateFormat.format(new Date(System.currentTimeMillis()));
                     saveRoute(date, hisBuilder.toString(), pos);
-                    publishMessage(sendBuilder.toString(), swNav.getSelectedTab() == 0 ? 1 : -1);
                 } else {
 //                        loadRoute(null);
                 }
@@ -919,7 +928,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 popupHistory.showAsDropDown(llMethod);
                 break;
             case R.id.btn_abort:
-                publishMessage("$CLEAR#", 0);
+                publishMessageForResult("$CLEAR#");
                 break;
             case R.id.btn_gostop:
                 int temp = ships.get(activity.selectShip).getState();
@@ -930,14 +939,14 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 }
                 break;
             case R.id.btn_stop_home:
-                publishMessage("$CLEAR#", 0);
+                publishMessageForResult("$CLEAR#");
                 break;
             case R.id.btn_finish:
-                publishMessage("$CLEAR#", 0);
+                publishMessageForResult("$CLEAR#");
                 resetMap();
                 break;
             case R.id.btn_reload:
-                publishMessage("$CLEAR#", 0);
+                publishMessageForResult("$CLEAR#");
 //                    resetMap();
 //                    long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
 //                    loadRoute(id == -1 ? null : String.valueOf(id));
@@ -1077,7 +1086,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     tvBattery.setText("剩余电量：" + ships.get(position - 1).getBattery() + "%");
                 }
                 activity.selectShip = position - 1;
-                topicSend = String.format(Locale.getDefault(), "APP2SHIP_%d_%d", activity.userInfo.getShip_id(), position - 1);
+                topicSend = String.format(Locale.getDefault(), "APP2SHIP/%d/%d", activity.userInfo.getShip_id(), position - 1);
                 shipListWindow.dismiss();
             }
         });
@@ -1365,35 +1374,27 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 
     private void publishMessage(String data) {
         try {
-            mqttClient.publish(topicSend, (data + "\r\n").getBytes(), 1, false);
+            mqttClient.publish(topicSend, (data + "\r\n").getBytes(), 2, false);
         } catch (MqttException e) {
             e.printStackTrace();
         }
     }
 
-    private void publishMessage(String data, int toState) {
-        publishMessage(data, toState, "正在发送");
+    private void publishMessageForResult(String data) {
+        publishMessageForResult(data, "正在发送");
     }
 
-    private void publishMessage(String data, final int toState, String hint) {
+    private void publishMessageForResult(String data, String hint) {
         showLoadingView(hint);
         publishMessage(data);
-        mqttSendThreadPool.execute(new mqttSendThread(data, toState));
+        mqttSendThreadPool.execute(new mqttSendThread());
     }
 
     private class mqttSendThread implements Runnable {
-        private String data;
-        private int toState;
-
-        mqttSendThread(String data, int toState) {
-            this.data = data;
-            this.toState = toState;
-        }
-
         @Override
         public void run() {
             int count = 0;
-            while(ships.get(activity.selectShip).getState() != toState) {
+            while (loadingView.isShowing()) {
                 count++;
                 if (count > 5) {
                     loadingView.dismiss();
@@ -1406,7 +1407,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     e.printStackTrace();
                 }
             }
-            loadingView.dismiss();
         }
     }
 
@@ -1427,6 +1427,12 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             switch (msg.what) {
                 case 0:
                     Toasty.info(activity, (String) msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                case 1:
+                    Toasty.success(activity, (String) msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                case 2:
+                    Toasty.error(activity, (String) msg.obj, Toast.LENGTH_SHORT).show();
                     break;
                 default:
                     break;

@@ -74,7 +74,7 @@ import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.activity.QRScanActivity;
 import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
-import com.cn.orcatech.cleanship.util.WriteSerialThreadFactory;
+import com.cn.orcatech.cleanship.util.WriteThreadFactory;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.kcode.lib.UpdateWrapper;
@@ -296,7 +296,7 @@ public class MqttActivity extends AppCompatActivity implements View.OnClickListe
         initSmoothMove();
         state = UNREADY;
         writeSerialThreadPool = new ThreadPoolExecutor(1, 1, 0L,
-                TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteSerialThreadFactory());
+                TimeUnit.MILLISECONDS, new LinkedBlockingDeque<Runnable>(), new WriteThreadFactory());
     }
 
     private void initView(Bundle savedInstanceState) {

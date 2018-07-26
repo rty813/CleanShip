@@ -136,9 +136,7 @@ public class MainActivity extends CompatActivity {
             MqttClient mqttClient = mapFragment.mqttClient;
             mqttClient.setCallback(mapFragment.mqttCallBack);
             mqttClient.connect();
-            for (int i = 0; i < userInfo.getTotalship(); i++){
-                mqttClient.subscribe("SHIP2APP_" + userInfo.getShip_id() + "_" + i);
-            }
+            mqttClient.subscribe("SHIP2APP/" + userInfo.getShip_id() + "/#");
             Toasty.info(this, "已建立MQTT连接", Toast.LENGTH_SHORT).show();
 //            sendBroadcast(new Intent(MqttService.MQTT_ONCONNCET));
         } catch (MqttException e) {
