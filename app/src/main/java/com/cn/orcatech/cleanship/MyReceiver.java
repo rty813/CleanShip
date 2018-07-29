@@ -43,7 +43,7 @@ public class MyReceiver extends BroadcastReceiver {
             try {
                 int shipid = intent.getIntExtra("shipid", -1);
                 int state = Integer.parseInt(intent.getStringExtra("state"));
-                int pd_current = Integer.parseInt(intent.getStringExtra("pd_current"));
+                int pdPercent = Integer.parseInt(intent.getStringExtra("pdPercent"));
                 String[] latlng = intent.getStringExtra("latlng").split(",");
                 double lat = Double.parseDouble(latlng[0]);
                 double lng = Double.parseDouble(latlng[1]);
@@ -68,8 +68,8 @@ public class MyReceiver extends BroadcastReceiver {
                 }
 
 //                更新battery
-                mMapFragment.getShips().get(shipid).setBattery(pd_current);
-                mMapFragment.setBattery(pd_current);
+                mMapFragment.getShips().get(shipid).setBattery(pdPercent);
+                mMapFragment.setBattery(pdPercent);
 
 //                更新坐标
                 mMapFragment.getShips().get(shipid).setLat(lat);

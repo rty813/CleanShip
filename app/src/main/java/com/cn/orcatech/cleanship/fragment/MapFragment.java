@@ -207,9 +207,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                             intent.putExtra("state", strings[0]);
                             intent.putExtra("latlng", strings[1]);
                             intent.putExtra("yaw", strings[2]);
-                            intent.putExtra("pd_percent", strings[3]);
-                            intent.putExtra("pd_rematime", strings[4]);
-                            intent.putExtra("pd_current", strings[5]);
+                            intent.putExtra("pdPercent", strings[3]);
+                            intent.putExtra("pdRematime", strings[4]);
+                            intent.putExtra("pdCurrent", strings[5]);
                             intent.putExtra("gps_speed", strings[6]);
                             intent.putExtra("gps_stars", strings[7]);
 
