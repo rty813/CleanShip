@@ -199,14 +199,20 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                         if (!"".equals(data)) {
                             String[] strings = data.split(";");
-                            if (strings.length < 3) {
+                            if (strings.length < 7) {
                                 return;
                             }
                             Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
                             intent.putExtra("shipid", ship_id);
                             intent.putExtra("state", strings[0]);
-                            intent.putExtra("battery", strings[1]);
-                            intent.putExtra("latlng", strings[2]);
+                            intent.putExtra("latlng", strings[1]);
+                            intent.putExtra("yaw", strings[2]);
+                            intent.putExtra("pd_percent", strings[3]);
+                            intent.putExtra("pd_rematime", strings[4]);
+                            intent.putExtra("pd_current", strings[5]);
+                            intent.putExtra("gps_speed", strings[6]);
+                            intent.putExtra("gps_stars", strings[7]);
+
                             activity.sendBroadcast(intent);
                         }
                     }
