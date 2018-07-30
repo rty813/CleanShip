@@ -146,9 +146,9 @@ public class MainActivity extends CompatActivity {
     }
 
     public void logout() {
-        SharedPreferences.Editor editor = getSharedPreferences("userinfo", MODE_PRIVATE).edit();
-        editor.clear();
-        editor.apply();
+//        SharedPreferences.Editor editor = getSharedPreferences("userinfo", MODE_PRIVATE).edit();
+//        editor.clear();
+//        editor.apply();
         hasLogin = false;
         if (fragmentList.get(3).isVisible()) {
             fm.beginTransaction()

@@ -168,10 +168,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         public void messageArrived(String topic, MqttMessage message) {
             if (message != null) {
                 Log.d(TAG, "messageArrived, topic: " + topic + "; message: " + new String(message.getPayload()));
-                if (topic.equals("test1")) {
-                    DataFragment.setBtnText();
-                    return;
-                }
                 if (message.toString().contains("ACK1")) {
                     mHandler.sendMessage(mHandler.obtainMessage(1, "发送成功"));
                     if (loadingView.isShowing()) {
@@ -187,7 +183,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     return;
                 }
                 String[] topics = topic.split("/");
-//                数据格式为 $state;battery;lat,lng#
                 try {
                     int ship_id = Integer.parseInt(topics[2]);
                     if (ship_id > activity.userInfo.getTotalship() - 1) {
@@ -216,28 +211,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                             activity.sendBroadcast(intent);
                         }
                     }
-//                    if (data.startsWith("#")) {
-//                        status = "待机";
-//                    }
-//                    else if (data.startsWith("$")) {
-//                        status = "在线";
-//                    }
-//                    else {
-//                        status = "离线";
-//                    }
-//                    ships .get(ship_id).setStatus(status);
-//                    if (shipPopupWindowList != null) {
-//                        shipPopupWindowList.get(ship_id).put("status", status);
-//                        activity.runOnUiThread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                shipPopupWindowAdapter.notifyItemChanged(ship_id);
-//                            }
-//                        });
-//                    }
-//                    if (ship_id != activity.selectShip) {
-//                        return;
-//                    }
                 }
                 catch (NumberFormatException e){
                     e.printStackTrace();
@@ -252,7 +225,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         @Override
         public void connectionLost(Throwable cause) {
             Log.d(TAG, "connectionLost");
-            Toasty.error(activity, "连接中断！", Toast.LENGTH_SHORT).show();
+            mHandler.sendMessage(mHandler.obtainMessage(2, "连接中断！"));
+            hideAll();
             activity.logout();
         }
     };
@@ -1378,7 +1352,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-    private void publishMessage(String data) {
+    public void publishMessage(String data) {
         try {
             mqttClient.publish(topicSend, (data + "\r\n").getBytes(), 2, false);
         } catch (MqttException e) {

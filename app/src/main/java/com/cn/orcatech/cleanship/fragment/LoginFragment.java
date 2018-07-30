@@ -118,6 +118,7 @@ public class LoginFragment extends NoFragment implements View.OnClickListener {
             @Override
             public void onFailed(int what, Response<String> response) {
                 Toasty.error(activity, "服务器连接失败，请检查网络连接", Toast.LENGTH_SHORT).show();
+                activity.logout();
                 super.onFailed(what, response);
             }
 
