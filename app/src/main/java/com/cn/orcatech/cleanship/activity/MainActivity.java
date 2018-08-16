@@ -1,6 +1,5 @@
 package com.cn.orcatech.cleanship.activity;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -176,4 +175,6 @@ public class MainActivity extends CompatActivity {
     public MapFragment getMapFragment() {
         return (MapFragment) fragmentList.get(0);
     }
+
+    public DataFragment getDataFragment() { return (DataFragment) fragmentList.get(1); }
 }

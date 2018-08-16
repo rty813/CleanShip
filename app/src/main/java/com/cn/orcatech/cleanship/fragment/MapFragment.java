@@ -197,6 +197,13 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                             if (strings.length < 7) {
                                 return;
                             }
+                            final String finalData = data.replace(";", "\n");
+                            activity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    activity.getDataFragment().setData(finalData);
+                                }
+                            });
                             Intent intent = new Intent(MyReceiver.ACTION_DATA_RECEIVED);
                             intent.putExtra("shipid", ship_id);
                             intent.putExtra("state", strings[0]);
@@ -207,7 +214,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                             intent.putExtra("pdCurrent", strings[5]);
                             intent.putExtra("gps_speed", strings[6]);
                             intent.putExtra("gps_stars", strings[7]);
-
                             activity.sendBroadcast(intent);
                         }
                     }

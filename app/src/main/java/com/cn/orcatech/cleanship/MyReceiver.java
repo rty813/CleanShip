@@ -47,6 +47,7 @@ public class MyReceiver extends BroadcastReceiver {
                 String[] latlng = intent.getStringExtra("latlng").split(",");
                 double lat = Double.parseDouble(latlng[0]);
                 double lng = Double.parseDouble(latlng[1]);
+                float yaw = Float.parseFloat(intent.getStringExtra("yaw"));
                 int status;
                 if (state == -10) {
                     status = 0;
@@ -69,7 +70,8 @@ public class MyReceiver extends BroadcastReceiver {
 
 //                更新battery
                 mMapFragment.getShips().get(shipid).setBattery(pdPercent);
-                mMapFragment.setBattery(pdPercent);
+//                mMapFragment.setBattery(pdPercent);
+                mMapFragment.setBattery((int) yaw);
 
 //                更新坐标
                 mMapFragment.getShips().get(shipid).setLat(lat);
