@@ -338,49 +338,21 @@
                 android:textSize="20sp" />
         </LinearLayout>
 
-        <com.github.clans.fab.FloatingActionMenu
-            android:id="@+id/fam"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:paddingTop="150dp"
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/btn_changemap"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="50dp"
+            android:layout_gravity="end|center_vertical"
+            android:src="@drawable/change_map"
             app:menu_backgroundColor="#65000000"
             app:menu_colorNormal="@color/velGray"
             app:menu_colorPressed="#6b6b6b"
             app:menu_openDirection="down"
             app:menu_showShadow="true"
-            android:visibility="gone">
-
-            <com.github.clans.fab.FloatingActionButton
-                android:id="@+id/btn_ctl"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/app_ctl"
-                app:fab_colorNormal="@color/velGray"
-                app:fab_colorPressed="#6b6b6b"
-                app:fab_label="剥夺控制权"
-                app:fab_size="mini" />
-
-            <com.github.clans.fab.FloatingActionButton
-                android:id="@+id/btn_changemap"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/change_map"
-                app:fab_colorNormal="@color/velGray"
-                app:fab_colorPressed="#6b6b6b"
-                app:fab_label="切换地图"
-                app:fab_size="mini" />
-
-            <com.github.clans.fab.FloatingActionButton
-                android:id="@+id/btn_bind"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/bind"
-                app:fab_colorNormal="@color/velGray"
-                app:fab_colorPressed="#6b6b6b"
-                app:fab_label="重新绑定"
-                app:fab_size="mini"
-                android:visibility="gone"/>
-        </com.github.clans.fab.FloatingActionMenu>
+            app:fab_size="mini">
+        </android.support.design.widget.FloatingActionButton>
 
     </FrameLayout>
 </LinearLayout>
