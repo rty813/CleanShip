@@ -58,4 +58,6 @@ dependencies {
     implementation files('libs/org.eclipse.paho.android.service-1.1.1.jar')
     implementation files('libs/org.eclipse.paho.client.mqttv3-1.2.0.jar')
     implementation(name: 'LiteAVSDK_Player_5.0.4978', ext: 'aar')
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.0.2'
+
 }
