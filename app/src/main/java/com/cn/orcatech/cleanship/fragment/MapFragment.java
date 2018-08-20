@@ -68,8 +68,6 @@ import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.mqtt.MqttService;
 import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
 import com.cn.orcatech.cleanship.util.WriteThreadFactory;
-import com.github.clans.fab.FloatingActionButton;
-import com.github.clans.fab.FloatingActionMenu;
 import com.yanzhenjie.fragment.NoFragment;
 import com.yanzhenjie.permission.Action;
 import com.yanzhenjie.permission.AndPermission;
@@ -151,7 +149,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private Button btnHistory;
     private Button btnManual;
     private Button btnAbort;
-    private FloatingActionButton btnCtl;
     private Button btnEnable;
     private TextView tvFinish;
     private TextView tvBattery;
@@ -159,7 +156,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private TextView tvDate;
     private TextView tvCircle;
     private ExecutorService mqttSendThreadPool;
-    private FloatingActionMenu fam;
     private String toolbarTitle;
     private Toolbar toolbar;
     private MainActivity activity;
@@ -300,9 +296,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         btnVel = view.findViewById(R.id.btn_vel);
         btnAbort = view.findViewById(R.id.btn_abort);
         btnEnable = view.findViewById(R.id.btn_enable);
-        btnCtl = view.findViewById(R.id.btn_ctl);
         seekBar = view.findViewById(R.id.seekbar);
-        fam = view.findViewById(R.id.fam);
         tvBattery = view.findViewById(R.id.tv_shipcharge);
         toolbar = view.findViewById(R.id.toolbar);
         llMethod = view.findViewById(R.id.ll_method);
@@ -341,7 +335,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         view.findViewById(R.id.btn_finish).setOnClickListener(this);
         view.findViewById(R.id.btn_stop_home).setOnClickListener(this);
         tvToolbar.setOnClickListener(this);
-        btnCtl.setOnClickListener(this);
         btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
         btnHistory.setOnClickListener(this);
@@ -642,60 +635,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 //        database.close();
 //    }
 
-//    private void morph(int state) {
-//        if (state != NONE) {
-//            this.state = state;
-//            this.markEnable = false;
-//            btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
-//            tvToolbar.setText(toolbarTitle);
-//            hideAll();
-//        }
-//        switch (state) {
-//            case UNREADY:
-//                Toasty.error(activity, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
-//                btnPoweron.setVisibility(View.VISIBLE);
-//                preState = Integer.MAX_VALUE;
-//                mqttService.close();
-//                resetMap();
-//                tvBattery.setVisibility(View.INVISIBLE);
-//                fam.hideMenu(false);
-//                break;
-//            case READY:
-//                llMark.setVisibility(View.VISIBLE);
-//                llMethod.setVisibility(View.VISIBLE);
-//                btnHome.setVisibility(View.VISIBLE);
-//                fam.showMenu(true);
-//                break;
-//            case GONE:
-//                btnGoStop.setText("暂停");
-//                btnGoStop.setCompoundDrawables(null, picPause, null, null);
-//                llNav.setVisibility(View.VISIBLE);
-//                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
-//                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-//                fam.showMenu(true);
-//                break;
-//            case PAUSE:
-//                btnGoStop.setText("开始");
-//                btnGoStop.setCompoundDrawables(null, picStart, null, null);
-//                llNav.setVisibility(View.VISIBLE);
-//                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
-//                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-//                fam.showMenu(true);
-//                break;
-//            case HOMING:
-//                llHome.setVisibility(View.VISIBLE);
-//                fam.showMenu(true);
-//                break;
-//            case FINISH:
-//                llFinish.setVisibility(View.VISIBLE);
-//                mqttSendThreadPool.execute(new QueryTimeDisThread());
-//                fam.showMenu(true);
-//                break;
-//            default:
-//                break;
-//        }
-//    }
-
     private void hideAll() {
         llMark.setVisibility(View.GONE);
         llMethod.setVisibility(View.INVISIBLE);
@@ -753,60 +692,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-//    public void handleState(int state) {
-//        // 有一个想法。目前，如果用prestate，会出现Bug，即如果点了会使App状态改变的按钮，
-//        // 而prestate不变，此时会导致状态错误。解决方法有两种，一种是在点击按钮的时候更改prestate，
-//        // 但这种方法通用性太差。另一种方法是统一船发来的state和app的state。决定采用第二种。
-////        long id = activity.getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
-//        int tempState = UNREADY;
-//        swNav.setSelectedTab(0);
-//        switch (state) {
-//            case 0:
-////                开机初始状态
-//                tempState = READY;
-//                break;
-//            case -1:
-////                连线模式运行中
-//                tempState = GONE;
-//                break;
-//            case -2:
-////                循环模式暂停
-//                swNav.setSelectedTab(1);
-//                tempState = PAUSE;
-//                break;
-//            case -3:
-////                连线模式暂停
-//                tempState = PAUSE;
-//                break;
-//            case -4:
-////                跑完了
-//                tempState = FINISH;
-//                break;
-//            case -5:
-////                返航
-//                tempState = HOMING;
-//                break;
-//            case -10:
-////                待机
-//
-//                break;
-//            default:
-//                break;
-//        }
-//        if (state > 0) {
-//            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
-//            swNav.setSelectedTab(1);
-//            tempState = GONE;
-//        }
-//        if (tempState != this.state) {
-//            if (state != -5 && state != 0) {
-////                    loadRoute(id == -1 ? null : String.valueOf(id));
-//            }
-//            this.state = UNREADY;
-//            mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
-//        }
-//    }
-
     @Override
     public void onClick(View view) {
         PopupWindow popupHistory;
@@ -824,7 +709,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 } else {
                     aMap.setMapType(AMap.MAP_TYPE_NORMAL);
                 }
-                fam.close(true);
                 break;
             case R.id.btn_delete:
                 new AlertDialog.Builder(activity).setTitle("提示")
@@ -938,7 +822,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 //                    loadRoute(id == -1 ? null : String.valueOf(id));
                 break;
             case R.id.btn_ctl:
-                fam.close(true);
                 publishMessage("$ORDER,7#");
                 break;
             case R.id.tv_toolbar:
@@ -1300,7 +1183,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 llMark.setVisibility(View.VISIBLE);
                 llMethod.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.VISIBLE);
-                fam.showMenu(true);
                 break;
             case -1:
 //                连线模式运行中
@@ -1308,7 +1190,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 btnGoStop.setCompoundDrawables(null, picPause, null, null);
                 llNav.setVisibility(View.VISIBLE);
                 tvCircle.setVisibility(View.GONE);
-                fam.showMenu(true);
                 break;
             case -2:
 //                循环模式暂停
@@ -1317,7 +1198,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 btnGoStop.setCompoundDrawables(null, picStart, null, null);
                 llNav.setVisibility(View.VISIBLE);
                 tvCircle.setVisibility(View.VISIBLE);
-                fam.showMenu(true);
                 break;
             case -3:
 //                连线模式暂停
@@ -1325,17 +1205,14 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 btnGoStop.setCompoundDrawables(null, picStart, null, null);
                 llNav.setVisibility(View.VISIBLE);
                 tvCircle.setVisibility(View.GONE);
-                fam.showMenu(true);
                 break;
             case -4:
 //                跑完了
                 llFinish.setVisibility(View.VISIBLE);
-                fam.showMenu(true);
                 break;
             case -5:
 //                返航
                 llHome.setVisibility(View.VISIBLE);
-                fam.showMenu(true);
                 break;
             case -10:
 //                待机
@@ -1353,7 +1230,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             btnGoStop.setCompoundDrawables(null, picPause, null, null);
             llNav.setVisibility(View.VISIBLE);
             tvCircle.setVisibility(View.VISIBLE);
-            fam.showMenu(true);
             tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
         }
     }
