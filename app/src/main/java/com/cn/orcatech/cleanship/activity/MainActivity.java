@@ -1,15 +1,29 @@
 package com.cn.orcatech.cleanship.activity;
 
+import android.annotation.SuppressLint;
+import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.Toolbar;
+import android.util.DisplayMetrics;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.ashokvarma.bottomnavigation.BottomNavigationBar;
 import com.ashokvarma.bottomnavigation.BottomNavigationItem;
 import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.ShiplistAdapter;
 import com.cn.orcatech.cleanship.UserInfo;
 import com.cn.orcatech.cleanship.fragment.DataFragment;
 import com.cn.orcatech.cleanship.fragment.LoginFragment;
@@ -20,15 +34,26 @@ import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.yanzhenjie.fragment.CompatActivity;
 import com.yanzhenjie.fragment.NoFragment;
 import com.yanzhenjie.nohttp.NoHttp;
+import com.yanzhenjie.recyclerview.swipe.SwipeItemClickListener;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenu;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuBridge;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuCreator;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuItemClickListener;
+import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
+import com.yanzhenjie.recyclerview.swipe.widget.DefaultItemDecoration;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 import es.dmoral.toasty.Toasty;
 
-public class MainActivity extends CompatActivity {
+public class MainActivity extends CompatActivity implements View.OnClickListener {
 
     private static final String MQTT_SERVER_URL = "tcp://orca-tech.cn:11883";
     private FragmentManager fm;
@@ -40,11 +65,18 @@ public class MainActivity extends CompatActivity {
     private static final String CHANNEL = "SELF";
     private long mExitTime = 0;
     public int selectShip = -1;
+    private Toolbar toolbar;
+    private TextView tvToolbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        toolbar = findViewById(R.id.toolbar);
+        tvToolbar = findViewById(R.id.tv_toolbar);
+
+        tvToolbar.setOnClickListener(this);
 
         MiStatInterface.initialize(this, MY_APPID, MY_APP_KEY, CHANNEL);
         MiStatInterface.setUploadPolicy(MiStatInterface.UPLOAD_POLICY_REALTIME, 0);
@@ -117,7 +149,7 @@ public class MainActivity extends CompatActivity {
     public void loginSuccess() {
         hasLogin = true;
         ((UserInfoFragment)fragmentList.get(3)).setUserinfo(userInfo);
-        MapFragment mapFragment = (MapFragment) fragmentList.get(0);
+        MapFragment mapFragment = getMapFragment();
 //        ships = new ArrayList<>();
 //        for (int i = 0; i < userInfo.getTotalship(); i++) {
 //            ships.add(new Ship());
@@ -177,4 +209,105 @@ public class MainActivity extends CompatActivity {
     }
 
     public DataFragment getDataFragment() { return (DataFragment) fragmentList.get(1); }
+
+    private ArrayList<Map<String, String>> shipPopupWindowList;
+    private ShiplistAdapter shipPopupWindowAdapter;
+    @Override
+    public void onClick(View view) {
+        if (view.getId() == R.id.tv_toolbar) {
+            View contentView = LayoutInflater.from(this).inflate(R.layout.popup_shiplist, null);
+            SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
+            PopupWindow shipListWindow = new PopupWindow();
+            shipListWindow.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
+            shipListWindow.setOutsideTouchable(true);
+            shipListWindow.setContentView(contentView);
+            shipListWindow.setAnimationStyle(R.style.dismiss_anim);
+            loadShipList(recyclerView, shipListWindow);
+            contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            int height = getResources().getDisplayMetrics().heightPixels / 2;
+            if (contentView.getMeasuredHeight() > height) {
+                shipListWindow.setHeight(height);
+            } else {
+                shipListWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+            }
+            shipListWindow.showAsDropDown(toolbar);
+            shipListWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
+                @Override
+                public void onDismiss() {
+                    shipPopupWindowList = null;
+                    shipPopupWindowAdapter = null;
+                }
+            });
+        }
+    }
+
+    private void loadShipList(SwipeMenuRecyclerView recyclerView, final PopupWindow shipListWindow) {
+        final SharedPreferences sharedPreferences = getSharedPreferences("shipname", MODE_PRIVATE);
+        shipPopupWindowList = new ArrayList<>();
+        for (int i =  0; i < userInfo.getTotalship(); i++) {
+            String shipName = sharedPreferences.getString(String.valueOf(i), String.valueOf(i));
+            Map<String, String> map = new HashMap<>();
+            map.put("title", shipName);
+            map.put("detail", String.valueOf(getMapFragment().getShips().get(i).getState()));
+            map.put("status", String.valueOf(getMapFragment().getShips().get(i).getStatus()));
+            shipPopupWindowList.add(map);
+        }
+        shipPopupWindowAdapter = new ShiplistAdapter(shipPopupWindowList);
+        shipPopupWindowAdapter.notifyDataSetChanged();
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
+            @SuppressLint("SetTextI18n")
+            @Override
+            public void onItemClick(View itemView, int position) {
+                getMapFragment().handleToolbarSelect(position);
+                selectShip = position - 1;
+                getMapFragment().topicSend = String.format(Locale.getDefault(), "APP2SHIP/%d/%d", userInfo.getShip_id(), position - 1);
+                tvToolbar.setText(position == 0 ? "欧卡小蓝船" : shipPopupWindowList.get(position - 1).get("title"));
+                shipListWindow.dismiss();
+            }
+        });
+        recyclerView.addItemDecoration(new DefaultItemDecoration(0xBB1C1C1C));
+        recyclerView.setSwipeMenuCreator(new SwipeMenuCreator() {
+            @Override
+            public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
+                DisplayMetrics metrics = getResources().getDisplayMetrics();
+                SwipeMenuItem renameItem = new SwipeMenuItem(MainActivity.this).setWidth((int)(metrics.widthPixels * 0.1))
+                        .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
+                swipeRightMenu.addMenuItem(renameItem);
+            }
+        });
+        recyclerView.setSwipeMenuItemClickListener(new SwipeMenuItemClickListener() {
+            @Override
+            public void onItemClick(SwipeMenuBridge menuBridge) {
+                menuBridge.closeMenu();
+                final int pos = menuBridge.getAdapterPosition();
+//                        重命名
+                final EditText etName = new EditText(MainActivity.this);
+                etName.setHint(shipPopupWindowList.get(pos).get("title"));
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("重命名路线")
+                        .setView(etName)
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                String name = etName.getText().toString();
+                                if (name.equals("")) {
+                                    return;
+                                }
+                                shipPopupWindowList.get(pos).put("title", name);
+                                shipPopupWindowAdapter.notifyItemChanged(pos);
+                                SharedPreferences.Editor editor = sharedPreferences.edit();
+                                editor.putString(String.valueOf(pos), name);
+                                editor.apply();
+                            }
+                        })
+                        .show();
+            }
+        });
+        recyclerView.setAdapter(shipPopupWindowAdapter);
+    }
+
+    public void hideToolbar(int visibility) {
+        toolbar.setVisibility(visibility);
+    }
 }

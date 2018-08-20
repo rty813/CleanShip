@@ -22,7 +22,6 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.AppCompatSeekBar;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.Toolbar;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
@@ -156,8 +155,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private TextView tvDate;
     private TextView tvCircle;
     private ExecutorService mqttSendThreadPool;
-    private String toolbarTitle;
-    private Toolbar toolbar;
     private MainActivity activity;
     public MqttCallback mqttCallBack = new MqttCallback() {
         @Override
@@ -235,7 +232,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private ArrayList<Ship> ships;
     private ArrayList<Map<String, String>> shipPopupWindowList;
     private ShiplistAdapter shipPopupWindowAdapter;
-    private String topicSend = "";
+    public String topicSend = "";
 
     @Nullable
     @Override
@@ -298,7 +295,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         btnEnable = view.findViewById(R.id.btn_enable);
         seekBar = view.findViewById(R.id.seekbar);
         tvBattery = view.findViewById(R.id.tv_shipcharge);
-        toolbar = view.findViewById(R.id.toolbar);
         llMethod = view.findViewById(R.id.ll_method);
         final SharedPreferences sharedPreferences = activity.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
@@ -334,6 +330,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         view.findViewById(R.id.btn_reload).setOnClickListener(this);
         view.findViewById(R.id.btn_finish).setOnClickListener(this);
         view.findViewById(R.id.btn_stop_home).setOnClickListener(this);
+        view.findViewById(R.id.btn_changemap).setOnClickListener(this);
         tvToolbar.setOnClickListener(this);
         btnAbort.setOnClickListener(this);
         btnManual.setOnClickListener(this);
@@ -342,7 +339,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         btnGoStop.setOnClickListener(this);
         btnEnable.setOnClickListener(this);
         btnPoweron.setOnClickListener(this);
-        view.findViewById(R.id.btn_changemap).setOnClickListener(this);
 
         picStart = getResources().getDrawable(R.drawable.btn_start_selector);
         picPause = getResources().getDrawable(R.drawable.btn_pause_selector);
@@ -364,8 +360,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         llMark.setOnTouchListener(onTouchListener);
         llMethod.setOnTouchListener(onTouchListener);
         llNav.setOnTouchListener(onTouchListener);
-        toolbarTitle = getResources().getString(R.string.app_name);
-        tvToolbar.setText(toolbarTitle);
     }
 
     public void initClass(int totalship) {
@@ -635,6 +629,60 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 //        database.close();
 //    }
 
+//    private void morph(int state) {
+//        if (state != NONE) {
+//            this.state = state;
+//            this.markEnable = false;
+//            btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
+//            tvToolbar.setText(toolbarTitle);
+//            hideAll();
+//        }
+//        switch (state) {
+//            case UNREADY:
+//                Toasty.error(activity, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
+//                btnPoweron.setVisibility(View.VISIBLE);
+//                preState = Integer.MAX_VALUE;
+//                mqttService.close();
+//                resetMap();
+//                tvBattery.setVisibility(View.INVISIBLE);
+//                fam.hideMenu(false);
+//                break;
+//            case READY:
+//                llMark.setVisibility(View.VISIBLE);
+//                llMethod.setVisibility(View.VISIBLE);
+//                btnHome.setVisibility(View.VISIBLE);
+//                fam.showMenu(true);
+//                break;
+//            case GONE:
+//                btnGoStop.setText("暂停");
+//                btnGoStop.setCompoundDrawables(null, picPause, null, null);
+//                llNav.setVisibility(View.VISIBLE);
+//                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
+//                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+//                fam.showMenu(true);
+//                break;
+//            case PAUSE:
+//                btnGoStop.setText("开始");
+//                btnGoStop.setCompoundDrawables(null, picStart, null, null);
+//                llNav.setVisibility(View.VISIBLE);
+//                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
+//                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
+//                fam.showMenu(true);
+//                break;
+//            case HOMING:
+//                llHome.setVisibility(View.VISIBLE);
+//                fam.showMenu(true);
+//                break;
+//            case FINISH:
+//                llFinish.setVisibility(View.VISIBLE);
+//                mqttSendThreadPool.execute(new QueryTimeDisThread());
+//                fam.showMenu(true);
+//                break;
+//            default:
+//                break;
+//        }
+//    }
+
     private void hideAll() {
         llMark.setVisibility(View.GONE);
         llMethod.setVisibility(View.INVISIBLE);
@@ -691,6 +739,60 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     shipPoints.get(shipPoints.size() - 1)).width(7).color(colors[shipid])));
         }
     }
+
+//    public void handleState(int state) {
+//        // 有一个想法。目前，如果用prestate，会出现Bug，即如果点了会使App状态改变的按钮，
+//        // 而prestate不变，此时会导致状态错误。解决方法有两种，一种是在点击按钮的时候更改prestate，
+//        // 但这种方法通用性太差。另一种方法是统一船发来的state和app的state。决定采用第二种。
+////        long id = activity.getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
+//        int tempState = UNREADY;
+//        swNav.setSelectedTab(0);
+//        switch (state) {
+//            case 0:
+////                开机初始状态
+//                tempState = READY;
+//                break;
+//            case -1:
+////                连线模式运行中
+//                tempState = GONE;
+//                break;
+//            case -2:
+////                循环模式暂停
+//                swNav.setSelectedTab(1);
+//                tempState = PAUSE;
+//                break;
+//            case -3:
+////                连线模式暂停
+//                tempState = PAUSE;
+//                break;
+//            case -4:
+////                跑完了
+//                tempState = FINISH;
+//                break;
+//            case -5:
+////                返航
+//                tempState = HOMING;
+//                break;
+//            case -10:
+////                待机
+//
+//                break;
+//            default:
+//                break;
+//        }
+//        if (state > 0) {
+//            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
+//            swNav.setSelectedTab(1);
+//            tempState = GONE;
+//        }
+//        if (tempState != this.state) {
+//            if (state != -5 && state != 0) {
+////                    loadRoute(id == -1 ? null : String.valueOf(id));
+//            }
+//            this.state = UNREADY;
+//            mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
+//        }
+//    }
 
     @Override
     public void onClick(View view) {
@@ -820,34 +922,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 //                    resetMap();
 //                    long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
 //                    loadRoute(id == -1 ? null : String.valueOf(id));
-                break;
-            case R.id.btn_ctl:
-                publishMessage("$ORDER,7#");
-                break;
-            case R.id.tv_toolbar:
-                contentView = LayoutInflater.from(activity).inflate(R.layout.popup_shiplist, null);
-                recyclerView = contentView.findViewById(R.id.recyclerView);
-                shipListWindow = new PopupWindow();
-                shipListWindow.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
-                shipListWindow.setOutsideTouchable(true);
-                shipListWindow.setContentView(contentView);
-                shipListWindow.setAnimationStyle(R.style.dismiss_anim);
-                loadShipList(recyclerView, shipListWindow);
-                contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-                height = getResources().getDisplayMetrics().heightPixels / 2;
-                if (contentView.getMeasuredHeight() > height) {
-                    shipListWindow.setHeight(height);
-                } else {
-                    shipListWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
-                }
-                shipListWindow.showAsDropDown(toolbar);
-                shipListWindow.setOnDismissListener(new PopupWindow.OnDismissListener() {
-                    @Override
-                    public void onDismiss() {
-                        shipPopupWindowList = null;
-                        shipPopupWindowAdapter = null;
-                    }
-                });
                 break;
             default:
                 break;
@@ -1299,6 +1373,19 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 default:
                     break;
             }
+        }
+    }
+
+    public void handleToolbarSelect(int pos) {
+        if (pos == 0) {
+            loadAllShip(true);
+            newHandleState(-11);
+            tvBattery.setVisibility(View.INVISIBLE);
+        }
+        else {
+            newHandleState(ships.get(pos - 1).getState());
+            loadOneShip(activity.selectShip, pos - 1);
+            tvBattery.setText("剩余电量：" + ships.get(pos - 1).getBattery() + "%");
         }
     }
 }

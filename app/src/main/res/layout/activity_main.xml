@@ -7,11 +7,42 @@
     android:background="@color/toolbarBlue"
     android:fitsSystemWindows="true">
 
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/toolbarBlue"
+        android:layout_alignParentTop="true">
+
+        <TextView
+            android:id="@+id/tv_toolbar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/app_name"
+            android:drawableEnd="@drawable/shiplist"
+            android:drawablePadding="10dp"
+            android:textColor="@color/mb_white"
+            android:textSize="20sp" />
+
+        <Button
+            android:id="@+id/btn_home"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:background="#00000000"
+            android:drawableLeft="@drawable/home_white"
+            android:text="返航"
+            android:textColor="@color/mb_white"
+            android:visibility="gone" />
+    </android.support.v7.widget.Toolbar>
+
     <FrameLayout
         android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/bottom_navigation"
+        android:layout_below="@+id/toolbar"
         />
     <com.ashokvarma.bottomnavigation.BottomNavigationBar
         android:id="@+id/bottom_navigation"

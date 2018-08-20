@@ -12,7 +12,8 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/toolbarBlue">
+        android:background="@color/toolbarBlue"
+        android:visibility="gone">
 
         <TextView
             android:id="@+id/tv_toolbar"

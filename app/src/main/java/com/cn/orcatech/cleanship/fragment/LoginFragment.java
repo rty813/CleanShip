@@ -60,6 +60,17 @@ public class LoginFragment extends NoFragment implements View.OnClickListener {
     }
 
     @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (hidden) {
+            ((MainActivity)getActivity()).hideToolbar(View.VISIBLE);
+        }
+        else {
+            ((MainActivity)getActivity()).hideToolbar(View.GONE);
+        }
+    }
+
+    @Override
     public void onClick(View v) {
         final MainActivity activity = (MainActivity) getActivity();
         if (activity == null) {
