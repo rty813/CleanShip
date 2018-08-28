@@ -67,6 +67,8 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
     public int selectShip = -1;
     private Toolbar toolbar;
     private TextView tvToolbar;
+    private ArrayList<Map<String, String>> shipPopupWindowList;
+    private ShiplistAdapter shipPopupWindowAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -210,8 +212,6 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
 
     public DataFragment getDataFragment() { return (DataFragment) fragmentList.get(1); }
 
-    private ArrayList<Map<String, String>> shipPopupWindowList;
-    private ShiplistAdapter shipPopupWindowAdapter;
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.tv_toolbar) {
@@ -309,5 +309,13 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
 
     public void hideToolbar(int visibility) {
         toolbar.setVisibility(visibility);
+    }
+
+    public void updateShiplist(int pos, int status) {
+        if (shipPopupWindowAdapter != null) {
+            shipPopupWindowList.get(pos).put("status", String.valueOf(status));
+            shipPopupWindowList.get(pos).put("detail", String.valueOf(status));
+            shipPopupWindowAdapter.notifyItemChanged(pos + 1);
+        }
     }
 }

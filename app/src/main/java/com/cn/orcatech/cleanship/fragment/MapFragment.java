@@ -1,6 +1,5 @@
 package com.cn.orcatech.cleanship.fragment;
 
-import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.Context;
@@ -14,6 +13,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -61,7 +61,6 @@ import com.amap.api.services.geocoder.RegeocodeResult;
 import com.cn.orcatech.cleanship.MyReceiver;
 import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.Ship;
-import com.cn.orcatech.cleanship.ShiplistAdapter;
 import com.cn.orcatech.cleanship.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.mqtt.MqttService;
@@ -81,7 +80,6 @@ import com.yanzhenjie.recyclerview.swipe.SwipeMenuCreator;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
-import com.yanzhenjie.recyclerview.swipe.widget.DefaultItemDecoration;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -90,9 +88,7 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.lang.ref.WeakReference;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -156,6 +152,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private TextView tvCircle;
     private ExecutorService mqttSendThreadPool;
     private MainActivity activity;
+    private boolean asyncTaskFlag = false;
     public MqttCallback mqttCallBack = new MqttCallback() {
         @Override
         public void messageArrived(String topic, MqttMessage message) {
@@ -163,7 +160,10 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 Log.d(TAG, "messageArrived, topic: " + topic + "; message: " + new String(message.getPayload()));
                 if (message.toString().contains("ACK1")) {
                     mHandler.sendMessage(mHandler.obtainMessage(1, "发送成功"));
-                    if (loadingView.isShowing()) {
+                    if (asyncTaskFlag) {
+                        asyncTaskFlag = false;
+                    }
+                    else if (loadingView.isShowing()) {
                         loadingView.dismiss();
                     }
                     return;
@@ -171,6 +171,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 else if (message.toString().contains("ACK0")) {
                     mHandler.sendMessage(mHandler.obtainMessage(2, "发送失败"));
                     if (loadingView.isShowing()) {
+                        asyncTaskFlag = false;
                         loadingView.dismiss();
                     }
                     return;
@@ -230,8 +231,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     };
     private ArrayList<Ship> ships;
-    private ArrayList<Map<String, String>> shipPopupWindowList;
-    private ShiplistAdapter shipPopupWindowAdapter;
     public String topicSend = "";
 
     @Nullable
@@ -850,17 +849,15 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         line.remove();
                     }
                     traces.removeAll(traces);
-                    final StringBuilder hisBuilder = new StringBuilder();
-                    showLoadingView("正在发送");
-                    for (Marker marker : markers) {
-                        hisBuilder.append(String.format(Locale.getDefault(), "%.6f,%.6f;", marker.getPosition().latitude, marker.getPosition().longitude));
-                        publishMessage(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#", marker.getPosition().latitude, marker.getPosition().longitude));
-
-                    }
-                    publishMessageForResult(swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#");
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.getDefault());
-                    final String date = dateFormat.format(new Date(System.currentTimeMillis()));
-                    saveRoute(date, hisBuilder.toString(), pos);
+                    loadingView = new ProgressDialog(activity);
+                    loadingView.setTitle("发送中");
+                    loadingView.setCanceledOnTouchOutside(false);
+                    loadingView.setCancelable(false);
+                    loadingView.setMax(markers.size());
+                    loadingView.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                    loadingView.setIcon(R.mipmap.ic_launcher);
+                    loadingView.show();
+                    new MyAsyncTask(this).execute();
                 } else {
 //                        loadRoute(null);
                 }
@@ -996,82 +993,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     }
                 })
                 .start();
-    }
-
-    private void loadShipList(SwipeMenuRecyclerView recyclerView, final PopupWindow shipListWindow) {
-        final SharedPreferences sharedPreferences = activity.getSharedPreferences("shipname", MODE_PRIVATE);
-        shipPopupWindowList = new ArrayList<>();
-        for (int i =  0; i < activity.userInfo.getTotalship(); i++) {
-            String shipName = sharedPreferences.getString(String.valueOf(i), String.valueOf(i));
-            Map<String, String> map = new HashMap<>();
-            map.put("title", shipName);
-            map.put("detail", String.valueOf(ships.get(i).getState()));
-            map.put("status", String.valueOf(ships.get(i).getStatus()));
-            shipPopupWindowList.add(map);
-        }
-        shipPopupWindowAdapter = new ShiplistAdapter(shipPopupWindowList);
-        shipPopupWindowAdapter.notifyDataSetChanged();
-        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
-        recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
-            @SuppressLint("SetTextI18n")
-            @Override
-            public void onItemClick(View itemView, int position) {
-                if (position == 0) {
-                    tvToolbar.setText("欧卡小蓝船");
-                    loadAllShip(true);
-                    newHandleState(-11);
-                    tvBattery.setVisibility(View.INVISIBLE);
-                }
-                else {
-                    tvToolbar.setText(shipPopupWindowList.get(position - 1).get("title"));
-                    newHandleState(ships.get(position - 1).getState());
-                    loadOneShip(activity.selectShip, position - 1);
-                    tvBattery.setText("剩余电量：" + ships.get(position - 1).getBattery() + "%");
-                }
-                activity.selectShip = position - 1;
-                topicSend = String.format(Locale.getDefault(), "APP2SHIP/%d/%d", activity.userInfo.getShip_id(), position - 1);
-                shipListWindow.dismiss();
-            }
-        });
-        recyclerView.addItemDecoration(new DefaultItemDecoration(0xBB1C1C1C));
-        recyclerView.setSwipeMenuCreator(new SwipeMenuCreator() {
-            @Override
-            public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
-                DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
-                SwipeMenuItem renameItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.1))
-                        .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
-                swipeRightMenu.addMenuItem(renameItem);
-            }
-        });
-        recyclerView.setSwipeMenuItemClickListener(new SwipeMenuItemClickListener() {
-            @Override
-            public void onItemClick(SwipeMenuBridge menuBridge) {
-                menuBridge.closeMenu();
-                final int pos = menuBridge.getAdapterPosition();
-//                        重命名
-                final EditText etName = new EditText(activity);
-                etName.setHint(shipPopupWindowList.get(pos).get("title"));
-                new AlertDialog.Builder(activity)
-                        .setTitle("重命名路线")
-                        .setView(etName)
-                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialogInterface, int i) {
-                                String name = etName.getText().toString();
-                                if (name.equals("")) {
-                                    return;
-                                }
-                                shipPopupWindowList.get(pos).put("title", name);
-                                shipPopupWindowAdapter.notifyItemChanged(pos);
-                                SharedPreferences.Editor editor = sharedPreferences.edit();
-                                editor.putString(String.valueOf(pos), name);
-                                editor.apply();
-                            }
-                        })
-                        .show();
-            }
-        });
-        recyclerView.setAdapter(shipPopupWindowAdapter);
     }
 
     private void loadAllShip(boolean visiable) {
@@ -1238,14 +1159,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         return ships;
     }
 
-    public void updateShiplist(int pos, int status) {
-        if (shipPopupWindowAdapter != null) {
-            shipPopupWindowList.get(pos).put("status", String.valueOf(status));
-            shipPopupWindowList.get(pos).put("detail", String.valueOf(status));
-            shipPopupWindowAdapter.notifyItemChanged(pos + 1);
-        }
-    }
-
     public void newHandleState(int state) {
         swNav.setSelectedTab(0);
         this.markEnable = false;
@@ -1375,6 +1288,71 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             }
         }
     }
+
+
+    private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
+        private String date;
+        private WeakReference<MapFragment> fragment;
+
+        MyAsyncTask(MapFragment fragment) {
+            this.fragment = new WeakReference<>(fragment);
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            MainActivity activity = (MainActivity) this.fragment.get().getActivity();
+            MapFragment fragment = this.fragment.get();
+            final ArrayList<Marker> markers = activity.selectShip == -1 ? null : fragment.markerLists.get(activity.selectShip);
+            fragment.publishMessage("$CLEAR#");
+            try {
+                Thread.sleep(1000);
+                for (int i = 0; i < markers.size(); i++) {
+                    double latitude = markers.get(i).getPosition().latitude;
+                    double longitude = markers.get(i).getPosition().longitude;
+                    boolean success = publishMessageForResult(String.format(Locale.getDefault(), "$GNGGA,%.6f,%.6f#", latitude, longitude));
+                    if (!success) {
+                        return null;
+                    }
+                    publishProgress(i + 1);
+                    Thread.sleep(100);
+                }
+                fragment.publishMessageForResult(fragment.swNav.getSelectedTab() == 0 ? "$NAV,1#" : "$NAV,2#");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        private boolean publishMessageForResult(String data){
+            MapFragment fragment = this.fragment.get();
+            fragment.asyncTaskFlag = true;
+            fragment.publishMessage(data);
+            try {
+                for (int i = 0; i < 50; i++) {
+                    Thread.sleep(100);
+                    if (!fragment.asyncTaskFlag) {
+                        return true;
+                    }
+                    if (!fragment.loadingView.isShowing()) {
+                        return false;
+                    }
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            fragment.asyncTaskFlag = false;
+            fragment.loadingView.dismiss();
+            fragment.mHandler.sendMessage(fragment.mHandler.obtainMessage(2, "发送失败"));
+            return false;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            fragment.get().loadingView.setProgress(values[0]);
+            super.onProgressUpdate(values);
+        }
+    }
+
 
     public void handleToolbarSelect(int pos) {
         if (pos == 0) {
