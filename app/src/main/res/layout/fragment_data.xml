@@ -73,17 +73,52 @@
         android:layout_marginStart="30dp"
         android:layout_marginEnd="30dp"/>
 
-    <LinearLayout
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:id="@+id/tv_data"
         app:layout_constraintTop_toBottomOf="@+id/textView"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_margin="10dp">
-        <TextView
-            android:layout_width="wrap_content"
+        android:layout_margin="10dp"
+        android:text="数据"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@+id/btn_videoplay"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp">
+        <EditText
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:id="@+id/tv_data"
-            android:text="数据"/>
+            android:layout_weight="1"
+            android:id="@+id/et_p"
+            android:text="1"
+            android:hint="P"/>
+        <EditText
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:id="@+id/et_i"
+            android:text="0"
+            android:hint="i"/>
+        <EditText
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:id="@+id/et_d"
+            android:text="0"
+            android:hint="d"/>
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="设定"
+            android:id="@+id/btn_setPID"/>
     </LinearLayout>
+
+
 
 </android.support.constraint.ConstraintLayout>

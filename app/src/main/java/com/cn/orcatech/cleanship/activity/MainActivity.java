@@ -20,9 +20,11 @@ import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.amap.api.maps.model.LatLng;
 import com.ashokvarma.bottomnavigation.BottomNavigationBar;
 import com.ashokvarma.bottomnavigation.BottomNavigationItem;
 import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.Ship;
 import com.cn.orcatech.cleanship.ShiplistAdapter;
 import com.cn.orcatech.cleanship.UserInfo;
 import com.cn.orcatech.cleanship.fragment.DataFragment;
@@ -34,6 +36,11 @@ import com.xiaomi.mistatistic.sdk.URLStatsRecorder;
 import com.yanzhenjie.fragment.CompatActivity;
 import com.yanzhenjie.fragment.NoFragment;
 import com.yanzhenjie.nohttp.NoHttp;
+import com.yanzhenjie.nohttp.RequestMethod;
+import com.yanzhenjie.nohttp.rest.AsyncRequestExecutor;
+import com.yanzhenjie.nohttp.rest.Response;
+import com.yanzhenjie.nohttp.rest.SimpleResponseListener;
+import com.yanzhenjie.nohttp.rest.StringRequest;
 import com.yanzhenjie.recyclerview.swipe.SwipeItemClickListener;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenu;
 import com.yanzhenjie.recyclerview.swipe.SwipeMenuBridge;
@@ -45,6 +52,9 @@ import com.yanzhenjie.recyclerview.swipe.widget.DefaultItemDecoration;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -66,7 +76,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
     private long mExitTime = 0;
     public int selectShip = -1;
     private Toolbar toolbar;
-    private TextView tvToolbar;
+    public TextView tvToolbar;
     private ArrayList<Map<String, String>> shipPopupWindowList;
     private ShiplistAdapter shipPopupWindowAdapter;
 
@@ -158,6 +168,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
 //        }
 //        mapFragment.setShips(ships);
         mapFragment.initClass(userInfo.getTotalship());
+        getShipInfo();
         if (fragmentList.get(2).isVisible()) {
             fm.beginTransaction()
                     .hide(fragmentList.get(2))
@@ -176,6 +187,42 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
             e.printStackTrace();
             Toasty.error(this, "与MQTT服务器连接失败", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void getShipInfo() {
+        StringRequest request = new StringRequest("http://orca-tech.cn/app/data_select.php", RequestMethod.POST);
+        request.add("ship_id", userInfo.getShip_id());
+        AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
+            @Override
+            public void onSucceed(int what, Response<String> response) {
+                super.onSucceed(what, response);
+                try {
+                    ArrayList<Ship> ships = getMapFragment().getShips();
+                    JSONArray array = new JSONArray(response.get());
+                    for (int i = 0; i < array.length(); i++) {
+                        JSONObject objShip = array.getJSONObject(i);
+                        ships.get(i).setLat(objShip.getDouble("lat"));
+                        ships.get(i).setLng(objShip.getDouble("lng"));
+                        ships.get(i).setBattery(objShip.getInt("pd_percent"));
+                        ships.get(i).setName(objShip.getString("name"));
+                        getMapFragment().setBattery(ships.get(i).getBattery());
+                        getMapFragment().getShipPointLists(i).add(new LatLng(ships.get(i).getLat(), ships.get(i).getLng()));
+                        getMapFragment().move(i);
+                    }
+                    Toasty.success(MainActivity.this, "数据更新成功", Toast.LENGTH_SHORT).show();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+            @Override
+            public void onFailed(int what, Response<String> response) {
+                super.onFailed(what, response);
+                Toasty.error(MainActivity.this, "数据更新失败", Toast.LENGTH_SHORT).show();
+            }
+        });
+
     }
 
     public void logout() {
@@ -245,9 +292,8 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
         final SharedPreferences sharedPreferences = getSharedPreferences("shipname", MODE_PRIVATE);
         shipPopupWindowList = new ArrayList<>();
         for (int i =  0; i < userInfo.getTotalship(); i++) {
-            String shipName = sharedPreferences.getString(String.valueOf(i), String.valueOf(i));
             Map<String, String> map = new HashMap<>();
-            map.put("title", shipName);
+            map.put("title", getMapFragment().getShips().get(i).getName());
             map.put("detail", String.valueOf(getMapFragment().getShips().get(i).getState()));
             map.put("status", String.valueOf(getMapFragment().getShips().get(i).getStatus()));
             shipPopupWindowList.add(map);

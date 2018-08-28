@@ -10,6 +10,8 @@ import com.amap.api.maps.model.LatLng;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.fragment.MapFragment;
 
+import java.util.Locale;
+
 import es.dmoral.toasty.Toasty;
 
 /**
@@ -58,21 +60,6 @@ public class MyReceiver extends BroadcastReceiver {
                 else {
                     status = 1;
                 }
-//                更新state
-                if (state != mMapFragment.getShips().get(shipid).getState()) {
-//                    mMapFragment.getShips().get(shipid).setPreState(mMapFragment.getShips().get(shipid).getState());
-                    mMapFragment.getShips().get(shipid).setState(state);
-                    activity.updateShiplist(shipid, status);
-                    if (shipid == activity.selectShip) {
-                        mMapFragment.newHandleState(state);
-                    }
-                }
-
-//                更新battery
-                mMapFragment.getShips().get(shipid).setBattery(pdPercent);
-//                mMapFragment.setBattery(pdPercent);
-                mMapFragment.setBattery((int) yaw);
-
 //                更新坐标
                 mMapFragment.getShips().get(shipid).setLat(lat);
                 mMapFragment.getShips().get(shipid).setLng(lng);
@@ -81,6 +68,28 @@ public class MyReceiver extends BroadcastReceiver {
                 }
                 mMapFragment.getShipPointLists(shipid).add(new LatLng(lat, lng));
                 mMapFragment.move(shipid);
+
+
+//                更新state
+                if (state != mMapFragment.getShips().get(shipid).getState()) {
+//                    mMapFragment.getShips().get(shipid).setPreState(mMapFragment.getShips().get(shipid).getState());
+                    mMapFragment.getShips().get(shipid).setState(state);
+                    activity.updateShiplist(shipid, status);
+                    if (shipid == activity.selectShip) {
+                        mMapFragment.newHandleState(state);
+                    }
+                    if (activity.selectShip == -1 && state != -11) {
+                        mMapFragment.handleToolbarSelect(shipid + 1);
+                        activity.selectShip = shipid;
+                        mMapFragment.topicSend = String.format(Locale.getDefault(), "APP2SHIP/%d/%d", activity.userInfo.getShip_id(), shipid);
+                        activity.tvToolbar.setText(mMapFragment.getShips().get(shipid).getName());
+                    }
+                }
+
+//                更新battery
+                mMapFragment.getShips().get(shipid).setBattery(pdPercent);
+//                mMapFragment.setBattery(pdPercent);
+                mMapFragment.setBattery((int) yaw);
 
             } catch (NumberFormatException e) {
                 e.printStackTrace();

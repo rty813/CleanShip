@@ -7,8 +7,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.activity.MainActivity;
@@ -19,6 +21,10 @@ import com.yanzhenjie.fragment.NoFragment;
 
 import org.eclipse.paho.client.mqttv3.MqttException;
 
+import java.util.Locale;
+
+import es.dmoral.toasty.Toasty;
+
 public class DataFragment extends NoFragment implements View.OnClickListener {
 
     private TXLivePlayer mLivePlayer;
@@ -27,6 +33,9 @@ public class DataFragment extends NoFragment implements View.OnClickListener {
     private TextView tvData;
     private int thrust = 0;
     private int dire = 0;
+    private EditText etP;
+    private EditText etI;
+    private EditText etD;
 
     @Nullable
     @Override
@@ -44,9 +53,13 @@ public class DataFragment extends NoFragment implements View.OnClickListener {
         mLivePlayer.setRenderRotation(TXLiveConstants.RENDER_ROTATION_LANDSCAPE);
         mLivePlayer.setPlayerView(mView);
         btnPause = view.findViewById(R.id.btn_videopause);
+        etP = view.findViewById(R.id.et_p);
+        etI = view.findViewById(R.id.et_i);
+        etD = view.findViewById(R.id.et_d);
         view.findViewById(R.id.btn_videoplay).setOnClickListener(this);
         view.findViewById(R.id.btn_videopause).setOnClickListener(this);
         view.findViewById(R.id.btn_videostop).setOnClickListener(this);
+        view.findViewById(R.id.btn_setPID).setOnClickListener(this);
         ((SeekBar)view.findViewById(R.id.sb_thrust)).setProgress(10);
         ((SeekBar)view.findViewById(R.id.sb_thrust)).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -105,6 +118,10 @@ public class DataFragment extends NoFragment implements View.OnClickListener {
     @Override
     public void onClick(View view) {
         MainActivity activity = (MainActivity) getActivity();
+        if (activity.selectShip == -1) {
+            Toasty.error(activity, "请先选船", Toast.LENGTH_SHORT).show();
+            return;
+        }
         String url = "rtmp://25779.liveplay.myqcloud.com/live/25779_" + activity.userInfo.getShip_id() + "_" + activity.selectShip;
         switch (view.getId()) {
             case R.id.btn_videoplay:
@@ -131,6 +148,13 @@ public class DataFragment extends NoFragment implements View.OnClickListener {
                 mView.setVisibility(View.GONE);
                 activity.getMapFragment().publishMessage("$video;stop#");
                 mLivePlayer.stopPlay(false);
+                break;
+            case R.id.btn_setPID:
+                activity.getMapFragment().publishMessageForResult(String.format(Locale.getDefault(),
+                        "$ORDER,9,%f,%f,%f#",
+                        Float.parseFloat(etP.getText().toString()),
+                        Float.parseFloat(etI.getText().toString()),
+                        Float.parseFloat(etD.getText().toString())));
                 break;
             default:
                 break;

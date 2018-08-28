@@ -374,7 +374,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             polylineLists.add(new ArrayList<Polyline>());
             traceLists.add(new ArrayList<Polyline>());
             markerLists.add(new ArrayList<Marker>());
-            shipPointLists.get(i).add(new LatLng(0, 0));
             smoothMoveMarkers.add(new SmoothMoveMarker(aMap));
             smoothMoveMarkers.get(i).setDescriptor(BitmapDescriptorFactory.fromView(View.inflate(activity, R.layout.ship, null)));
         }
@@ -704,7 +703,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             polyline.remove();
         }
         shipPointLists.get(activity.selectShip).removeAll(shipPointLists.get(activity.selectShip));
-        shipPointLists.get(activity.selectShip).add(new LatLng(0, 0));
         markerLists.get(activity.selectShip).removeAll(markerLists.get(activity.selectShip));
         polylineLists.get(activity.selectShip).removeAll(polylineLists.get(activity.selectShip));
         traceLists.get(activity.selectShip).removeAll(traceLists.get(activity.selectShip));
@@ -720,23 +718,30 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 
     public void move(int shipid) {
         ArrayList<LatLng> shipPoints = shipPointLists.get(shipid);
-        if (shipPoints.size() == 2) {
-            LatLngBounds bounds = new LatLngBounds(shipPoints.get(1), shipPoints.get(shipPoints.size() - 1));
-            aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 50));
-            CameraUpdate mCameraUpdate = CameraUpdateFactory.zoomTo(15);
-            aMap.moveCamera(mCameraUpdate);
-        } else {
-            List<LatLng> subList = shipPoints.subList(shipPoints.size() - 2, shipPoints.size());
-            SmoothMoveMarker smoothMoveMarker = smoothMoveMarkers.get(shipid);
-            smoothMoveMarker.setPoints(subList);
-            smoothMoveMarker.setTotalDuration(1);
-            smoothMoveMarker.startSmoothMove();
-            smoothMoveMarker.getMarker().setInfoWindowEnable(false);
-            smoothMoveMarker.getMarker().setFlat(true);
-            smoothMoveMarker.getMarker().setAnchor(0.5f, 0.5f);
+        List<LatLng> subList = new ArrayList<>();
+        if (shipPoints.size() == 1) {
+            subList.add(shipPoints.get(0));
+            subList.add(shipPoints.get(0));
+        }
+        else {
+            subList = shipPoints.subList(shipPoints.size() - 2, shipPoints.size());
             traceLists.get(shipid).add(aMap.addPolyline(new PolylineOptions().add(shipPoints.get(shipPoints.size() - 2),
                     shipPoints.get(shipPoints.size() - 1)).width(7).color(colors[shipid])));
         }
+        SmoothMoveMarker smoothMoveMarker = smoothMoveMarkers.get(shipid);
+        smoothMoveMarker.setPoints(subList);
+        smoothMoveMarker.setTotalDuration(1);
+        smoothMoveMarker.startSmoothMove();
+        smoothMoveMarker.getMarker().setInfoWindowEnable(false);
+        smoothMoveMarker.getMarker().setFlat(true);
+        smoothMoveMarker.getMarker().setAnchor(0.5f, 0.5f);
+    }
+
+    public void moveCamera(int shipid) {
+        ArrayList<LatLng> shipPoints = shipPointLists.get(shipid);
+        int len = shipPoints.size();
+        aMap.animateCamera(CameraUpdateFactory.newLatLngBounds(new LatLngBounds(
+                shipPoints.get(len - 1), shipPoints.get(len - 1)), 50));
     }
 
 //    public void handleState(int state) {
@@ -1034,7 +1039,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         for (Polyline polyline : traceLists.get(id)) {
             polyline.setVisible(true);
         }
-
+        moveCamera(id);
     }
 
     private void loadHistory(final SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
@@ -1229,7 +1234,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-    private void publishMessageForResult(String data) {
+    public void publishMessageForResult(String data) {
         publishMessageForResult(data, "正在发送");
     }
 
