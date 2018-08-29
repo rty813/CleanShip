@@ -259,7 +259,7 @@
                     android:layout_height="match_parent"
                     android:layout_gravity="center_vertical"
                     android:layout_margin="20dp"
-                    android:max="600"
+                    android:max="100"
                     android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>

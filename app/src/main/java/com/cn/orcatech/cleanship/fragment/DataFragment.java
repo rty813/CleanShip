@@ -64,13 +64,7 @@ public class DataFragment extends NoFragment implements View.OnClickListener {
         ((SeekBar)view.findViewById(R.id.sb_thrust)).setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                thrust = (i - 10) * 10;
-                MainActivity activity = (MainActivity) getActivity();
-                try {
-                    activity.getMapFragment().mqttClient.publish("APP2SHIP/5/1", ("$4GCTL," + thrust + "," + dire + "#").getBytes(), 0, false);
-                } catch (MqttException e) {
-                    e.printStackTrace();
-                }
+
             }
 
             @Override
@@ -80,7 +74,13 @@ public class DataFragment extends NoFragment implements View.OnClickListener {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-
+                thrust = (seekBar.getProgress() - 10) * 10;
+                MainActivity activity = (MainActivity) getActivity();
+                try {
+                    activity.getMapFragment().mqttClient.publish("APP2SHIP/5/1", ("$4GCTL," + thrust + "," + dire + "#").getBytes(), 0, false);
+                } catch (MqttException e) {
+                    e.printStackTrace();
+                }
             }
         });
         ((SeekBar)view.findViewById(R.id.sb_dire)).setProgress(10);

@@ -316,7 +316,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 btnAbort.setVisibility(View.VISIBLE);
                 seekBar.setVisibility(View.GONE);
                 sharedPreferences.edit().putInt("seekbar", seekBar.getProgress()).apply();
-                publishMessage(String.format(Locale.getDefault(), "$ORDER,6,%d#", 1400 + seekBar.getProgress()));
+                publishMessage(String.format(Locale.getDefault(), "$ORDER,6,%d#", seekBar.getProgress()));
             }
         });
 
@@ -1308,7 +1308,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             MainActivity activity = (MainActivity) this.fragment.get().getActivity();
             MapFragment fragment = this.fragment.get();
             final ArrayList<Marker> markers = activity.selectShip == -1 ? null : fragment.markerLists.get(activity.selectShip);
-            fragment.publishMessage("$CLEAR#");
+            publishMessageForResult("$CLEAR#");
             try {
                 Thread.sleep(1000);
                 for (int i = 0; i < markers.size(); i++) {
