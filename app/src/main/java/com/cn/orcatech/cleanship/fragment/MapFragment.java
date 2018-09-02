@@ -1310,7 +1310,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             final ArrayList<Marker> markers = activity.selectShip == -1 ? null : fragment.markerLists.get(activity.selectShip);
             publishMessageForResult("$CLEAR#");
             try {
-                Thread.sleep(1000);
+                Thread.sleep(100);
                 for (int i = 0; i < markers.size(); i++) {
                     double latitude = markers.get(i).getPosition().latitude;
                     double longitude = markers.get(i).getPosition().longitude;
