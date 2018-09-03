@@ -39,7 +39,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Random;
 
 import es.dmoral.toasty.Toasty;
 
@@ -132,7 +131,6 @@ public class DataFragment extends NoFragment implements View.OnClickListener {
             }
         });
         final LineChart chart = view.findViewById(R.id.chart);
-
 
         StringRequest request = new StringRequest("http://orca-tech.cn/app/history_select.php", RequestMethod.POST);
         request.add("ship_id", 5).add("id", 1).add("start_time", "2018-08-29 00:00:00");

@@ -67,6 +67,11 @@ import com.cn.orcatech.cleanship.mqtt.MqttService;
 import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
 import com.cn.orcatech.cleanship.util.WriteThreadFactory;
 import com.yanzhenjie.fragment.NoFragment;
+import com.yanzhenjie.nohttp.RequestMethod;
+import com.yanzhenjie.nohttp.rest.AsyncRequestExecutor;
+import com.yanzhenjie.nohttp.rest.Response;
+import com.yanzhenjie.nohttp.rest.SimpleResponseListener;
+import com.yanzhenjie.nohttp.rest.StringRequest;
 import com.yanzhenjie.permission.Action;
 import com.yanzhenjie.permission.AndPermission;
 import com.yanzhenjie.permission.Permission;
@@ -208,6 +213,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                             intent.putExtra("pdCurrent", strings[5]);
                             intent.putExtra("gps_speed", strings[6]);
                             intent.putExtra("gps_stars", strings[7]);
+                            intent.putExtra("temprature", strings[9]);
                             activity.sendBroadcast(intent);
                         }
                     }
@@ -1201,6 +1207,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             case -4:
 //                跑完了
                 llFinish.setVisibility(View.VISIBLE);
+                queryTaskInfo();
                 break;
             case -5:
 //                返航
@@ -1223,6 +1230,23 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             llNav.setVisibility(View.VISIBLE);
             tvCircle.setVisibility(View.VISIBLE);
             tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
+        }
+    }
+
+    private void queryTaskInfo() {
+        if (activity.selectShip > 0) {
+            StringRequest request = new StringRequest("http://orca-tech.cn/app/taskhistory.php", RequestMethod.POST);
+            request.add("ship_id", activity.userInfo.getShip_id()).add("id", activity.selectShip).add("limit", 1).add("type", "select");
+            AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
+                @Override
+                public void onSucceed(int what, Response<String> response) {
+                    super.onSucceed(what, response);
+                    new AlertDialog.Builder(activity)
+                            .setTitle("导航结果")
+                            .setMessage(response.get())
+                            .show();
+                }
+            });
         }
     }
 
@@ -1296,7 +1320,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 
 
     private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
-        private String date;
         private WeakReference<MapFragment> fragment;
 
         MyAsyncTask(MapFragment fragment) {
