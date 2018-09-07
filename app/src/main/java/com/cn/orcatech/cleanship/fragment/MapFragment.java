@@ -151,13 +151,13 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private Button btnAbort;
     private Button btnEnable;
     private TextView tvFinish;
-    private TextView tvBattery;
     private TextView tvToolbar;
     private TextView tvDate;
     private TextView tvCircle;
     private ExecutorService mqttSendThreadPool;
     private MainActivity activity;
     private boolean asyncTaskFlag = false;
+    public static ArrayList<Ship> ships;
     public MqttCallback mqttCallBack = new MqttCallback() {
         @Override
         public void messageArrived(String topic, MqttMessage message) {
@@ -193,7 +193,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         data = data.replaceAll(Matcher.quoteReplacement("$"), "");
                         if (!"".equals(data)) {
                             String[] strings = data.split(";");
-                            if (strings.length < 7) {
+                            if (strings.length < 10) {
                                 return;
                             }
                             final String finalData = data.replace(";", "\n");
@@ -236,7 +236,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             activity.logout();
         }
     };
-    private ArrayList<Ship> ships;
     public String topicSend = "";
 
     @Nullable
@@ -299,7 +298,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         btnAbort = view.findViewById(R.id.btn_abort);
         btnEnable = view.findViewById(R.id.btn_enable);
         seekBar = view.findViewById(R.id.seekbar);
-        tvBattery = view.findViewById(R.id.tv_shipcharge);
         llMethod = view.findViewById(R.id.ll_method);
         final SharedPreferences sharedPreferences = activity.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
@@ -538,22 +536,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-    private void saveRoute(String time, String route, String address) {
-        SQLiteDatabase database = dbHelper.getWritableDatabase();
-        ContentValues cv = new ContentValues();
-        cv.put("TIME", time);
-        cv.put("ROUTE", route);
-        cv.put("NAME", address);
-        SharedPreferences.Editor editor = activity.getSharedPreferences("cleanship", MODE_PRIVATE).edit();
-        if (database.insert(SQLiteDBHelper.TABLE_NAME, null, cv) == -1) {
-            editor.putLong("route", routeID);
-        } else {
-            editor.putLong("route", -1);
-        }
-        editor.apply();
-        database.close();
-    }
-
     @Override
     public void onResume() {
         super.onResume();
@@ -648,7 +630,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 //                preState = Integer.MAX_VALUE;
 //                mqttService.close();
 //                resetMap();
-//                tvBattery.setVisibility(View.INVISIBLE);
 //                fam.hideMenu(false);
 //                break;
 //            case READY:
@@ -695,7 +676,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         llHome.setVisibility(View.GONE);
         btnHome.setVisibility(View.GONE);
         btnPoweron.setVisibility(View.GONE);
-        tvBattery.setVisibility(View.VISIBLE);
     }
 
     private void resetMap() {
@@ -712,10 +692,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         markerLists.get(activity.selectShip).removeAll(markerLists.get(activity.selectShip));
         polylineLists.get(activity.selectShip).removeAll(polylineLists.get(activity.selectShip));
         traceLists.get(activity.selectShip).removeAll(traceLists.get(activity.selectShip));
-    }
-
-    public void setBattery(int battery) {
-        tvBattery.setText(String.format(Locale.getDefault(), "剩余电量：%d%%", battery));
     }
 
     public ArrayList<LatLng> getShipPointLists(int id) {
@@ -750,64 +726,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 shipPoints.get(len - 1), shipPoints.get(len - 1)), 50));
     }
 
-//    public void handleState(int state) {
-//        // 有一个想法。目前，如果用prestate，会出现Bug，即如果点了会使App状态改变的按钮，
-//        // 而prestate不变，此时会导致状态错误。解决方法有两种，一种是在点击按钮的时候更改prestate，
-//        // 但这种方法通用性太差。另一种方法是统一船发来的state和app的state。决定采用第二种。
-////        long id = activity.getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
-//        int tempState = UNREADY;
-//        swNav.setSelectedTab(0);
-//        switch (state) {
-//            case 0:
-////                开机初始状态
-//                tempState = READY;
-//                break;
-//            case -1:
-////                连线模式运行中
-//                tempState = GONE;
-//                break;
-//            case -2:
-////                循环模式暂停
-//                swNav.setSelectedTab(1);
-//                tempState = PAUSE;
-//                break;
-//            case -3:
-////                连线模式暂停
-//                tempState = PAUSE;
-//                break;
-//            case -4:
-////                跑完了
-//                tempState = FINISH;
-//                break;
-//            case -5:
-////                返航
-//                tempState = HOMING;
-//                break;
-//            case -10:
-////                待机
-//
-//                break;
-//            default:
-//                break;
-//        }
-//        if (state > 0) {
-//            tvCircle.setText(String.format(Locale.getDefault(), "第%d圈", state));
-//            swNav.setSelectedTab(1);
-//            tempState = GONE;
-//        }
-//        if (tempState != this.state) {
-//            if (state != -5 && state != 0) {
-////                    loadRoute(id == -1 ? null : String.valueOf(id));
-//            }
-//            this.state = UNREADY;
-//            mHandler.sendMessage(mHandler.obtainMessage(8, tempState));
-//        }
-//    }
-
     @Override
     public void onClick(View view) {
         PopupWindow popupHistory;
-        PopupWindow shipListWindow;
         final ArrayList<Marker> markers = activity.selectShip == -1 ? null : markerLists.get(activity.selectShip);
         ArrayList<Polyline> polylines = activity.selectShip == -1 ? null : polylineLists.get(activity.selectShip);
         ArrayList<Polyline> traces = activity.selectShip == -1 ? null : traceLists.get(activity.selectShip);
@@ -927,9 +848,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 break;
             case R.id.btn_reload:
                 publishMessageForResult("$CLEAR#");
-//                    resetMap();
-//                    long id = getSharedPreferences("cleanship", MODE_PRIVATE).getLong("route", -1);
-//                    loadRoute(id == -1 ? null : String.valueOf(id));
+                break;
+            case R.id.btn_ctl:
+
                 break;
             default:
                 break;
@@ -1166,10 +1087,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         recyclerView.setAdapter(adapter);
     }
 
-    public ArrayList<Ship> getShips() {
-        return ships;
-    }
-
     public void newHandleState(int state) {
         swNav.setSelectedTab(0);
         this.markEnable = false;
@@ -1235,18 +1152,29 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 
     private void queryTaskInfo() {
         if (activity.selectShip > 0) {
-            StringRequest request = new StringRequest("http://orca-tech.cn/app/taskhistory.php", RequestMethod.POST);
-            request.add("ship_id", activity.userInfo.getShip_id()).add("id", activity.selectShip).add("limit", 1).add("type", "select");
-            AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
+            btnAbort.postDelayed(new Runnable() {
                 @Override
-                public void onSucceed(int what, Response<String> response) {
-                    super.onSucceed(what, response);
-                    new AlertDialog.Builder(activity)
-                            .setTitle("导航结果")
-                            .setMessage(response.get())
-                            .show();
+                public void run() {
+                    StringRequest request = new StringRequest("http://orca-tech.cn/app/taskhistory.php", RequestMethod.POST);
+                    request.add("ship_id", activity.userInfo.getShip_id()).add("id", activity.selectShip).add("limit", 1).add("type", "select");
+                    AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
+                        @Override
+                        public void onSucceed(int what, final Response<String> response) {
+                            super.onSucceed(what, response);
+                            activity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    new AlertDialog.Builder(activity)
+                                            .setTitle("导航结果")
+                                            .setMessage(response.get())
+                                            .show();
+                                }
+                            });
+                        }
+                    });
                 }
-            });
+            }, 1000);
+
         }
     }
 
@@ -1318,7 +1246,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-
     private static class MyAsyncTask extends AsyncTask<Void, Integer, Void> {
         private WeakReference<MapFragment> fragment;
 
@@ -1381,17 +1308,14 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-
     public void handleToolbarSelect(int pos) {
         if (pos == 0) {
             loadAllShip(true);
             newHandleState(-11);
-            tvBattery.setVisibility(View.INVISIBLE);
         }
         else {
             newHandleState(ships.get(pos - 1).getState());
             loadOneShip(activity.selectShip, pos - 1);
-            tvBattery.setText("剩余电量：" + ships.get(pos - 1).getBattery() + "%");
         }
     }
 }

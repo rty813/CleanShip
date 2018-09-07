@@ -79,18 +79,6 @@
                     android:background="#00000000"
                     android:text="历史路线" />
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/tv_shipcharge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
-                android:layout_marginTop="5dp"
-                android:background="#86ffffff"
-                android:padding="5dp"
-                android:text="剩余电量：100%"
-                android:textColor="@android:color/black"
-                android:visibility="invisible" />
         </LinearLayout>
 
         <Button
@@ -347,11 +335,6 @@
             android:layout_marginBottom="50dp"
             android:layout_gravity="end|center_vertical"
             android:src="@drawable/change_map"
-            app:menu_backgroundColor="#65000000"
-            app:menu_colorNormal="@color/velGray"
-            app:menu_colorPressed="#6b6b6b"
-            app:menu_openDirection="down"
-            app:menu_showShadow="true"
             app:fab_size="mini">
         </android.support.design.widget.FloatingActionButton>
 

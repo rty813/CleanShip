@@ -50,6 +50,7 @@ public class MyReceiver extends BroadcastReceiver {
                 double lat = Double.parseDouble(latlng[0]);
                 double lng = Double.parseDouble(latlng[1]);
                 float yaw = Float.parseFloat(intent.getStringExtra("yaw"));
+                float temprature = Float.parseFloat(intent.getStringExtra("temprature"));
                 int status;
                 if (state == -10) {
                     status = 0;
@@ -61,8 +62,8 @@ public class MyReceiver extends BroadcastReceiver {
                     status = 1;
                 }
 //                更新坐标
-                mMapFragment.getShips().get(shipid).setLat(lat);
-                mMapFragment.getShips().get(shipid).setLng(lng);
+                MapFragment.ships.get(shipid).setLat(lat);
+                MapFragment.ships.get(shipid).setLng(lng);
                 if (lat < 0 || lat > 55 || lng < 70 || lng > 136) {
                     return;
                 }
@@ -71,9 +72,9 @@ public class MyReceiver extends BroadcastReceiver {
 
 
 //                更新state
-                if (state != mMapFragment.getShips().get(shipid).getState()) {
-//                    mMapFragment.getShips().get(shipid).setPreState(mMapFragment.getShips().get(shipid).getState());
-                    mMapFragment.getShips().get(shipid).setState(state);
+                if (state != MapFragment.ships.get(shipid).getState()) {
+//                    MapFragment.ships.get(shipid).setPreState(MapFragment.ships.get(shipid).getState());
+                    MapFragment.ships.get(shipid).setState(state);
                     activity.updateShiplist(shipid, status);
                     if (shipid == activity.selectShip) {
                         mMapFragment.newHandleState(state);
@@ -82,15 +83,20 @@ public class MyReceiver extends BroadcastReceiver {
                         mMapFragment.handleToolbarSelect(shipid + 1);
                         activity.selectShip = shipid;
                         mMapFragment.topicSend = String.format(Locale.getDefault(), "APP2SHIP/%d/%d", activity.userInfo.getShip_id(), shipid);
-                        activity.tvToolbar.setText(mMapFragment.getShips().get(shipid).getName());
+                        activity.tvToolbar.setText(MapFragment.ships.get(shipid).getName());
                     }
                 }
 
-//                更新battery
-                mMapFragment.getShips().get(shipid).setBattery(pdPercent);
-//                mMapFragment.setBattery(pdPercent);
-                mMapFragment.setBattery((int) yaw);
+//                更新电量和低电量报警
+                if (pdPercent != MapFragment.ships.get(shipid).getBattery()) {
+                    MapFragment.ships.get(shipid).setBattery(pdPercent);
+                    if (pdPercent <= 20 && pdPercent % 5 == 0) {
+                        activity.lowPdNotify(shipid);
+                    }
+                }
 
+//                更新温度
+                MapFragment.ships.get(shipid).setTemprature(temprature);
             } catch (NumberFormatException e) {
                 e.printStackTrace();
             }

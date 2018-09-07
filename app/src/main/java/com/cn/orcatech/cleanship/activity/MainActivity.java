@@ -1,12 +1,18 @@
 package com.cn.orcatech.cleanship.activity;
 
 import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.Toolbar;
@@ -24,9 +30,9 @@ import com.amap.api.maps.model.LatLng;
 import com.ashokvarma.bottomnavigation.BottomNavigationBar;
 import com.ashokvarma.bottomnavigation.BottomNavigationItem;
 import com.cn.orcatech.cleanship.R;
-import com.cn.orcatech.cleanship.Ship;
 import com.cn.orcatech.cleanship.ShiplistAdapter;
 import com.cn.orcatech.cleanship.UserInfo;
+import com.cn.orcatech.cleanship.fragment.ControlFragment;
 import com.cn.orcatech.cleanship.fragment.DataFragment;
 import com.cn.orcatech.cleanship.fragment.LoginFragment;
 import com.cn.orcatech.cleanship.fragment.MapFragment;
@@ -102,6 +108,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
         fragmentList = new ArrayList<>();
         fragmentList.add(new MapFragment());
         fragmentList.add(new DataFragment());
+        fragmentList.add(new ControlFragment());
         fragmentList.add(new LoginFragment());
         fragmentList.add(new UserInfoFragment());
 
@@ -119,8 +126,8 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
             public void onTabSelected(int position) {
                 hideAllFragments();
                 FragmentTransaction transaction = fm.beginTransaction();
-                if (position == 2 && hasLogin) {
-                    transaction.show(fragmentList.get(3));
+                if (position == 3 && hasLogin) {
+                    transaction.show(fragmentList.get(4));
                 }
                 else {
                     transaction.show(fragmentList.get(position));
@@ -140,6 +147,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
         });
         navigationBar.addItem(new BottomNavigationItem(R.drawable.map_plane, "地图"))
                 .addItem(new BottomNavigationItem(R.drawable.bottom_data, "数据"))
+                .addItem(new BottomNavigationItem(R.drawable.app_ctl, "控制"))
                 .addItem(new BottomNavigationItem(R.drawable.store, "个人"))
                 .setFirstSelectedPosition(0)
                 .initialise();
@@ -160,7 +168,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
 
     public void loginSuccess() {
         hasLogin = true;
-        ((UserInfoFragment)fragmentList.get(3)).setUserinfo(userInfo);
+        ((UserInfoFragment) fragmentList.get(4)).setUserinfo(userInfo);
         MapFragment mapFragment = getMapFragment();
 //        ships = new ArrayList<>();
 //        for (int i = 0; i < userInfo.getTotalship(); i++) {
@@ -169,10 +177,10 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
 //        mapFragment.setShips(ships);
         mapFragment.initClass(userInfo.getTotalship());
         getShipInfo();
-        if (fragmentList.get(2).isVisible()) {
+        if (fragmentList.get(3).isVisible()) {
             fm.beginTransaction()
-                    .hide(fragmentList.get(2))
-                    .show(fragmentList.get(3))
+                    .hide(fragmentList.get(3))
+                    .show(fragmentList.get(4))
                     .commit();
         }
         try {
@@ -182,7 +190,6 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
             mqttClient.connect();
             mqttClient.subscribe("SHIP2APP/" + userInfo.getShip_id() + "/#");
             Toasty.info(this, "已建立MQTT连接", Toast.LENGTH_SHORT).show();
-//            sendBroadcast(new Intent(MqttService.MQTT_ONCONNCET));
         } catch (MqttException e) {
             e.printStackTrace();
             Toasty.error(this, "与MQTT服务器连接失败", Toast.LENGTH_SHORT).show();
@@ -197,16 +204,14 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
             public void onSucceed(int what, Response<String> response) {
                 super.onSucceed(what, response);
                 try {
-                    ArrayList<Ship> ships = getMapFragment().getShips();
                     JSONArray array = new JSONArray(response.get());
                     for (int i = 0; i < array.length(); i++) {
                         JSONObject objShip = array.getJSONObject(i);
-                        ships.get(i).setLat(objShip.getDouble("lat"));
-                        ships.get(i).setLng(objShip.getDouble("lng"));
-                        ships.get(i).setBattery(objShip.getInt("pd_percent"));
-                        ships.get(i).setName(objShip.getString("name"));
-                        getMapFragment().setBattery(ships.get(i).getBattery());
-                        getMapFragment().getShipPointLists(i).add(new LatLng(ships.get(i).getLat(), ships.get(i).getLng()));
+                        MapFragment.ships.get(i).setLat(objShip.getDouble("lat"));
+                        MapFragment.ships.get(i).setLng(objShip.getDouble("lng"));
+                        MapFragment.ships.get(i).setBattery(objShip.getInt("pd_percent"));
+                        MapFragment.ships.get(i).setName(objShip.getString("name"));
+                        getMapFragment().getShipPointLists(i).add(new LatLng(MapFragment.ships.get(i).getLat(), MapFragment.ships.get(i).getLng()));
                         getMapFragment().move(i);
                     }
                     Toasty.success(MainActivity.this, "数据更新成功", Toast.LENGTH_SHORT).show();
@@ -226,14 +231,11 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
     }
 
     public void logout() {
-//        SharedPreferences.Editor editor = getSharedPreferences("userinfo", MODE_PRIVATE).edit();
-//        editor.clear();
-//        editor.apply();
         hasLogin = false;
-        if (fragmentList.get(3).isVisible()) {
+        if (fragmentList.get(4).isVisible()) {
             fm.beginTransaction()
-                    .hide(fragmentList.get(3))
-                    .show(fragmentList.get(2))
+                    .hide(fragmentList.get(4))
+                    .show(fragmentList.get(3))
                     .commit();
         }
         userInfo = new UserInfo();
@@ -293,9 +295,9 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
         shipPopupWindowList = new ArrayList<>();
         for (int i =  0; i < userInfo.getTotalship(); i++) {
             Map<String, String> map = new HashMap<>();
-            map.put("title", getMapFragment().getShips().get(i).getName());
-            map.put("detail", String.valueOf(getMapFragment().getShips().get(i).getState()));
-            map.put("status", String.valueOf(getMapFragment().getShips().get(i).getStatus()));
+            map.put("title", MapFragment.ships.get(i).getName());
+            map.put("detail", String.valueOf(MapFragment.ships.get(i).getState()));
+            map.put("status", String.valueOf(MapFragment.ships.get(i).getStatus()));
             shipPopupWindowList.add(map);
         }
         shipPopupWindowAdapter = new ShiplistAdapter(shipPopupWindowList);
@@ -363,5 +365,27 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
             shipPopupWindowList.get(pos).put("detail", String.valueOf(status));
             shipPopupWindowAdapter.notifyItemChanged(pos + 1);
         }
+    }
+
+    public void lowPdNotify(int shipid) {
+        NotificationManager notificationManager = (NotificationManager) this.getSystemService(NOTIFICATION_SERVICE);
+        NotificationCompat.Builder builder;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel notificationChannel = new NotificationChannel("2", "低电量", NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel(notificationChannel);
+            builder = new NotificationCompat.Builder(this, "2");
+        } else {
+            builder = new NotificationCompat.Builder(this);
+        }
+        builder.setContentIntent(PendingIntent.getActivity(this, 3,
+                new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT))
+                .setContentTitle(MapFragment.ships.get(shipid).getName())
+                .setContentText("低电量：" + MapFragment.ships.get(shipid).getBattery() + "%")
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setSmallIcon(R.mipmap.ic_launcher);
+        Notification notification = builder.build();
+        notificationManager.notify(shipid, notification);
     }
 }
