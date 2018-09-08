@@ -213,7 +213,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                             intent.putExtra("pdCurrent", strings[5]);
                             intent.putExtra("gps_speed", strings[6]);
                             intent.putExtra("gps_stars", strings[7]);
-                            intent.putExtra("temprature", strings[9]);
+                            intent.putExtra("temperature", strings[9]);
                             activity.sendBroadcast(intent);
                         }
                     }

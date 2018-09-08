@@ -18,10 +18,9 @@ import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.IAxisValueFormatter;
 import com.yanzhenjie.fragment.NoFragment;
 import com.yanzhenjie.nohttp.RequestMethod;
-import com.yanzhenjie.nohttp.rest.AsyncRequestExecutor;
 import com.yanzhenjie.nohttp.rest.Response;
-import com.yanzhenjie.nohttp.rest.SimpleResponseListener;
 import com.yanzhenjie.nohttp.rest.StringRequest;
+import com.yanzhenjie.nohttp.rest.SyncRequestExecutor;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,6 +31,13 @@ import java.util.List;
 
 public class DataFragment extends NoFragment {
     private TextView tvData;
+    public static final int CHART_BATTERY = 0;
+    public static final int CHART_YAW = 1;
+    public static final int CHART_TEMP = 2;
+    private ArrayList<LineChart> charts;
+    private ArrayList<LineData> lineDatas;
+    private ArrayList<ArrayList<String>> times;
+    private int chartCount[];
 
     @Nullable
     @Override
@@ -44,37 +50,90 @@ public class DataFragment extends NoFragment {
         super.onViewCreated(view, savedInstanceState);
 
         tvData = view.findViewById(R.id.tv_data);
-        final LineChart chart = view.findViewById(R.id.chart);
+        charts = new ArrayList<>();
+        charts.add((LineChart) view.findViewById(R.id.chart_battery));
+        charts.add((LineChart) view.findViewById(R.id.chart_yaw));
+        charts.add((LineChart) view.findViewById(R.id.chart_temperature));
 
-        StringRequest request = new StringRequest("http://orca-tech.cn/app/history_select.php", RequestMethod.POST);
-        request.add("ship_id", 5).add("id", 1).add("limit", "5000");
-        AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
+        lineDatas = new ArrayList<>();
+        lineDatas.add(new LineData(new LineDataSet(new ArrayList<Entry>(), "电量")));
+        lineDatas.add(new LineData(new LineDataSet(new ArrayList<Entry>(), "航向角")));
+        lineDatas.add(new LineData(new LineDataSet(new ArrayList<Entry>(), "温度")));
+
+        chartCount = new int[charts.size()];
+
+        times = new ArrayList<>();
+        for (int i = 0; i < charts.size(); i++) {
+            chartCount[i] = 0;
+            times.add(new ArrayList<String>());
+            XAxis axis = charts.get(i).getXAxis();
+            axis.setPosition(XAxis.XAxisPosition.BOTTOM);
+            axis.setValueFormatter(new MyXFormatter(times.get(i)));
+            axis.setLabelCount(8);
+        }
+
+        new Thread(new Runnable() {
             @Override
-            public void onSucceed(int what, Response<String> response) {
-                super.onSucceed(what, response);
-                try {
-                    List<String> time = new ArrayList<>();
-                    List<Entry> entries = new ArrayList<>();
-                    JSONArray array = new JSONArray(response.get());
-                    for (int i = array.length() - 1; i >= 0; i--) {
-                        JSONObject objHistory = array.getJSONObject(i);
-                        time.add(objHistory.getString("time").split(" ")[1].substring(0, 5));
-                        entries.add(new Entry(array.length() - i - 1, objHistory.getInt("pd_percent")));
-                    }
-                    LineDataSet dataSet = new LineDataSet(entries, "电量");
-                    LineData lineData = new LineData(dataSet);
-                    chart.setData(lineData);
-                    chart.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM);
-                    XAxis axis = chart.getXAxis();
-                    axis.setValueFormatter(new MyXFormatter(time));
-                    axis.setLabelCount(8);
-                    chart.invalidate();
+            public void run() {
+                StringRequest request = new StringRequest("http://orca-tech.cn/app/history_select.php", RequestMethod.POST);
+                request.add("ship_id", 5).add("id", 1).add("limit", "5000");
+                Response<String> response = SyncRequestExecutor.INSTANCE.execute(request);
+                if (response.isSucceed()) {
+                    try {
+                        JSONArray array = new JSONArray(response.get());
+                        for (int i = array.length() - 1; i >= 0; i--) {
+                            System.out.println(i);
+                            final JSONObject jsonObject = array.getJSONObject(i);
 
-                } catch (JSONException e) {
-                    e.printStackTrace();
+                            final String time = jsonObject.getString("time");
+                            final int pdPercent = jsonObject.getInt("pd_percent");
+                            final float yaw = (float) jsonObject.getDouble("yaw");
+                            int temp1 = jsonObject.getInt("temperature");
+                            if (temp1 < 10 || temp1 > 80) {
+                                temp1 = (int) lineDatas.get(CHART_TEMP).getDataSetByIndex(0)
+                                        .getEntryForIndex(lineDatas.get(CHART_TEMP).getDataSetByIndex(0).getEntryCount() - 1)
+                                        .getY();
+                            }
+                            final int temp = temp1;
+
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    addEntry(0, pdPercent, time);
+                                    addEntry(1, yaw, time);
+                                    addEntry(2, temp, time);
+                                }
+                            });
+                            Thread.sleep(100);
+                        }
+                    } catch (JSONException | InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        });
+        }).start();
+    }
+
+    public void addEntry(int index, float data, String time) {
+        if (chartCount[index] == 0) {
+            charts.get(index).setData(lineDatas.get(index));
+        }
+        this.times.get(index).add(time.split(" ")[1].substring(0, 5));
+        lineDatas.get(index).addEntry(new Entry(chartCount[index]++, data), 0);
+        if (lineDatas.get(index).getEntryCount() > 500) {
+            Entry entry = lineDatas.get(index).getDataSetByIndex(0).getEntryForIndex(0);
+            lineDatas.get(index).removeEntry(entry, 0);
+        }
+        charts.get(index).notifyDataSetChanged();
+        charts.get(index).invalidate();
+    }
+
+    public void clearChart(int index) {
+        times.get(index).clear();
+        charts.get(index).clear();
+        lineDatas.set(index, new LineData(new LineDataSet(new ArrayList<Entry>(), "电量")));
+        charts.get(index).setData(lineDatas.get(index));
+        charts.get(index).invalidate();
     }
 
     public class MyXFormatter implements IAxisValueFormatter {

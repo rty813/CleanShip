@@ -50,7 +50,7 @@ public class MyReceiver extends BroadcastReceiver {
                 double lat = Double.parseDouble(latlng[0]);
                 double lng = Double.parseDouble(latlng[1]);
                 float yaw = Float.parseFloat(intent.getStringExtra("yaw"));
-                float temprature = Float.parseFloat(intent.getStringExtra("temprature"));
+                float temperature = Float.parseFloat(intent.getStringExtra("temperature"));
                 int status;
                 if (state == -10) {
                     status = 0;
@@ -96,7 +96,7 @@ public class MyReceiver extends BroadcastReceiver {
                 }
 
 //                更新温度
-                MapFragment.ships.get(shipid).setTemprature(temprature);
+                MapFragment.ships.get(shipid).setTemprature(temperature);
             } catch (NumberFormatException e) {
                 e.printStackTrace();
             }
