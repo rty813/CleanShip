@@ -400,6 +400,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         aMap.getUiSettings().setCompassEnabled(false);
         aMap.getUiSettings().setMyLocationButtonEnabled(true);
         aMap.getUiSettings().setZoomControlsEnabled(false);
+        aMap.setMapType(AMap.MAP_TYPE_SATELLITE);
         aMap.setOnMarkerClickListener(new AMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
@@ -848,9 +849,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 break;
             case R.id.btn_reload:
                 publishMessageForResult("$CLEAR#");
-                break;
-            case R.id.btn_ctl:
-
                 break;
             default:
                 break;

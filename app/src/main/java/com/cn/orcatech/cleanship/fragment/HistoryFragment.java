@@ -98,6 +98,8 @@ public class HistoryFragment extends NoFragment implements SwipeItemClickListene
     public void onItemClick(View itemView, int position) {
         Intent intent = new Intent(getActivity(), TaskDetailActivity.class);
         intent.putExtra("task", (Serializable) list.get(position));
+        intent.putExtra("id", ((MainActivity) getActivity()).selectShip);
+        intent.putExtra("ship_id", ((MainActivity) getActivity()).userInfo.getShip_id());
         startActivityForResult(intent, 0);
     }
 
