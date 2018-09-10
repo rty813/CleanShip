@@ -82,7 +82,6 @@ public class DataFragment extends NoFragment {
                     try {
                         JSONArray array = new JSONArray(response.get());
                         for (int i = array.length() - 1; i >= 0; i--) {
-                            System.out.println(i);
                             final JSONObject jsonObject = array.getJSONObject(i);
 
                             final String time = jsonObject.getString("time");
@@ -148,8 +147,6 @@ public class DataFragment extends NoFragment {
             return mValues.get((int)(value));
         }
     }
-
-
 
     public void setData(String data) {
         tvData.setText(data);

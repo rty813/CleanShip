@@ -1,4 +1,4 @@
-package com.cn.orcatech.cleanship;
+package com.cn.orcatech.cleanship.adapter;
 
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -7,6 +7,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.cn.orcatech.cleanship.R;
+
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -14,7 +16,7 @@ import java.util.Map;
  * Created by doufu on 2017/11/30.
  */
 
-public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter{
+public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter {
 
     private ArrayList<Map<String, String>> list;
 
@@ -48,6 +50,7 @@ public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter{
         private TextView tv_title;
         private TextView tv_detail;
         private ImageView iv_top;
+
         public MyViewHolder(View itemView) {
             super(itemView);
             tv_title = itemView.findViewById(R.id.tv_title);
@@ -67,7 +70,4 @@ public class SwipeRecyclerViewAdapter extends RecyclerView.Adapter{
             return iv_top;
         }
     }
-
-    
-
 }

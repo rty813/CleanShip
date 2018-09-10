@@ -74,7 +74,7 @@ import com.amap.api.services.geocoder.RegeocodeQuery;
 import com.amap.api.services.geocoder.RegeocodeResult;
 import com.cn.orcatech.cleanship.MyReceiver;
 import com.cn.orcatech.cleanship.R;
-import com.cn.orcatech.cleanship.SwipeRecyclerViewAdapter;
+import com.cn.orcatech.cleanship.adapter.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.ble.BleStateReceiver;
 import com.cn.orcatech.cleanship.ble.BluetoothLeService;
 import com.cn.orcatech.cleanship.ble.CoreService;
@@ -955,7 +955,7 @@ public class NewActivity extends AppCompatActivity implements View.OnClickListen
                 // 是否是省电模式
                 PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
                 Class<?> cls = pm.getClass();
-                Method method1 = cls.getMethod("isPowerSaveMode", new Class<?>[]{});
+                Method method1 = cls.getMethod("isPowerSaveMode");
                 Method method2 = cls.getMethod("isIgnoringBatteryOptimizations", String.class);
                 boolean isSavedMode = (Boolean) method1.invoke(pm, new Object[]{});
                 boolean isWhileList = (Boolean) method2.invoke(pm, getPackageName());

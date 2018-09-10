@@ -116,7 +116,8 @@
             </intent-filter>
         </activity>
         <activity android:name=".activity.LogonActivity" />
-        <activity android:name=".activity.ForgetPwActivity"></activity>
+        <activity android:name=".activity.ForgetPwActivity" />
+        <activity android:name=".activity.TaskDetailActivity"></activity>
     </application>
 
 </manifest>

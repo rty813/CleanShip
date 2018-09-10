@@ -1,4 +1,4 @@
-package com.cn.orcatech.cleanship;
+package com.cn.orcatech.cleanship.adapter;
 
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -6,6 +6,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import com.cn.orcatech.cleanship.R;
 
 import java.util.ArrayList;
 import java.util.Map;

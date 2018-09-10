@@ -30,10 +30,11 @@ import com.amap.api.maps.model.LatLng;
 import com.ashokvarma.bottomnavigation.BottomNavigationBar;
 import com.ashokvarma.bottomnavigation.BottomNavigationItem;
 import com.cn.orcatech.cleanship.R;
-import com.cn.orcatech.cleanship.ShiplistAdapter;
 import com.cn.orcatech.cleanship.UserInfo;
+import com.cn.orcatech.cleanship.adapter.ShiplistAdapter;
 import com.cn.orcatech.cleanship.fragment.ControlFragment;
 import com.cn.orcatech.cleanship.fragment.DataFragment;
+import com.cn.orcatech.cleanship.fragment.HistoryFragment;
 import com.cn.orcatech.cleanship.fragment.LoginFragment;
 import com.cn.orcatech.cleanship.fragment.MapFragment;
 import com.cn.orcatech.cleanship.fragment.UserInfoFragment;
@@ -108,6 +109,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
         fragmentList = new ArrayList<>();
         fragmentList.add(new MapFragment());
         fragmentList.add(new DataFragment());
+        fragmentList.add(new HistoryFragment());
         fragmentList.add(new ControlFragment());
         fragmentList.add(new LoginFragment());
         fragmentList.add(new UserInfoFragment());
@@ -119,15 +121,15 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
         transaction.show(fragmentList.get(0));
         transaction.commit();
 
-        navigationBar.setMode(BottomNavigationBar.MODE_FIXED);
+        navigationBar.setMode(BottomNavigationBar.MODE_DEFAULT);
         navigationBar.setBackgroundStyle(BottomNavigationBar.BACKGROUND_STYLE_STATIC);
         navigationBar.setTabSelectedListener(new BottomNavigationBar.OnTabSelectedListener() {
             @Override
             public void onTabSelected(int position) {
                 hideAllFragments();
                 FragmentTransaction transaction = fm.beginTransaction();
-                if (position == 3 && hasLogin) {
-                    transaction.show(fragmentList.get(4));
+                if (position == 4 && hasLogin) {
+                    transaction.show(fragmentList.get(5));
                 }
                 else {
                     transaction.show(fragmentList.get(position));
@@ -147,6 +149,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
         });
         navigationBar.addItem(new BottomNavigationItem(R.drawable.map_plane, "地图"))
                 .addItem(new BottomNavigationItem(R.drawable.bottom_data, "数据"))
+                .addItem(new BottomNavigationItem(R.drawable.history, "历史"))
                 .addItem(new BottomNavigationItem(R.drawable.app_ctl, "控制"))
                 .addItem(new BottomNavigationItem(R.drawable.store, "个人"))
                 .setFirstSelectedPosition(0)
@@ -168,19 +171,14 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
 
     public void loginSuccess() {
         hasLogin = true;
-        ((UserInfoFragment) fragmentList.get(4)).setUserinfo(userInfo);
+        ((UserInfoFragment) fragmentList.get(5)).setUserinfo(userInfo);
         MapFragment mapFragment = getMapFragment();
-//        ships = new ArrayList<>();
-//        for (int i = 0; i < userInfo.getTotalship(); i++) {
-//            ships.add(new Ship());
-//        }
-//        mapFragment.setShips(ships);
         mapFragment.initClass(userInfo.getTotalship());
         getShipInfo();
-        if (fragmentList.get(3).isVisible()) {
+        if (fragmentList.get(4).isVisible()) {
             fm.beginTransaction()
-                    .hide(fragmentList.get(3))
-                    .show(fragmentList.get(4))
+                    .hide(fragmentList.get(4))
+                    .show(fragmentList.get(5))
                     .commit();
         }
         try {
@@ -232,10 +230,10 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
 
     public void logout() {
         hasLogin = false;
-        if (fragmentList.get(4).isVisible()) {
+        if (fragmentList.get(5).isVisible()) {
             fm.beginTransaction()
-                    .hide(fragmentList.get(4))
-                    .show(fragmentList.get(3))
+                    .hide(fragmentList.get(5))
+                    .show(fragmentList.get(4))
                     .commit();
         }
         userInfo = new UserInfo();
@@ -260,6 +258,10 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
     }
 
     public DataFragment getDataFragment() { return (DataFragment) fragmentList.get(1); }
+
+    public HistoryFragment getHistoryFragment() {
+        return (HistoryFragment) fragmentList.get(2);
+    }
 
     @Override
     public void onClick(View view) {
@@ -309,6 +311,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
             public void onItemClick(View itemView, int position) {
                 getMapFragment().handleToolbarSelect(position);
                 selectShip = position - 1;
+                getHistoryFragment().update(MainActivity.this, selectShip);
                 getMapFragment().topicSend = String.format(Locale.getDefault(), "APP2SHIP/%d/%d", userInfo.getShip_id(), position - 1);
                 tvToolbar.setText(position == 0 ? "欧卡小蓝船" : shipPopupWindowList.get(position - 1).get("title"));
                 shipListWindow.dismiss();
