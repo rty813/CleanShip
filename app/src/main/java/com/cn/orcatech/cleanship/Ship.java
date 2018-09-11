@@ -9,14 +9,14 @@ public class Ship {
     // state 正数=循环模式第几圈且正在运行 0=刚上电啥都没干 -1=连线模式运行中 -2=循环模式暂停 -3=连线模式暂停 -4=连线模式结束 -5=返航 -10=待机 -11=关机
     private int state = -11;
     private int turns = 0;
-    private double temprature = 0;
+    private short temprature1 = 0;
+    private short temprature2 = 0;
+    private short temprature3 = 0;
 
-    public double getTemprature() {
-        return temprature;
-    }
-
-    public void setTemprature(double temprature) {
-        this.temprature = temprature;
+    public void setTemprature(short temp1, short temp2, short temp3) {
+        this.temprature1 = temp1;
+        this.temprature2 = temp2;
+        this.temprature3 = temp3;
     }
 
     public double getLat() {

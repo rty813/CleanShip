@@ -8,8 +8,11 @@ import android.widget.Toast;
 
 import com.amap.api.maps.model.LatLng;
 import com.cn.orcatech.cleanship.activity.MainActivity;
+import com.cn.orcatech.cleanship.fragment.DataFragment;
 import com.cn.orcatech.cleanship.fragment.MapFragment;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 
 import es.dmoral.toasty.Toasty;
@@ -50,7 +53,10 @@ public class MyReceiver extends BroadcastReceiver {
                 double lat = Double.parseDouble(latlng[0]);
                 double lng = Double.parseDouble(latlng[1]);
                 float yaw = Float.parseFloat(intent.getStringExtra("yaw"));
-                float temperature = Float.parseFloat(intent.getStringExtra("temperature"));
+                String[] temperature = intent.getStringExtra("temperature").split(",");
+                short temperature1 = Short.parseShort(temperature[0]);
+                short temperature2 = Short.parseShort(temperature[1]);
+                short temperature3 = Short.parseShort(temperature[2]);
                 int status;
                 if (state == -10) {
                     status = 0;
@@ -61,6 +67,13 @@ public class MyReceiver extends BroadcastReceiver {
                 else {
                     status = 1;
                 }
+
+//                更新图表
+                String time = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.getDefault()).format(new Date());
+                activity.getDataFragment().addEntry(DataFragment.CHART_BATTERY, pdPercent, time);
+                activity.getDataFragment().addEntry(DataFragment.CHART_YAW, yaw, time);
+                activity.getDataFragment().addEntry(DataFragment.CHART_TEMP, temperature1, temperature2, temperature3, time);
+
 //                更新坐标
                 MapFragment.ships.get(shipid).setLat(lat);
                 MapFragment.ships.get(shipid).setLng(lng);
@@ -81,6 +94,7 @@ public class MyReceiver extends BroadcastReceiver {
                     }
                     if (activity.selectShip == -1 && state != -11) {
                         mMapFragment.handleToolbarSelect(shipid + 1);
+                        activity.getHistoryFragment().update(activity, shipid);
                         activity.selectShip = shipid;
                         mMapFragment.topicSend = String.format(Locale.getDefault(), "APP2SHIP/%d/%d", activity.userInfo.getShip_id(), shipid);
                         activity.tvToolbar.setText(MapFragment.ships.get(shipid).getName());
@@ -96,7 +110,7 @@ public class MyReceiver extends BroadcastReceiver {
                 }
 
 //                更新温度
-                MapFragment.ships.get(shipid).setTemprature(temperature);
+                MapFragment.ships.get(shipid).setTemprature(temperature1, temperature2, temperature3);
             } catch (NumberFormatException e) {
                 e.printStackTrace();
             }

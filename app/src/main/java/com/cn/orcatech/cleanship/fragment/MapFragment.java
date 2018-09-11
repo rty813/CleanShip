@@ -187,7 +187,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     if (ship_id > activity.userInfo.getTotalship() - 1) {
                         return;
                     }
-                    String data = message.toString();
+                    String data = message.toString().trim();
                     if (data.startsWith("$") && data.endsWith("#")) {
                         data = data.replaceAll("#", "");
                         data = data.replaceAll(Matcher.quoteReplacement("$"), "");
@@ -216,6 +216,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                             intent.putExtra("temperature", strings[9]);
                             activity.sendBroadcast(intent);
                         }
+                    } else {
+                        mHandler.sendMessage(mHandler.obtainMessage(3, data));
                     }
                 }
                 catch (NumberFormatException e){
@@ -1237,6 +1239,9 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     break;
                 case 2:
                     Toasty.error(activity, (String) msg.obj, Toast.LENGTH_SHORT).show();
+                    break;
+                case 3:
+                    Toasty.warning(activity, (String) msg.obj, Toast.LENGTH_SHORT).show();
                     break;
                 default:
                     break;
