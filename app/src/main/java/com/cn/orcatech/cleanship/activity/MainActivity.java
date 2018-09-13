@@ -8,7 +8,9 @@ import android.app.PendingIntent;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
@@ -59,6 +61,7 @@ import com.yanzhenjie.recyclerview.swipe.widget.DefaultItemDecoration;
 
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -182,7 +185,8 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
                     .commit();
         }
         try {
-            mapFragment.mqttClient = new MqttClient(MQTT_SERVER_URL, "APP", null);
+            String clientId = Settings.System.getString(getContentResolver(), Settings.System.ANDROID_ID) + Build.SERIAL;
+            mapFragment.mqttClient = new MqttClient(MQTT_SERVER_URL, clientId, new MemoryPersistence());
             MqttClient mqttClient = mapFragment.mqttClient;
             mqttClient.setCallback(mapFragment.mqttCallBack);
             mqttClient.connect();

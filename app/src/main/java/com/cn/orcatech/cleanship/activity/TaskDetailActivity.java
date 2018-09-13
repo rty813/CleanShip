@@ -104,6 +104,7 @@ public class TaskDetailActivity extends AppCompatActivity {
     private static class MyAsyncTask extends AsyncTask<String, Double, Void> {
         private WeakReference<TaskDetailActivity> activity;
         private LatLng prePoint;
+        private List<LatLng> points;
 
         MyAsyncTask(TaskDetailActivity activity) {
             this.activity = new WeakReference<>(activity);
@@ -113,9 +114,9 @@ public class TaskDetailActivity extends AppCompatActivity {
         protected Void doInBackground(String... strings) {
             try {
                 JSONArray array = new JSONArray(strings[0]);
-                for (int i = 0; i < array.length(); i++) {
+                for (int i = array.length() - 1; i >= 0; i--) {
                     JSONObject object = array.getJSONObject(i);
-                    publishProgress((double) i, object.getDouble("lat"), object.getDouble("lng"));
+                    publishProgress((double) (array.length() - i - 1), object.getDouble("lat"), object.getDouble("lng"));
                     Thread.sleep(100);
                 }
             } catch (JSONException | InterruptedException e) {
@@ -133,7 +134,7 @@ public class TaskDetailActivity extends AppCompatActivity {
                 activity.aMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, 30));
                 prePoint = new LatLng(values[1], values[2]);
             }
-            List<LatLng> points = new ArrayList<>();
+            points = new ArrayList<>();
             points.add(new LatLng(prePoint.latitude, prePoint.longitude));
             prePoint = new LatLng(values[1], values[2]);
             points.add(new LatLng(prePoint.latitude, prePoint.longitude));
