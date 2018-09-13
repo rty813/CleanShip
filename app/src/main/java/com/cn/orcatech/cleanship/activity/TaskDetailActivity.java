@@ -4,7 +4,9 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.amap.api.maps.AMap;
 import com.amap.api.maps.CameraUpdateFactory;
@@ -30,12 +32,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import es.dmoral.toasty.Toasty;
+
 public class TaskDetailActivity extends AppCompatActivity {
 
     private MapView mMapView;
     private AMap aMap;
     private ArrayList<LatLng> traceList;
     private SmoothMoveMarker smoothMoveMarker;
+    private ProgressBar progressBar;
+    private TextView tvHint;
+    private AsyncTask<String, Double, Void> myAsyncTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +56,8 @@ public class TaskDetailActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.tv_ise)).setText("ISE：" + map.get("ise"));
         ((TextView) findViewById(R.id.tv_variance)).setText("方差：" + map.get("variance"));
         ((TextView) findViewById(R.id.tv_timeCost)).setText("耗时：" + map.get("timeCost") + "秒");
+        progressBar = findViewById(R.id.progressBar);
+        tvHint = findViewById(R.id.tv_hint);
 
         mMapView = findViewById(R.id.mapView);
         mMapView.onCreate(savedInstanceState);
@@ -72,7 +81,24 @@ public class TaskDetailActivity extends AppCompatActivity {
             @Override
             public void onSucceed(int what, Response<String> response) {
                 super.onSucceed(what, response);
-                new MyAsyncTask(TaskDetailActivity.this).execute(response.get(), timeCost);
+                if (response.get().equals("[]")) {
+                    Toasty.warning(TaskDetailActivity.this, "此路线无记录", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                myAsyncTask = new MyAsyncTask(TaskDetailActivity.this).execute(response.get(), timeCost);
+            }
+
+            @Override
+            public void onFailed(int what, Response<String> response) {
+                super.onFailed(what, response);
+                Toasty.error(TaskDetailActivity.this, "获取路线图失败", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFinish(int what) {
+                super.onFinish(what);
+                progressBar.setVisibility(View.INVISIBLE);
+                tvHint.setVisibility(View.INVISIBLE);
             }
         });
     }
@@ -91,6 +117,9 @@ public class TaskDetailActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (myAsyncTask != null) {
+            myAsyncTask.cancel(true);
+        }
         super.onDestroy();
         mMapView.onDestroy();
     }

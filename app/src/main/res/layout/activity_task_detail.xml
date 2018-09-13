@@ -13,7 +13,25 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:title="路径详情"
-        app:titleTextColor="@android:color/white"></android.support.v7.widget.Toolbar>
+        app:titleTextColor="@android:color/white">
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginEnd="10dp"
+            android:indeterminateTint="@color/mb_red" />
+
+        <TextView
+            android:id="@+id/tv_hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginEnd="10dp"
+            android:text="正在获取路径"
+            android:textColor="@android:color/darker_gray" />
+    </android.support.v7.widget.Toolbar>
 
     <com.amap.api.maps.MapView
         android:id="@+id/mapView"
