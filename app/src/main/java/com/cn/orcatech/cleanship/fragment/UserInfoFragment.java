@@ -2,6 +2,7 @@ package com.cn.orcatech.cleanship.fragment;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -17,6 +18,7 @@ import android.widget.Toast;
 
 import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.UserInfo;
+import com.cn.orcatech.cleanship.activity.BoundActivity;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.yanzhenjie.fragment.NoFragment;
 import com.yanzhenjie.nohttp.RequestMethod;
@@ -57,6 +59,7 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
         toolbar.setSubtitleTextColor(Color.WHITE);
         toolbar.setTitle(R.string.app_name);
         setToolbar(toolbar);
+        view.findViewById(R.id.btn_bound).setOnClickListener(this);
     }
 
     @Override
@@ -101,6 +104,12 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
                         })
                         .setCancelable(true)
                         .show();
+                break;
+            case R.id.btn_bound:
+                Intent intent = new Intent(activity, BoundActivity.class);
+                intent.putExtra("ship_id", userinfo.getShip_id());
+                startActivityForResult(intent, 0);
+                break;
         }
     }
 
@@ -139,6 +148,14 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
             btnVerify.setEnabled(false);
             tvTotalship.setText("拥有的船：" + userinfo.getTotalship() + "艘");
             tvVerify.setText("已认证！ID=" + String.valueOf(userinfo.getShip_id()));
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 0 && resultCode == 1) {
+            ((MainActivity) getActivity()).getMapFragment().loadBound();
         }
     }
 }

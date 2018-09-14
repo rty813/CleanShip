@@ -177,6 +177,7 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
         ((UserInfoFragment) fragmentList.get(5)).setUserinfo(userInfo);
         MapFragment mapFragment = getMapFragment();
         mapFragment.initClass(userInfo.getTotalship());
+        mapFragment.loadBound();
         getShipInfo();
         if (fragmentList.get(4).isVisible()) {
             fm.beginTransaction()

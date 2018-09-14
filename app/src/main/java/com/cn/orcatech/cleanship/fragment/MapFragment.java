@@ -12,7 +12,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
-import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -43,27 +42,23 @@ import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.MapView;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
 import com.amap.api.maps.model.Circle;
-import com.amap.api.maps.model.CircleOptions;
 import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.LatLngBounds;
 import com.amap.api.maps.model.Marker;
 import com.amap.api.maps.model.MarkerOptions;
 import com.amap.api.maps.model.MyLocationStyle;
+import com.amap.api.maps.model.Polygon;
+import com.amap.api.maps.model.PolygonOptions;
 import com.amap.api.maps.model.Polyline;
 import com.amap.api.maps.model.PolylineOptions;
 import com.amap.api.maps.utils.overlay.SmoothMoveMarker;
-import com.amap.api.services.core.LatLonPoint;
-import com.amap.api.services.geocoder.GeocodeResult;
-import com.amap.api.services.geocoder.GeocodeSearch;
-import com.amap.api.services.geocoder.RegeocodeAddress;
-import com.amap.api.services.geocoder.RegeocodeQuery;
-import com.amap.api.services.geocoder.RegeocodeResult;
 import com.cn.orcatech.cleanship.MyReceiver;
 import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.Ship;
 import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.cn.orcatech.cleanship.adapter.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.mqtt.MqttService;
+import com.cn.orcatech.cleanship.util.BoundUtils;
 import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
 import com.cn.orcatech.cleanship.util.WriteThreadFactory;
 import com.yanzhenjie.fragment.NoFragment;
@@ -91,6 +86,9 @@ import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -112,7 +110,6 @@ import static android.content.Context.MODE_PRIVATE;
 public class MapFragment extends NoFragment implements View.OnClickListener {
     private static final String TAG = "MapFragment";
     public static SQLiteDBHelper dbHelper;
-    private final float CTL_RADIUS = 2000;
     public MqttClient mqttClient;
     public MyHandler mHandler;
     private MapView mMapView;
@@ -239,6 +236,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         }
     };
     public String topicSend = "";
+    private ArrayList<Polygon> polygons;
+    private Button btnCancel;
 
     @Nullable
     @Override
@@ -255,8 +254,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         initMap();
         initClass(0);
         initColor();
-//        activity.bindService(new Intent(activity, MqttService.class), serviceConnection, BIND_AUTO_CREATE);
-//        activity.startService(new Intent(activity, MqttService.class));
         requestPermission();
     }
 
@@ -301,6 +298,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         btnEnable = view.findViewById(R.id.btn_enable);
         seekBar = view.findViewById(R.id.seekbar);
         llMethod = view.findViewById(R.id.ll_method);
+        btnCancel = view.findViewById(R.id.btn_cancel);
         final SharedPreferences sharedPreferences = activity.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -373,6 +371,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         traceLists = new ArrayList<>(totalship);
         markerLists = new ArrayList<>(totalship);
         smoothMoveMarkers = new ArrayList<>();
+        polygons = new ArrayList<>();
         ships = new ArrayList<>();
         for (int i = 0; i < totalship; i++) {
             ships.add(new Ship());
@@ -478,51 +477,22 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 markerOptions.setFlat(true);
                 markerOptions.draggable(true);
 
-                System.out.println(latLng.toString());
-                if (markerLists.get(activity.selectShip).size() > 0) {
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
-                    LatLng lastLatlng = markerLists.get(activity.selectShip).get(markerLists.get(activity.selectShip).size() - 1).getPosition();
-                    polylineLists.get(activity.selectShip).add(aMap.addPolyline(new PolylineOptions().add(latLng, lastLatlng).width(14)
-                            .color(Color.parseColor("#0B76CE"))));
-                } else {
-                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
-                    GeocodeSearch geocodeSearch = new GeocodeSearch(activity);
-                    geocodeSearch.setOnGeocodeSearchListener(new GeocodeSearch.OnGeocodeSearchListener() {
-                        @Override
-                        public void onRegeocodeSearched(RegeocodeResult regeocodeResult, int i) {
-                            if (i == 1000) {
-                                RegeocodeAddress address = regeocodeResult.getRegeocodeAddress();
-                                startPosition = address.getProvince();
-                                if (!address.getProvince().equals(address.getCity())) {
-                                    startPosition += " " + address.getCity();
-                                }
-                                startPosition += " " + address.getDistrict();
-                                if (address.getPois().size() != 0) {
-                                    startPosition = startPosition + " " + address.getPois().get(0);
-                                }
-//                                System.out.println(startPosition);
-                            }
-                        }
-
-                        @Override
-                        public void onGeocodeSearched(GeocodeResult geocodeResult, int i) {
-
-                        }
-                    });
-                    RegeocodeQuery query = new RegeocodeQuery(new LatLonPoint(latLng.latitude, latLng.longitude), 1000, GeocodeSearch.AMAP);
-                    geocodeSearch.getFromLocationAsyn(query);
-                }
+                markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(),
+                        markerLists.get(activity.selectShip).size() > 0 ? R.drawable.mao : R.drawable.mao_start)));
                 markerLists.get(activity.selectShip).add(aMap.addMarker(markerOptions));
-            }
-        });
-        aMap.setOnMyLocationChangeListener(new AMap.OnMyLocationChangeListener() {
-            @Override
-            public void onMyLocationChange(Location location) {
-                if (limitCircle != null) {
-                    limitCircle.remove();
+                if (markerLists.get(activity.selectShip).size() > 1) {
+                    LatLng lastLatlng = markerLists.get(activity.selectShip).get(markerLists.get(activity.selectShip).size() - 2).getPosition();
+                    Polyline polyline = aMap.addPolyline(new PolylineOptions().add(latLng, lastLatlng).width(14).color(Color.parseColor("#0B76CE")));
+                    polylineLists.get(activity.selectShip).add(polyline);
+                    for (Polygon polygon : polygons) {
+                        if (BoundUtils.detectIntersect(polyline, polygon)) {
+                            mHandler.sendMessage(mHandler.obtainMessage(3, "航迹穿过边界或障碍！"));
+                            btnCancel.performClick();
+                            break;
+                        }
+                    }
                 }
-                limitCircle = aMap.addCircle(new CircleOptions().center(new LatLng(location.getLatitude(), location.getLongitude()))
-                        .radius(CTL_RADIUS).strokeColor(Color.RED).strokeWidth(8).fillColor(Color.argb(20, 1, 1, 1)));
+
             }
         });
     }
@@ -762,7 +732,7 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 if (markers.size() > 0) {
                     Marker marker = markers.get(markers.size() - 1);
                     marker.hideInfoWindow();
-                    markers.get(markers.size() - 1).destroy();
+                    marker.destroy();
                     markers.remove(markers.size() - 1);
                     if (polylines.size() > 0) {
                         polylines.get(polylines.size() - 1).remove();
@@ -1194,6 +1164,55 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         showLoadingView(hint);
         publishMessage(data);
         mqttSendThreadPool.execute(new mqttSendThread());
+    }
+
+    public void loadBound() {
+        for (Polygon polygon : polygons) {
+            polygon.remove();
+        }
+        polygons.clear();
+        StringRequest request = new StringRequest("http://orca-tech.cn/app/bound.php", RequestMethod.POST);
+        request.add("ship_id", activity.userInfo.getShip_id()).add("type", "select");
+        AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
+            private PolygonOptions initPolygonOptions(int flag) {
+                PolygonOptions options = new PolygonOptions();
+                if (flag == 0) {
+                    options.strokeWidth(15).strokeColor(Color.argb(150, 1, 1, 1))
+                            .fillColor(Color.argb(30, 0, 0, 0));
+                } else {
+                    options.strokeWidth(15).strokeColor(Color.argb(255, 255, 0, 0))
+                            .fillColor(Color.argb(200, 255, 60, 60));
+                }
+                return options;
+            }
+
+            @Override
+            public void onSucceed(int what, Response<String> response) {
+                super.onSucceed(what, response);
+                try {
+                    JSONArray array = new JSONArray(response.get());
+                    for (int i = 0; i < array.length(); i++) {
+                        JSONObject obj = array.getJSONObject(i);
+                        String latlngs[] = obj.getString("latlng").split(";");
+                        PolygonOptions options = initPolygonOptions(obj.getInt("flag"));
+                        for (String latlng : latlngs) {
+                            double lat = Double.parseDouble(latlng.split(",")[0]);
+                            double lng = Double.parseDouble(latlng.split(",")[1]);
+                            options.add(new LatLng(lat, lng));
+                        }
+                        polygons.add(aMap.addPolygon(options));
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void onFailed(int what, Response<String> response) {
+                Toasty.warning(activity, "拉取失败", Toast.LENGTH_SHORT).show();
+                super.onFailed(what, response);
+            }
+        });
     }
 
     private class mqttSendThread implements Runnable {

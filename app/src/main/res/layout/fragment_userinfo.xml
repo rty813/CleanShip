@@ -50,6 +50,12 @@
                 android:layout_height="wrap_content"
                 android:id="@+id/btn_verify"
                 android:text="认证"/>
+
+            <Button
+                android:id="@+id/btn_bound"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="设定边界及障碍" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

@@ -4,4 +4,9 @@
         <item>连线模式</item>
         <item>循环模式</item>
     </array>
+
+    <array name="switch_tabs_bound">
+        <item>边界</item>
+        <item>障碍</item>
+    </array>
 </resources>
