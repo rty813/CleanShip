@@ -43,6 +43,6 @@ public class BoundUtils {
                 return true;
             }
         }
-        return false;
+        return intersect(a, b, LatLngs.get(0), LatLngs.get(LatLngs.size() - 1));
     }
 }

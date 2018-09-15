@@ -41,7 +41,6 @@ import com.amap.api.maps.CameraUpdate;
 import com.amap.api.maps.CameraUpdateFactory;
 import com.amap.api.maps.MapView;
 import com.amap.api.maps.model.BitmapDescriptorFactory;
-import com.amap.api.maps.model.Circle;
 import com.amap.api.maps.model.LatLng;
 import com.amap.api.maps.model.LatLngBounds;
 import com.amap.api.maps.model.Marker;
@@ -119,8 +118,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private ArrayList<ArrayList<Polyline>> polylineLists;
     private ArrayList<ArrayList<Polyline>> traceLists;
     private int[] colors;
-    private Circle limitCircle;
-    private String startPosition;
     private MyReceiver myReceiver;
     private Drawable picPause;
     private Drawable picStart;
@@ -419,7 +416,15 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                     markerOptions.setFlat(true);
                     markerOptions.draggable(true);
                     markerLists.get(activity.selectShip).add(aMap.addMarker(markerOptions));
-                    polylineLists.get(activity.selectShip).add(aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(14).color(Color.parseColor("#0B76CE"))));
+                    Polyline polyline = aMap.addPolyline(new PolylineOptions().add(latLng, marker.getPosition()).width(14).color(Color.parseColor("#0B76CE")));
+                    polylineLists.get(activity.selectShip).add(polyline);
+                    for (Polygon polygon : polygons) {
+                        if (BoundUtils.detectIntersect(polyline, polygon)) {
+                            mHandler.sendMessage(mHandler.obtainMessage(3, "航迹穿过边界或障碍！"));
+                            btnCancel.performClick();
+                            break;
+                        }
+                    }
                 }
                 return true;
             }
