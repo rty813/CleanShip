@@ -48,15 +48,6 @@ public class LoginFragment extends NoFragment implements View.OnClickListener {
         etUsername = view.findViewById(R.id.et_username);
         etPassword = view.findViewById(R.id.et_password);
         progressbar = view.findViewById(R.id.progressBar);
-        MainActivity activity = (MainActivity) getActivity();
-        if (activity != null) {
-            SharedPreferences sharedPreferences = activity.getSharedPreferences("userinfo", Context.MODE_PRIVATE);
-            String username = sharedPreferences.getString("username", null);
-            String password = sharedPreferences.getString("password", null);
-            if (username != null && password != null) {
-                login(activity, username, password);
-            }
-        }
     }
 
     @Override
@@ -97,7 +88,7 @@ public class LoginFragment extends NoFragment implements View.OnClickListener {
         }
     }
 
-    private void login(final MainActivity activity, final String username, final String password) {
+    public void login(final MainActivity activity, final String username, final String password) {
         StringRequest request = new StringRequest("http://orca-tech.cn/app/loginlogon.php", RequestMethod.POST);
         request.add("username", username).add("password", password).add("type", "login");
         AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {

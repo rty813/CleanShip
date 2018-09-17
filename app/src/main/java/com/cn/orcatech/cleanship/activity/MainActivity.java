@@ -5,6 +5,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -76,6 +77,7 @@ import es.dmoral.toasty.Toasty;
 public class MainActivity extends CompatActivity implements View.OnClickListener {
 
     private static final String MQTT_SERVER_URL = "tcp://orca-tech.cn:11883";
+    private static final String TAG = "MainActivity";
     private FragmentManager fm;
     private ArrayList<NoFragment> fragmentList;
     public static boolean hasLogin = false;
@@ -395,5 +397,18 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
                 .setSmallIcon(R.mipmap.ic_launcher);
         Notification notification = builder.build();
         notificationManager.notify(shipid, notification);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!hasLogin) {
+            SharedPreferences sharedPreferences = getSharedPreferences("userinfo", Context.MODE_PRIVATE);
+            String username = sharedPreferences.getString("username", null);
+            String password = sharedPreferences.getString("password", null);
+            if (username != null && password != null) {
+                ((LoginFragment) fragmentList.get(4)).login(this, username, password);
+            }
+        }
     }
 }

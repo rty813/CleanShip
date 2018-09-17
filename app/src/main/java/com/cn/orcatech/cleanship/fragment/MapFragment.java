@@ -1,14 +1,11 @@
 package com.cn.orcatech.cleanship.fragment;
 
 import android.app.ProgressDialog;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
@@ -20,8 +17,6 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.AppCompatSeekBar;
-import android.support.v7.widget.LinearLayoutManager;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -29,7 +24,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
@@ -55,7 +49,6 @@ import com.cn.orcatech.cleanship.MyReceiver;
 import com.cn.orcatech.cleanship.R;
 import com.cn.orcatech.cleanship.Ship;
 import com.cn.orcatech.cleanship.activity.MainActivity;
-import com.cn.orcatech.cleanship.adapter.SwipeRecyclerViewAdapter;
 import com.cn.orcatech.cleanship.mqtt.MqttService;
 import com.cn.orcatech.cleanship.util.BoundUtils;
 import com.cn.orcatech.cleanship.util.SQLiteDBHelper;
@@ -72,13 +65,6 @@ import com.yanzhenjie.permission.Permission;
 import com.yanzhenjie.permission.Rationale;
 import com.yanzhenjie.permission.RequestExecutor;
 import com.yanzhenjie.permission.SettingService;
-import com.yanzhenjie.recyclerview.swipe.SwipeItemClickListener;
-import com.yanzhenjie.recyclerview.swipe.SwipeMenu;
-import com.yanzhenjie.recyclerview.swipe.SwipeMenuBridge;
-import com.yanzhenjie.recyclerview.swipe.SwipeMenuCreator;
-import com.yanzhenjie.recyclerview.swipe.SwipeMenuItem;
-import com.yanzhenjie.recyclerview.swipe.SwipeMenuItemClickListener;
-import com.yanzhenjie.recyclerview.swipe.SwipeMenuRecyclerView;
 
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
@@ -91,10 +77,8 @@ import org.json.JSONObject;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -127,7 +111,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private LinearLayout llFinish;
     private LinearLayout llNav;
     private LinearLayout llMark;
-    private LinearLayout llMethod;
     private LinearLayout llHome;
     private SwitchMultiButton swNav;
     private ArrayList<ArrayList<LatLng>> shipPointLists;
@@ -140,8 +123,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
     private Button btnGoStop;
     private AppCompatSeekBar seekBar;
     private Button btnVel;
-    private Button btnHistory;
-    private Button btnManual;
     private Button btnAbort;
     private Button btnEnable;
     private TextView tvFinish;
@@ -288,13 +269,10 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         tvDate = view.findViewById(R.id.tv_date);
         btnGoStop = view.findViewById(R.id.btn_gostop);
         btnHome2 = view.findViewById(R.id.btn_home2);
-        btnHistory = view.findViewById(R.id.btn_history);
-        btnManual = view.findViewById(R.id.btn_manual);
         btnVel = view.findViewById(R.id.btn_vel);
         btnAbort = view.findViewById(R.id.btn_abort);
         btnEnable = view.findViewById(R.id.btn_enable);
         seekBar = view.findViewById(R.id.seekbar);
-        llMethod = view.findViewById(R.id.ll_method);
         btnCancel = view.findViewById(R.id.btn_cancel);
         final SharedPreferences sharedPreferences = activity.getSharedPreferences("cleanship", MODE_PRIVATE);
         seekBar.setProgress(sharedPreferences.getInt("seekbar", 450));
@@ -333,8 +311,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         view.findViewById(R.id.btn_changemap).setOnClickListener(this);
         tvToolbar.setOnClickListener(this);
         btnAbort.setOnClickListener(this);
-        btnManual.setOnClickListener(this);
-        btnHistory.setOnClickListener(this);
         btnHome.setOnClickListener(this);
         btnGoStop.setOnClickListener(this);
         btnEnable.setOnClickListener(this);
@@ -358,7 +334,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         llFinish.setOnTouchListener(onTouchListener);
         llHome.setOnTouchListener(onTouchListener);
         llMark.setOnTouchListener(onTouchListener);
-        llMethod.setOnTouchListener(onTouchListener);
         llNav.setOnTouchListener(onTouchListener);
     }
 
@@ -497,7 +472,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                         }
                     }
                 }
-
             }
         });
     }
@@ -552,103 +526,8 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         mMapView.onSaveInstanceState(outState);
     }
 
-//    private void loadRoute(@Nullable String id) {
-//        SQLiteDatabase database = dbHelper.getReadableDatabase();
-//        resetMap();
-//        Cursor cursor;
-//        if (id != null) {
-//            cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, "ID=?", new String[]{id}, null, null, null);
-//            cursor.moveToFirst();
-//        } else {
-//            cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null, null, null, null);
-//            cursor.moveToLast();
-//        }
-//        if (cursor.getCount() > 0) {
-//            String route = cursor.getString(cursor.getColumnIndex("ROUTE"));
-//            String[] markers_str = route.split(";");
-//            for (int i = 0; i < markers_str.length; i++) {
-//                String[] location = markers_str[i].split(",");
-//                LatLng latLng = new LatLng(Double.parseDouble(location[0]), Double.parseDouble(location[1]));
-//                if (i == 0) {
-//                    CameraUpdate cameraUpdate = CameraUpdateFactory.newCameraPosition(new CameraPosition(latLng, 18, 0, 0));
-//                    aMap.animateCamera(cameraUpdate);
-//                }
-//                MarkerOptions markerOptions = new MarkerOptions().position(latLng);
-//                markerOptions.title(String.valueOf(markerLists.size() + 1));
-//                markerOptions.snippet("纬度：" + latLng.latitude + "\n经度：" + latLng.longitude);
-//                markerOptions.anchor(0.5f, 0.5f);
-//                markerOptions.draggable(true);
-//                markerOptions.setFlat(true);
-//                if (markerLists.size() > 0) {
-//                    LatLng lastLatlng = markerLists.get(markerLists.size() - 1).getPosition();
-//                    polylineLists.add(aMap.addPolyline(new PolylineOptions().add(latLng, lastLatlng).width(14).color(Color.parseColor("#0B76CE"))));
-//                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao)));
-//                } else {
-//                    markerOptions.icon(BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.mao_start)));
-//                }
-//                markerLists.add(aMap.addMarker(markerOptions));
-//            }
-//        }
-//        cursor.close();
-//        database.close();
-//    }
-
-//    private void morph(int state) {
-//        if (state != NONE) {
-//            this.state = state;
-//            this.markEnable = false;
-//            btnEnable.setCompoundDrawables(null, picMarkDisable, null, null);
-//            tvToolbar.setText(toolbarTitle);
-//            hideAll();
-//        }
-//        switch (state) {
-//            case UNREADY:
-//                Toasty.error(activity, "连接中断，请重新连接", Toast.LENGTH_SHORT).show();
-//                btnPoweron.setVisibility(View.VISIBLE);
-//                preState = Integer.MAX_VALUE;
-//                mqttService.close();
-//                resetMap();
-//                fam.hideMenu(false);
-//                break;
-//            case READY:
-//                llMark.setVisibility(View.VISIBLE);
-//                llMethod.setVisibility(View.VISIBLE);
-//                btnHome.setVisibility(View.VISIBLE);
-//                fam.showMenu(true);
-//                break;
-//            case GONE:
-//                btnGoStop.setText("暂停");
-//                btnGoStop.setCompoundDrawables(null, picPause, null, null);
-//                llNav.setVisibility(View.VISIBLE);
-//                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
-//                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-//                fam.showMenu(true);
-//                break;
-//            case PAUSE:
-//                btnGoStop.setText("开始");
-//                btnGoStop.setCompoundDrawables(null, picStart, null, null);
-//                llNav.setVisibility(View.VISIBLE);
-//                tvToolbar.setText(swNav.getSelectedTab() == 0 ? "正处于单次自主导航" : "正处于循环自主导航");
-//                tvCircle.setVisibility(swNav.getSelectedTab() == 0 ? View.GONE : View.VISIBLE);
-//                fam.showMenu(true);
-//                break;
-//            case HOMING:
-//                llHome.setVisibility(View.VISIBLE);
-//                fam.showMenu(true);
-//                break;
-//            case FINISH:
-//                llFinish.setVisibility(View.VISIBLE);
-//                mqttSendThreadPool.execute(new QueryTimeDisThread());
-//                fam.showMenu(true);
-//                break;
-//            default:
-//                break;
-//        }
-//    }
-
     private void hideAll() {
         llMark.setVisibility(View.GONE);
-        llMethod.setVisibility(View.INVISIBLE);
         llNav.setVisibility(View.GONE);
         llFinish.setVisibility(View.GONE);
         llHome.setVisibility(View.GONE);
@@ -706,7 +585,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
 
     @Override
     public void onClick(View view) {
-        PopupWindow popupHistory;
         final ArrayList<Marker> markers = activity.selectShip == -1 ? null : markerLists.get(activity.selectShip);
         ArrayList<Polyline> polylines = activity.selectShip == -1 ? null : polylineLists.get(activity.selectShip);
         ArrayList<Polyline> traces = activity.selectShip == -1 ? null : traceLists.get(activity.selectShip);
@@ -778,33 +656,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
                 btnHome2.setVisibility(View.GONE);
                 btnVel.setVisibility(View.GONE);
                 seekBar.setVisibility(View.VISIBLE);
-                break;
-            case R.id.btn_history:
-                btnManual.setTextColor(Color.BLACK);
-                btnHistory.setTextColor(getResources().getColor(R.color.toolbarBlue));
-                View contentView = LayoutInflater.from(activity).inflate(R.layout.popup_history, null);
-                SwipeMenuRecyclerView recyclerView = contentView.findViewById(R.id.recyclerView);
-                popupHistory = new PopupWindow();
-                popupHistory.setWidth(ViewGroup.LayoutParams.MATCH_PARENT);
-                popupHistory.setOutsideTouchable(true);
-                popupHistory.setContentView(contentView);
-                popupHistory.setAnimationStyle(R.style.dismiss_anim);
-                popupHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
-                    @Override
-                    public void onDismiss() {
-                        btnHistory.setTextColor(Color.BLACK);
-                        btnManual.setTextColor(getResources().getColor(R.color.toolbarBlue));
-                    }
-                });
-                loadHistory(recyclerView, popupHistory);
-                contentView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-                int height = getResources().getDisplayMetrics().heightPixels / 2;
-                if (contentView.getMeasuredHeight() > height) {
-                    popupHistory.setHeight(height);
-                } else {
-                    popupHistory.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
-                }
-                popupHistory.showAsDropDown(llMethod);
                 break;
             case R.id.btn_abort:
                 publishMessageForResult("$CLEAR#");
@@ -944,124 +795,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
         moveCamera(id);
     }
 
-    private void loadHistory(final SwipeMenuRecyclerView recyclerView, final PopupWindow popupHistory) {
-        final ArrayList<Map<String, String>> list = new ArrayList<>();
-        SQLiteDatabase database = dbHelper.getReadableDatabase();
-        Cursor cursor = database.query(SQLiteDBHelper.TABLE_NAME, null, null, null ,null, null, null);
-        if (cursor.getCount() > 0){
-            cursor.moveToLast();
-            do{
-                Map<String, String> map = new HashMap();
-                map.put("detail", cursor.getString(cursor.getColumnIndex("TIME")));
-                map.put("title", cursor.getString(cursor.getColumnIndex("NAME")));
-                map.put("id", cursor.getString(cursor.getColumnIndex("ID")));
-                map.put("top", cursor.getString(cursor.getColumnIndex("TOP")));
-                if (!Boolean.parseBoolean(map.get("top"))) {
-                    list.add(map);
-                }
-            } while(cursor.moveToPrevious());
-            cursor.moveToFirst();
-            do {
-                Map<String, String> map = new HashMap();
-                map.put("detail", cursor.getString(cursor.getColumnIndex("TIME")));
-                map.put("title", cursor.getString(cursor.getColumnIndex("NAME")));
-                map.put("id", cursor.getString(cursor.getColumnIndex("ID")));
-                map.put("top", cursor.getString(cursor.getColumnIndex("TOP")));
-                if (Boolean.parseBoolean(map.get("top"))) {
-                    list.add(0, map);
-                }
-            } while (cursor.moveToNext());
-        }
-        database.close();
-        final SwipeRecyclerViewAdapter adapter = new SwipeRecyclerViewAdapter(list);
-        adapter.notifyDataSetChanged();
-        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
-        recyclerView.setSwipeItemClickListener(new SwipeItemClickListener() {
-            @Override
-            public void onItemClick(View itemView, int position) {
-                popupHistory.dismiss();
-                routeID = Long.parseLong(list.get(position).get("id"));
-//                loadRoute(list.get(position).get("id"));
-            }
-        });
-        recyclerView.setSwipeMenuCreator(new SwipeMenuCreator() {
-            @Override
-            public void onCreateMenu(SwipeMenu swipeLeftMenu, SwipeMenu swipeRightMenu, int viewType) {
-                DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
-                SwipeMenuItem deleteItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
-                        .setImage(R.drawable.menu_delete).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
-                SwipeMenuItem renameItem = new SwipeMenuItem(activity).setWidth((int)(metrics.widthPixels * 0.2))
-                        .setImage(R.drawable.menu_rename).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
-                swipeRightMenu.addMenuItem(renameItem);
-                swipeRightMenu.addMenuItem(deleteItem);
-
-                SwipeMenuItem topItem = new SwipeMenuItem(activity).setWidth((int) (metrics.widthPixels * 0.2))
-                        .setImage(R.drawable.menu_top).setHeight(ViewGroup.LayoutParams.MATCH_PARENT);
-                swipeLeftMenu.addMenuItem(topItem);
-            }
-        });
-        recyclerView.setSwipeMenuItemClickListener(new SwipeMenuItemClickListener() {
-            @Override
-            public void onItemClick(SwipeMenuBridge menuBridge) {
-                menuBridge.closeMenu();
-                final int pos = menuBridge.getAdapterPosition();
-//                System.out.println(menuBridge.getDirection());
-                if (menuBridge.getDirection() > 0) {
-                    Map<String, String> map = new HashMap<>();
-                    map.put("id", list.get(pos).get("id"));
-                    map.put("title", list.get(pos).get("title"));
-                    map.put("detail", list.get(pos).get("detail"));
-                    map.put("top", String.valueOf(!Boolean.parseBoolean(list.get(pos).get("top"))));
-                    list.remove(pos);
-                    list.add(pos, map);
-                    adapter.notifyItemChanged(pos);
-                    SQLiteDatabase database = dbHelper.getWritableDatabase();
-                    ContentValues values = new ContentValues();
-                    values.put("TOP", map.get("top"));
-                    database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
-                    database.close();
-                } else {
-                    if (menuBridge.getPosition() == 1) {
-                        Map<String, String> map = list.get(pos);
-                        String id = map.get("id");
-                        list.remove(pos);
-                        adapter.notifyItemRemoved(pos);
-                        adapter.notifyItemRangeChanged(pos, list.size() - pos);
-                        SQLiteDatabase database = dbHelper.getWritableDatabase();
-                        database.delete(SQLiteDBHelper.TABLE_NAME, "ID=?", new String[]{id});
-                        database.close();
-                    } else {
-                        final EditText etName = new EditText(activity);
-                        etName.setHint(list.get(pos).get("title"));
-                        new AlertDialog.Builder(activity)
-                                .setTitle("重命名路线")
-                                .setView(etName)
-                                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-                                        Map<String, String> map = new HashMap<>();
-                                        map.put("id", list.get(pos).get("id"));
-                                        map.put("title", etName.getText().toString());
-                                        map.put("detail", list.get(pos).get("detail"));
-                                        map.put("top", list.get(pos).get("top"));
-                                        list.remove(list.get(pos));
-                                        list.add(pos, map);
-                                        adapter.notifyDataSetChanged();
-                                        SQLiteDatabase database = dbHelper.getWritableDatabase();
-                                        ContentValues values = new ContentValues();
-                                        values.put("NAME", etName.getText().toString());
-                                        database.update(SQLiteDBHelper.TABLE_NAME, values, "ID=?", new String[]{map.get("id")});
-                                        database.close();
-                                    }
-                                })
-                                .show();
-                    }
-                }
-            }
-        });
-        recyclerView.setAdapter(adapter);
-    }
-
     public void newHandleState(int state) {
         swNav.setSelectedTab(0);
         this.markEnable = false;
@@ -1071,7 +804,6 @@ public class MapFragment extends NoFragment implements View.OnClickListener {
             case 0:
 //                开机初始状态
                 llMark.setVisibility(View.VISIBLE);
-                llMethod.setVisibility(View.VISIBLE);
                 btnHome.setVisibility(View.VISIBLE);
                 break;
             case -1:
