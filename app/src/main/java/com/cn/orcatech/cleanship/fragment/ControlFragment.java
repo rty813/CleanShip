@@ -1,5 +1,6 @@
 package com.cn.orcatech.cleanship.fragment;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -33,6 +34,13 @@ public class ControlFragment extends NoFragment implements View.OnClickListener 
     private TXCloudVideoView mView;
     private int thrust = 0;
     private int dire = 0;
+    private MainActivity activity;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        activity = (MainActivity) context;
+    }
 
     @Nullable
     @Override
@@ -45,7 +53,7 @@ public class ControlFragment extends NoFragment implements View.OnClickListener 
         super.onViewCreated(view, savedInstanceState);
 
         mView = view.findViewById(R.id.video_view);
-        mLivePlayer = new TXLivePlayer(getActivity());
+        mLivePlayer = new TXLivePlayer(activity);
         mLivePlayer.setRenderMode(TXLiveConstants.RENDER_MODE_ADJUST_RESOLUTION);
         mLivePlayer.setRenderRotation(TXLiveConstants.RENDER_ROTATION_LANDSCAPE);
         mLivePlayer.setPlayerView(mView);
@@ -72,7 +80,6 @@ public class ControlFragment extends NoFragment implements View.OnClickListener 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 thrust = (seekBar.getProgress() - 10) * 10;
-                MainActivity activity = (MainActivity) getActivity();
                 try {
                     activity.getMapFragment().mqttClient.publish("APP2SHIP/5/1", ("$4GCTL," + thrust + "," + dire + "#").getBytes(), 0, false);
                 } catch (MqttException e) {
@@ -85,7 +92,6 @@ public class ControlFragment extends NoFragment implements View.OnClickListener 
             @Override
             public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                 dire = (i - 10) * 10;
-                MainActivity activity = (MainActivity) getActivity();
                 try {
                     activity.getMapFragment().mqttClient.publish("APP2SHIP/5/1", ("$4GCTL," + thrust + "," + dire + "#").getBytes(), 0, false);
                 } catch (MqttException e) {
@@ -102,7 +108,6 @@ public class ControlFragment extends NoFragment implements View.OnClickListener 
             public void onStopTrackingTouch(SeekBar seekBar) {
                 seekBar.setProgress(10);
                 dire = 0;
-                MainActivity activity = (MainActivity) getActivity();
                 try {
                     activity.getMapFragment().mqttClient.publish("APP2SHIP/5/1", ("$4GCTL," + thrust + "," + dire + "#").getBytes(), 0, false);
                 } catch (MqttException e) {
@@ -115,7 +120,6 @@ public class ControlFragment extends NoFragment implements View.OnClickListener 
 
     @Override
     public void onClick(View view) {
-        MainActivity activity = (MainActivity) getActivity();
         if (activity.selectShip == -1) {
             Toasty.error(activity, "请先选船", Toast.LENGTH_SHORT).show();
             return;

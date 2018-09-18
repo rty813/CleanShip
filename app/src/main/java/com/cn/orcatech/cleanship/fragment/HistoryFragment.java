@@ -1,5 +1,6 @@
 package com.cn.orcatech.cleanship.fragment;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -39,6 +40,13 @@ public class HistoryFragment extends NoFragment implements SwipeItemClickListene
 
     private ArrayList<Map<String, String>> list;
     private TaskHistoryAdapter adapter;
+    private MainActivity activity;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        activity = (MainActivity) context;
+    }
 
     @Nullable
     @Override
@@ -51,7 +59,7 @@ public class HistoryFragment extends NoFragment implements SwipeItemClickListene
         SwipeMenuRecyclerView recyclerView = view.findViewById(R.id.srv_task);
         list = new ArrayList<>();
         adapter = new TaskHistoryAdapter(list);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        recyclerView.setLayoutManager(new LinearLayoutManager(activity));
         recyclerView.setSwipeItemClickListener(this);
         recyclerView.setAdapter(adapter);
         super.onViewCreated(view, savedInstanceState);
@@ -96,10 +104,10 @@ public class HistoryFragment extends NoFragment implements SwipeItemClickListene
 
     @Override
     public void onItemClick(View itemView, int position) {
-        Intent intent = new Intent(getActivity(), TaskDetailActivity.class);
+        Intent intent = new Intent(activity, TaskDetailActivity.class);
         intent.putExtra("task", (Serializable) list.get(position));
-        intent.putExtra("id", ((MainActivity) getActivity()).selectShip);
-        intent.putExtra("ship_id", ((MainActivity) getActivity()).userInfo.getShip_id());
+        intent.putExtra("id", activity.selectShip);
+        intent.putExtra("ship_id", activity.userInfo.getShip_id());
         startActivityForResult(intent, 0);
     }
 

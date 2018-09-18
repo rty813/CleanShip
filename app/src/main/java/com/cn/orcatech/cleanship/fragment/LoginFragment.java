@@ -32,6 +32,13 @@ public class LoginFragment extends NoFragment implements View.OnClickListener {
     private MaterialEditText etUsername;
     private MaterialEditText etPassword;
     private ProgressBar progressbar;
+    private MainActivity activity;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        activity = (MainActivity) context;
+    }
 
     @Nullable
     @Override
@@ -48,7 +55,7 @@ public class LoginFragment extends NoFragment implements View.OnClickListener {
         etUsername = view.findViewById(R.id.et_username);
         etPassword = view.findViewById(R.id.et_password);
         progressbar = view.findViewById(R.id.progressBar);
-        SharedPreferences preferences = getActivity().getSharedPreferences("userinfo", Context.MODE_PRIVATE);
+        SharedPreferences preferences = activity.getSharedPreferences("userinfo", Context.MODE_PRIVATE);
         etUsername.setText(preferences.getString("username", ""));
     }
 
@@ -56,19 +63,15 @@ public class LoginFragment extends NoFragment implements View.OnClickListener {
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
         if (hidden) {
-            ((MainActivity)getActivity()).hideToolbar(View.VISIBLE);
+            activity.hideToolbar(View.VISIBLE);
         }
         else {
-            ((MainActivity)getActivity()).hideToolbar(View.GONE);
+            activity.hideToolbar(View.GONE);
         }
     }
 
     @Override
     public void onClick(View v) {
-        final MainActivity activity = (MainActivity) getActivity();
-        if (activity == null) {
-            return;
-        }
         switch (v.getId()) {
             case R.id.tv_forget:
                 startActivity(new Intent(activity, ForgetPwActivity.class));

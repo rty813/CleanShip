@@ -1,6 +1,7 @@
 package com.cn.orcatech.cleanship.fragment;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
@@ -35,6 +36,13 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
     private TextView tvVerify;
     private TextView tvTotalship;
     private Button btnVerify;
+    private MainActivity activity;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        activity = (MainActivity) context;
+    }
 
     @Nullable
     @Override
@@ -48,10 +56,6 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
         btnVerify = view.findViewById(R.id.btn_verify);
         view.findViewById(R.id.btn_logout).setOnClickListener(this);
         btnVerify.setOnClickListener(this);
-        MainActivity activity = (MainActivity) getActivity();
-        if (activity == null) {
-            System.exit(0);
-        }
         tvVerify = view.findViewById(R.id.tv_verify);
         tvTotalship = view.findViewById(R.id.tv_totalship);
         toolbar = view.findViewById(R.id.toolbar);
@@ -66,19 +70,15 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);
         if (hidden) {
-            ((MainActivity)getActivity()).hideToolbar(View.VISIBLE);
+            activity.hideToolbar(View.VISIBLE);
         }
         else {
-            ((MainActivity)getActivity()).hideToolbar(View.GONE);
+            activity.hideToolbar(View.GONE);
         }
     }
 
     @Override
     public void onClick(View v) {
-        final MainActivity activity = (MainActivity) getActivity();
-        if (activity == null) {
-            return;
-        }
         switch (v.getId()) {
             case R.id.btn_logout:
                 activity.logout();
@@ -94,7 +94,7 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
                             public void onClick(DialogInterface dialog, int which) {
                                 try {
                                     int id = Integer.parseInt(editText.getText().toString());
-                                    verify(id, activity);
+                                    verify(id);
                                 }
                                 catch (NumberFormatException e){
                                     Toasty.error(activity, "请输入正确的序列号", Toast.LENGTH_SHORT).show();
@@ -113,7 +113,7 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
         }
     }
 
-    private void verify(final int id, final MainActivity activity) {
+    private void verify(final int id) {
         StringRequest request = new StringRequest("http://orca-tech.cn/app/loginlogon.php", RequestMethod.POST);
         request.add("type", "verify").add("username", userinfo.getUsername()).add("id", id);
         AsyncRequestExecutor.INSTANCE.execute(0, request, new SimpleResponseListener<String>() {
@@ -142,7 +142,7 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
         toolbar.setTitle(userinfo.getUsername());
         if (userinfo.getShip_id() == -1) {
             btnVerify.setEnabled(true);
-            Toasty.warning(getActivity(), "未认证！", Toast.LENGTH_SHORT).show();
+            Toasty.warning(activity, "未认证！", Toast.LENGTH_SHORT).show();
         }
         else {
             btnVerify.setEnabled(false);
@@ -155,7 +155,7 @@ public class UserInfoFragment extends NoFragment implements View.OnClickListener
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 0 && resultCode == 1) {
-            ((MainActivity) getActivity()).getMapFragment().loadBound();
+            activity.getMapFragment().loadBound();
         }
     }
 }

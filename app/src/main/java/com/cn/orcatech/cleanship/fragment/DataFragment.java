@@ -1,5 +1,6 @@
 package com.cn.orcatech.cleanship.fragment;
 
+import android.content.Context;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -10,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.cn.orcatech.cleanship.R;
+import com.cn.orcatech.cleanship.activity.MainActivity;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.components.XAxis;
@@ -31,6 +33,13 @@ public class DataFragment extends NoFragment {
     private ArrayList<LineData> lineDatas;
     private ArrayList<ArrayList<String>> times;
     private int chartCount[];
+    private MainActivity activity;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        activity = (MainActivity) context;
+    }
 
     @Nullable
     @Override
