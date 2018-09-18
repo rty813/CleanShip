@@ -48,6 +48,8 @@ public class LoginFragment extends NoFragment implements View.OnClickListener {
         etUsername = view.findViewById(R.id.et_username);
         etPassword = view.findViewById(R.id.et_password);
         progressbar = view.findViewById(R.id.progressBar);
+        SharedPreferences preferences = getActivity().getSharedPreferences("userinfo", Context.MODE_PRIVATE);
+        etUsername.setText(preferences.getString("username", ""));
     }
 
     @Override

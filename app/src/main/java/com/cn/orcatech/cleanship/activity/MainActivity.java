@@ -244,6 +244,15 @@ public class MainActivity extends CompatActivity implements View.OnClickListener
                     .commit();
         }
         userInfo = new UserInfo();
+        try {
+            getMapFragment().mqttClient.disconnect();
+            getMapFragment().mqttClient.close();
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+        SharedPreferences.Editor editor = getSharedPreferences("userinfo", Context.MODE_PRIVATE).edit();
+        editor.remove("password");
+        editor.apply();
     }
 
     @Override
